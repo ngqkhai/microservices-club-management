@@ -1,0 +1,28 @@
+{
+    "subject": "Verify your email address - Club Management",
+    "category": "authentication",
+    "priority": "high",
+    "description": "Email verification template for new user registrations",
+    "variables": [
+      {
+        "name": "fullName",
+        "type": "string",
+        "required": true,
+        "description": "Full name of the user"
+      },
+      {
+        "name": "verificationLink",
+        "type": "string",
+        "required": true,
+        "description": "Email verification URL"
+      },
+      {
+        "name": "frontendUrl",
+        "type": "string",
+        "required": false,
+        "description": "Base URL of the frontend application"
+      }
+    ],
+    "version": "1.0.0",
+    "lastModified": "2024-01-15T00:00:00Z"
+  }

@@ -1,0 +1,25 @@
+RESET YOUR PASSWORD
+
+Hello {{fullName}},
+
+We received a request to reset your password for your Club Management account. Click the link below to create a new password.
+
+Reset Link:
+{{resetLink}}
+
+IMPORTANT: This password reset link will expire in 15 minutes for your security. If you didn't request this reset, please ignore this email and your password will remain unchanged.
+
+PASSWORD SECURITY TIPS:
+• Use at least 8 characters
+• Include uppercase and lowercase letters
+• Add numbers and special characters
+• Avoid using personal information
+• Don't reuse passwords from other accounts
+
+If you continue to have problems, please contact our support team for assistance.
+
+---
+
+This email was sent by Club Management System
+For security reasons, this link will expire soon.
+© 2024 Club Management. All rights reserved. 
