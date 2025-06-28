@@ -1,0 +1,22 @@
+VERIFY YOUR EMAIL ADDRESS
+
+Hello {{fullName}},
+
+Welcome to Club Management! To complete your registration and secure your account, please verify your email address.
+
+Verification Link:
+{{verificationLink}}
+
+SECURITY NOTE: This verification link will expire in 1 hour for your security. If you didn't create an account with us, you can safely ignore this email.
+
+After verification, you'll be able to:
+• Access your club dashboard
+• Join club events and activities
+• Connect with other members
+• Manage your profile and preferences
+
+---
+
+This email was sent by Club Management System
+If you have any questions, please contact our support team.
+© 2024 Club Management. All rights reserved. 

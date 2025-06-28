@@ -1,0 +1,28 @@
+{
+  "subject": "Reset your password - Club Management",
+  "category": "authentication",
+  "priority": "high",
+  "description": "Password reset template for user password recovery",
+  "variables": [
+    {
+      "name": "fullName",
+      "type": "string",
+      "required": true,
+      "description": "Full name of the user"
+    },
+    {
+      "name": "resetLink",
+      "type": "string",
+      "required": true,
+      "description": "Password reset URL"
+    },
+    {
+      "name": "frontendUrl",
+      "type": "string",
+      "required": false,
+      "description": "Base URL of the frontend application"
+    }
+  ],
+  "version": "1.0.0",
+  "lastModified": "2024-01-15T00:00:00Z"
+} 

@@ -1,0 +1,882 @@
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: User unique identifier
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: User email address
+ *         full_name:
+ *           type: string
+ *           description: User full name
+ *         role:
+ *           type: string
+ *           enum: [USER, ADMIN]
+ *           description: User role
+ *         email_verified:
+ *           type: boolean
+ *           description: Whether email is verified
+ *         last_login:
+ *           type: string
+ *           format: date-time
+ *           description: Last login timestamp
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           description: Account creation timestamp
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: Last update timestamp
+ *     
+ *     RegisterRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *         - full_name
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: User email address
+ *         password:
+ *           type: string
+ *           minLength: 8
+ *           description: User password (min 8 characters)
+ *         full_name:
+ *           type: string
+ *           minLength: 2
+ *           description: User full name
+ *     
+ *     LoginRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: User email address
+ *         password:
+ *           type: string
+ *           description: User password
+ *     
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           description: Operation success status
+ *         message:
+ *           type: string
+ *           description: Response message
+ *         data:
+ *           type: object
+ *           properties:
+ *             user:
+ *               $ref: '#/components/schemas/User'
+ *             access_token:
+ *               type: string
+ *               description: JWT access token
+ *             expires_in:
+ *               type: number
+ *               description: Token expiration time in seconds
+ *     
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           description: Error message
+ *         code:
+ *           type: string
+ *           description: Error code
+ *         details:
+ *           type: object
+ *           description: Additional error details
+ *     
+ *     HealthResponse:
+ *       type: object
+ *       properties:
+ *         service:
+ *           type: string
+ *           example: auth-service
+ *         version:
+ *           type: string
+ *           example: 1.0.0
+ *         status:
+ *           type: string
+ *           example: healthy
+ *         timestamp:
+ *           type: string
+ *           format: date-time
+ *         uptime:
+ *           type: number
+ *           description: Service uptime in seconds
+ *         database:
+ *           type: object
+ *           properties:
+ *             status:
+ *               type: string
+ *               example: connected
+ *             response_time:
+ *               type: number
+ *         rabbitmq:
+ *           type: object
+ *           properties:
+ *             status:
+ *               type: string
+ *               example: connected
+ *         email:
+ *           type: object
+ *           properties:
+ *             configured:
+ *               type: boolean
+ *             service:
+ *               type: string
+ *   
+ *   parameters:
+ *     GatewayUserId:
+ *       in: header
+ *       name: x-user-id
+ *       required: true
+ *       schema:
+ *         type: string
+ *         format: uuid
+ *       description: User ID injected by API Gateway
+ *     
+ *     GatewayUserRole:
+ *       in: header
+ *       name: x-user-role
+ *       required: true
+ *       schema:
+ *         type: string
+ *         enum: [USER, ADMIN]
+ *       description: User role injected by API Gateway
+ *   
+ *   responses:
+ *     Unauthorized:
+ *       description: Unauthorized - Invalid or missing authentication
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ErrorResponse'
+ *     
+ *     Forbidden:
+ *       description: Forbidden - Insufficient permissions
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ErrorResponse'
+ *     
+ *     ValidationError:
+ *       description: Validation Error - Invalid request data
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ErrorResponse'
+ *     
+ *     RateLimitExceeded:
+ *       description: Rate Limit Exceeded
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ErrorResponse'
+ * 
+ * tags:
+ *   - name: Authentication
+ *     description: User authentication operations
+ *   - name: User Management
+ *     description: User profile and management operations
+ *   - name: Health
+ *     description: Service health and monitoring
+ */
+
+const express = require('express');
+const authController = require('../controllers/authController');
+
+// Import validation middleware
+const {
+  validateRegister,
+  validateLogin,
+  validateForgotPassword,
+  validateResetPassword,
+  validateChangePassword,
+  validateRefreshToken,
+  validateEmailVerification,
+  validateAccountDeletion,
+  validateUserIdParam
+} = require('../utils/validation');
+
+// Import security middleware
+const {
+  validateApiGatewayHeaders,
+  requireAdmin,
+  requireUser
+} = require('../middlewares/security');
+
+// Import rate limiting middleware
+const {
+  authLimiter,
+  passwordResetLimiter,
+  registrationLimiter,
+  refreshLimiter
+} = require('../middlewares/rateLimiter');
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             password: "SecurePass123!"
+ *             full_name: "John Doe"
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Registration successful. Please login to access your account."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.post('/register', registrationLimiter, validateRegister, authController.register);
+
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify email address using verification token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Email verification JWT token from email link
+ *           example:
+ *             token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     responses:
+ *       200:
+ *         description: Email verification result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Email verified successfully. You can now login to your account."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     verified:
+ *                       type: boolean
+ *                       example: true
+ *                     alreadyVerified:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Invalid or expired verification token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post('/verify-email', validateEmailVerification, authController.verifyEmail);
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: "user@example.com"
+ *             password: "SecurePass123!"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         headers:
+ *           Set-Cookie:
+ *             description: HTTP-only refresh token cookie
+ *             schema:
+ *               type: string
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       423:
+ *         description: Account locked due to too many failed attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.post('/login', authLimiter, validateLogin, authController.login);
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token using refresh token
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: cookie
+ *         name: refreshToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: HTTP-only refresh token cookie
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         headers:
+ *           Set-Cookie:
+ *             description: New HTTP-only refresh token cookie
+ *             schema:
+ *               type: string
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       401:
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.post('/refresh', refreshLimiter, validateRefreshToken, authController.refreshToken);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User email address
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Password reset email sent (or user not found - same response for security)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "If an account with that email exists, a password reset link has been sent"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.post('/forgot-password', passwordResetLimiter, validateForgotPassword, authController.forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password using reset token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Password reset token from email
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password (min 8 characters)
+ *           example:
+ *             token: "reset-token-from-email"
+ *             newPassword: "NewSecurePass123!"
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Password reset successfully"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Invalid or expired reset token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.post('/reset-password', authLimiter, validateResetPassword, authController.resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service health status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthResponse'
+ */
+router.get('/health', authController.health);
+
+/**
+ * @swagger
+ * /api/auth/liveness:
+ *   get:
+ *     summary: Kubernetes liveness probe
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is alive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: alive
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
+router.get('/liveness', authController.liveness);
+
+/**
+ * @swagger
+ * /api/auth/readiness:
+ *   get:
+ *     summary: Kubernetes readiness probe
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is ready to serve traffic
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ready
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 database:
+ *                   type: string
+ *                   example: connected
+ *       503:
+ *         description: Service not ready
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get('/readiness', authController.readiness);
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user and invalidate refresh tokens
+ *     tags: [Authentication]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         headers:
+ *           Set-Cookie:
+ *             description: Cleared refresh token cookie
+ *             schema:
+ *               type: string
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out successfully"
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.post('/logout', validateApiGatewayHeaders, authController.logout);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get('/me', validateApiGatewayHeaders, requireUser, authController.getCurrentUser);
+
+/**
+ * @swagger
+ * /api/auth/change-password:
+ *   post:
+ *     summary: Change user password
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: Current user password
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password (min 8 characters)
+ *           example:
+ *             currentPassword: "CurrentPass123!"
+ *             newPassword: "NewSecurePass123!"
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Password changed successfully"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Current password is incorrect
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.post('/change-password', 
+  validateApiGatewayHeaders, 
+  requireUser, 
+  authLimiter, 
+  validateChangePassword, 
+  authController.changePassword
+);
+
+/**
+ * @swagger
+ * /api/auth/cleanup:
+ *   post:
+ *     summary: Cleanup expired tokens and sessions (Admin only)
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     responses:
+ *       200:
+ *         description: Cleanup completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Cleanup completed successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     expired_tokens_removed:
+ *                       type: number
+ *                       example: 15
+ *                     expired_reset_tokens_removed:
+ *                       type: number
+ *                       example: 8
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+router.post('/cleanup', validateApiGatewayHeaders, requireAdmin, authController.cleanup);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   delete:
+ *     summary: Delete own account (self-deletion)
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *               - confirmText
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: Current password for verification
+ *           example:
+ *             password: "CurrentPassword123!"
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Account deleted successfully"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Invalid password or unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Admin accounts cannot be self-deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.delete('/me', 
+  validateApiGatewayHeaders, 
+  requireUser, 
+  authLimiter,
+  validateAccountDeletion, 
+  authController.deleteAccount
+);
+
+/**
+ * @swagger
+ * /api/auth/users/{id}:
+ *   delete:
+ *     summary: Delete user account (admin only)
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID to delete
+ *     responses:
+ *       200:
+ *         description: User account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User account deleted successfully"
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Admin role required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.delete('/users/:id', 
+  validateApiGatewayHeaders, 
+  requireAdmin, 
+  authLimiter,
+  validateUserIdParam,
+  authController.deleteUser
+);
+
+module.exports = router; 
