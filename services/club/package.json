@@ -1,0 +1,32 @@
+{
+  "name": "club-service",
+  "version": "1.0.0",
+  "description": "Club management service for the Club Management System",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=tests/models",
+    "test:controllers": "jest --testPathPattern=tests/controllers",
+    "test:middlewares": "jest --testPathPattern=tests/middlewares",
+    "test:middleware": "jest --testPathPattern=tests/middleware",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:coverage": "jest --coverage",
+    "test:all": "jest",
+    "setup-tests": "node -e \"console.log('Running test setup script...'); require('child_process').execSync('npm install --no-save mongodb-memory-server@8.15.1 supertest', {stdio: 'inherit'}); console.log('Dependencies installed!');\""
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^8.15.1",
+    "nodemon": "^3.0.1",
+    "supertest": "^7.1.1"
+  }
+}

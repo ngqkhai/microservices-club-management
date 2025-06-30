@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email Address</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fc;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .message {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+            transition: transform 0.2s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        .alternative-link {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        .security-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .security-notice strong {
+            color: #856404;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+            .header {
+                padding: 25px 20px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Verify Your Email</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hello {{fullName}},
+            </div>
+            
+            <div class="message">
+                Welcome to Club Management! To complete your registration and secure your account, please verify your email address by clicking the button below.
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{verificationLink}}" class="cta-button">
+                    ✓ Verify Email Address
+                </a>
+            </div>
+            
+            <div class="security-notice">
+                <strong>Security Note:</strong> This verification link will expire in 1 hour for your security. If you didn't create an account with us, you can safely ignore this email.
+            </div>
+            
+            <div class="message">
+                If the button above doesn't work, you can copy and paste this link into your browser:
+            </div>
+            
+            <div class="alternative-link">
+                {{verificationLink}}
+            </div>
+            
+            <div class="message">
+                After verification, you'll be able to:
+                <ul>
+                    <li>Access your club dashboard</li>
+                    <li>Join club events and activities</li>
+                    <li>Connect with other members</li>
+                    <li>Manage your profile and preferences</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>This email was sent by Club Management System</p>
+            <p>If you have any questions, please contact our support team.</p>
+            <p>© 2024 Club Management. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html> 
