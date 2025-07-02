@@ -206,6 +206,7 @@
 
 const express = require('express');
 const authController = require('../controllers/authController');
+const jwtUtil = require('../utils/jwt');
 
 // Import validation middleware
 const {
@@ -878,5 +879,56 @@ router.delete('/users/:id',
   validateUserIdParam,
   authController.deleteUser
 );
+
+// Token verification endpoint for Kong API Gateway
+router.get('/verify-token', (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Verify the token using our JWT utility
+    const decoded = jwtUtil.verifyAccessToken(token);
+    
+    // Return user information as headers that Kong can use
+    res.set('X-User-Id', decoded.id);
+    res.set('X-User-Email', decoded.email);
+    res.set('X-User-Role', decoded.role);
+    
+    res.json({
+      success: true,
+      user: {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role
+      }
+    });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// Public key endpoint for Kong API Gateway
+router.get('/public-key', (req, res) => {
+  try {
+    res.json({
+      publicKey: jwtUtil.getPublicKey(),
+      algorithm: jwtUtil.getAlgorithm(),
+      keyId: 'auth-service-key-1'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve public key' });
+  }
+});
+
+// JWKS endpoint for standards compliance
+router.get('/.well-known/jwks.json', (req, res) => {
+  try {
+    res.json(jwtUtil.getJWKS());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve JWKS' });
+  }
+});
 
 module.exports = router; 

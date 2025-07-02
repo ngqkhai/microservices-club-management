@@ -84,18 +84,21 @@ class ConfigManager {
       TEST_DB_PASSWORD: Joi.string()
         .default('password'),
 
-      // JWT Configuration
-      JWT_SECRET: Joi.string()
-        .min(32)
-        .required()
-        .messages({
-          'any.required': 'JWT secret (JWT_SECRET) is required',
-          'string.min': 'JWT secret must be at least 32 characters long'
-        }),
+      // JWT Configuration - Asymmetric
+      JWT_ALGORITHM: Joi.string()
+        .valid('RS256', 'RS384', 'RS512')
+        .default('RS256'),
+      
+      JWT_PRIVATE_KEY_PATH: Joi.string()
+        .default('./src/config/keys/private.pem'),
+      
+      JWT_PUBLIC_KEY_PATH: Joi.string()
+        .default('./src/config/keys/public.pem'),
       
       JWT_EXPIRES_IN: Joi.string()
         .default('15m'),
       
+      // Refresh Token - Keep symmetric for security
       REFRESH_TOKEN_SECRET: Joi.string()
         .min(32)
         .required()
@@ -217,7 +220,9 @@ class ConfigManager {
       TEST_DB_PASSWORD: process.env.TEST_DB_PASSWORD,
       
       // JWT
-      JWT_SECRET: process.env.JWT_SECRET,
+      JWT_ALGORITHM: process.env.JWT_ALGORITHM,
+      JWT_PRIVATE_KEY_PATH: process.env.JWT_PRIVATE_KEY_PATH,
+      JWT_PUBLIC_KEY_PATH: process.env.JWT_PUBLIC_KEY_PATH,
       JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
       REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
       REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN,
@@ -398,7 +403,9 @@ class ConfigManager {
    */
   getJWTConfig() {
     return {
-      accessTokenSecret: this.config.JWT_SECRET,
+      algorithm: this.config.JWT_ALGORITHM,
+      privateKeyPath: this.config.JWT_PRIVATE_KEY_PATH,
+      publicKeyPath: this.config.JWT_PUBLIC_KEY_PATH,
       accessTokenExpiry: this.config.JWT_EXPIRES_IN,
       refreshTokenSecret: this.config.REFRESH_TOKEN_SECRET,
       refreshTokenExpiry: this.config.REFRESH_TOKEN_EXPIRES_IN
