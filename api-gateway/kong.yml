@@ -1,0 +1,200 @@
+_format_version: "3.0"
+_transform: true
+
+# JWT Consumers (will be configured via setup script)
+consumers:
+  - username: club-management-system
+
+# Services
+services:
+  # Auth Service
+  - name: auth-service
+    host: auth-service
+    port: 3001
+    protocol: http
+    path: /api/auth
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+
+  # Notification Service
+  - name: notify-service
+    host: notify-service
+    port: 3005
+    protocol: http
+    path: /api/notifications
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+
+# Routes
+routes:
+  # Auth Routes (Public - No JWT required)
+  - name: auth-register
+    service: auth-service
+    paths:
+      - /api/auth/register
+    methods:
+      - POST
+    strip_path: false
+
+  - name: auth-login
+    service: auth-service
+    paths:
+      - /api/auth/login
+    methods:
+      - POST
+    strip_path: false
+
+  - name: auth-refresh
+    service: auth-service
+    paths:
+      - /api/auth/refresh
+    methods:
+      - POST
+    strip_path: false
+
+  - name: auth-verify-email
+    service: auth-service
+    paths:
+      - /api/auth/verify-email
+    methods:
+      - POST
+    strip_path: false
+
+  - name: auth-forgot-password
+    service: auth-service
+    paths:
+      - /api/auth/forgot-password
+    methods:
+      - POST
+    strip_path: false
+
+  - name: auth-reset-password
+    service: auth-service
+    paths:
+      - /api/auth/reset-password
+    methods:
+      - POST
+    strip_path: false
+
+  - name: auth-public-key
+    service: auth-service
+    paths:
+      - /api/auth/public-key
+      - /api/auth/.well-known/jwks.json
+    methods:
+      - GET
+    strip_path: false
+
+  - name: auth-health
+    service: auth-service
+    paths:
+      - /api/auth/health
+      - /api/auth/liveness
+      - /api/auth/readiness
+    methods:
+      - GET
+    strip_path: false
+
+  # Protected Auth Routes (JWT required)
+  - name: auth-protected
+    service: auth-service
+    paths:
+      - /api/auth/me
+      - /api/auth/logout
+      - /api/auth/change-password
+    methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+    strip_path: false
+
+  # Notification Routes (All protected)
+  - name: notify-routes
+    service: notify-service
+    paths:
+      - /api/notifications
+    methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+    strip_path: false
+
+# Plugins
+plugins:
+  # JWT Plugin for Protected Routes
+  - name: jwt
+    route: auth-protected
+    config:
+      key_claim_name: kid
+      claims_to_verify:
+        - exp
+        - aud
+        - iss
+      secret_is_base64: false
+      run_on_preflight: true
+
+  - name: jwt
+    route: notify-routes
+    config:
+      key_claim_name: kid
+      claims_to_verify:
+        - exp
+        - aud
+        - iss
+      secret_is_base64: false
+      run_on_preflight: true
+
+  # Request Transformer to inject user headers
+  - name: request-transformer
+    route: auth-protected
+    config:
+      add:
+        headers:
+          - "x-user-id:$(X-JWT-Claim-id)"
+          - "x-user-email:$(X-JWT-Claim-email)"
+          - "x-user-role:$(X-JWT-Claim-role)"
+
+  - name: request-transformer
+    route: notify-routes
+    config:
+      add:
+        headers:
+          - "x-user-id:$(X-JWT-Claim-id)"
+          - "x-user-email:$(X-JWT-Claim-email)"
+          - "x-user-role:$(X-JWT-Claim-role)"
+
+  # CORS Plugin
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - Authorization
+        - X-Auth-Token
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+
+  # Rate Limiting
+  - name: rate-limiting
+    config:
+      minute: 100
+      hour: 1000
+      policy: local 
