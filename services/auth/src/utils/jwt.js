@@ -1,17 +1,33 @@
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../config/logger');
 const config = require('../config');
 
 class JWTUtil {
   constructor() {
     const jwtConfig = config.getJWTConfig();
-    this.accessTokenSecret = jwtConfig.accessTokenSecret;
+    this.algorithm = jwtConfig.algorithm;
     this.accessTokenExpiry = jwtConfig.accessTokenExpiry;
     this.refreshTokenSecret = jwtConfig.refreshTokenSecret;
     this.refreshTokenExpiry = jwtConfig.refreshTokenExpiry;
 
-    if (!this.accessTokenSecret || !this.refreshTokenSecret) {
-      throw new Error('JWT secrets must be defined in environment variables');
+    // Load RSA keys for access tokens
+    try {
+      const privateKeyPath = path.resolve(jwtConfig.privateKeyPath);
+      const publicKeyPath = path.resolve(jwtConfig.publicKeyPath);
+      
+      this.privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+      this.publicKey = fs.readFileSync(publicKeyPath, 'utf8');
+      
+      logger.info('RSA keys loaded successfully for JWT signing');
+    } catch (error) {
+      logger.error('Failed to load RSA keys:', error);
+      throw new Error('RSA keys required for JWT signing. Run: node scripts/generate-keys.js');
+    }
+
+    if (!this.refreshTokenSecret) {
+      throw new Error('Refresh token secret must be defined in environment variables');
     }
   }
 
@@ -24,10 +40,16 @@ class JWTUtil {
         type: 'access'
       };
 
-      return jwt.sign(tokenPayload, this.accessTokenSecret, {
+      return jwt.sign(tokenPayload, this.privateKey, {
+        algorithm: this.algorithm,
         expiresIn: this.accessTokenExpiry,
         issuer: 'auth-service',
-        audience: 'club-management-system'
+        audience: 'club-management-system',
+        header: {
+          alg: this.algorithm,
+          typ: 'JWT',
+          kid: 'auth-service-key-1' // For Kong JWT plugin key identification
+        }
       });
     } catch (error) {
       logger.error('Error generating access token:', error);
@@ -56,7 +78,8 @@ class JWTUtil {
 
   verifyAccessToken(token) {
     try {
-      return jwt.verify(token, this.accessTokenSecret, {
+      return jwt.verify(token, this.publicKey, {
+        algorithms: [this.algorithm],
         issuer: 'auth-service',
         audience: 'club-management-system'
       });
@@ -131,7 +154,8 @@ class JWTUtil {
         type: 'email_verification'
       };
 
-      return jwt.sign(tokenPayload, this.accessTokenSecret, {
+      return jwt.sign(tokenPayload, this.privateKey, {
+        algorithm: this.algorithm,
         expiresIn: '1h', // 1 hour expiration for email verification
         issuer: 'auth-service',
         audience: 'club-management-system'
@@ -144,7 +168,8 @@ class JWTUtil {
 
   verifyEmailVerificationToken(token) {
     try {
-      const decoded = jwt.verify(token, this.accessTokenSecret, {
+      const decoded = jwt.verify(token, this.publicKey, {
+        algorithms: [this.algorithm],
         issuer: 'auth-service',
         audience: 'club-management-system'
       });
@@ -177,6 +202,38 @@ class JWTUtil {
     return {
       accessToken: this.generateAccessToken(payload),
       refreshToken: this.generateRefreshToken(payload)
+    };
+  }
+
+  /**
+   * Get public key for Kong API Gateway
+   */
+  getPublicKey() {
+    return this.publicKey;
+  }
+
+  /**
+   * Get JWT algorithm
+   */
+  getAlgorithm() {
+    return this.algorithm;
+  }
+
+  /**
+   * Get JWKS (JSON Web Key Set) for Kong
+   */
+  getJWKS() {
+    const crypto = require('crypto');
+    const key = crypto.createPublicKey(this.publicKey);
+    const jwk = key.export({ format: 'jwk' });
+    
+    return {
+      keys: [{
+        ...jwk,
+        kid: 'auth-service-key-1',
+        alg: this.algorithm,
+        use: 'sig'
+      }]
     };
   }
 }

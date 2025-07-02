@@ -30,6 +30,18 @@ const validateApiGatewayHeaders = (req, res, next) => {
   const requiredHeaders = ['x-user-id', 'x-user-role'];
   const optionalHeaders = ['x-user-email', 'x-request-id'];
   
+  // DEBUG: Log all headers for debugging Kong JWT claims injection
+  logger.info('🔍 DEBUG: Incoming headers from Kong', {
+    path: req.path,
+    method: req.method,
+    allHeaders: req.headers,
+    'x-user-id': req.headers['x-user-id'],
+    'x-user-role': req.headers['x-user-role'], 
+    'x-user-email': req.headers['x-user-email'],
+    'x-user-id-type': typeof req.headers['x-user-id'],
+    'authorization': req.headers['authorization']
+  });
+  
   // Check if request is from API Gateway
   // const gatewaySecret = req.headers['x-gateway-secret'];
   // if (!gatewaySecret || gatewaySecret !== process.env.API_GATEWAY_SECRET) {
