@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - '3000:3000'
+    networks:
+      - user-net
+
+networks:
+  user-net:
