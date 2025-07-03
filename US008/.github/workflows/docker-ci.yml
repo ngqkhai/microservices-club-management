@@ -2,7 +2,7 @@ name: Docker CI for user-service
 
 on:
   push:
-    branches: [Thuận]
+    branches: [Thuan]
 
 jobs:
   build:
