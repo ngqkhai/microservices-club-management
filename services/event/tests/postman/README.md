@@ -1,33 +1,60 @@
-# US-014 Join Event API - Postman Test Collection
+# Postman Collections - Event API Testing
 
-Collection đơn giản để test API Join Event (US-014) với authentication qua API Gateway (Kong).
+Simple Postman collections for testing US-014 (Join Event) and US-015 (Leave Event) APIs.
 
-## 📁 Files
+## 📁 Collections
 
-- **`US-014-Join-Event.postman_collection.json`** - Postman collection với 5 test cases
-- **`README.md`** - Hướng dẫn sử dụng (file này)
+- **`US-014-Join-Event.postman_collection.json`** - Join Event test cases
+- **`US-015-Leave-Event.postman_collection.json`** - Leave Event test cases
 
-## 🎯 API Endpoint
+## 🚀 Quick Setup
 
-```http
-POST /api/events/{event_id}/join
+### 1. Import Collections
+1. Open **Postman**
+2. Click **Import** → Select both JSON files
+3. Import into Postman
+
+### 2. Environment Variables
+```
+base_url = http://localhost:3003
+user_id = test-user-123
+user_email = test@example.com 
+user_role = USER
+event_id = 507f1f77bcf86cd799439011
 ```
 
-**Authentication:** API Gateway headers (Kong injection)
-- `x-user-id`: UUID của user  
-- `x-user-role`: `USER` hoặc `ADMIN`
-- `x-user-email`: Email của user
+### 3. Authentication Headers
+All requests automatically include:
+```
+X-User-ID: {{user_id}}
+X-User-Email: {{user_email}}
+X-User-Role: {{user_role}}
+```
 
-## 🚀 Hướng dẫn sử dụng
+## 🧪 Test Cases
 
-### Bước 1: Import Collection
+### US-014 Join Event
+1. ✅ **Success Case** - User joins available event
+2. ❌ **Already Joined** - User tries to join again  
+3. ❌ **Event Not Found** - Join non-existent event
+4. ❌ **Invalid Event ID** - Malformed ObjectId
+5. ❌ **Missing Auth** - Request without headers
 
-1. Mở **Postman**
-2. Click **Import** 
-3. Chọn file `US-014-Join-Event.postman_collection.json`
-4. Click **Import**
+### US-015 Leave Event  
+1. ✅ **Success Case** - User leaves joined event
+2. ❌ **Not Joined** - User tries to leave un-joined event
+3. ❌ **Event Not Found** - Leave non-existent event
+4. ❌ **Invalid Event ID** - Malformed ObjectId
+5. ❌ **Missing Auth** - Request without headers
 
-### Bước 2: Cấu hình Variables
+## 🎯 Usage
+
+1. **Start Event Service**: `docker-compose up -d event-service`
+2. **Setup Test Data**: `cd tests && node setup-test-data-quick.js`
+3. **Run Collections**: Execute all requests in Postman
+4. **Expected Results**: Success cases pass, error cases return proper error codes
+
+For automated testing, use the Node.js scripts in the `tests/` directory instead.
 
 Trong Postman, cấu hình các collection variables:
 

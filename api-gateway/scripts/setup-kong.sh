@@ -82,6 +82,18 @@ curl -s -X POST "${KONG_ADMIN_URL}/services" \
     -d "name=notify-service" \
     -d "url=http://notify-service:3005" > /dev/null
 
+# Create Club Service
+echo "🔧 Creating club service..."
+curl -s -X POST "${KONG_ADMIN_URL}/services" \
+    -d "name=club-service" \
+    -d "url=http://club-service:3002" > /dev/null
+
+# Create Event Service
+echo "🔧 Creating event service..."
+curl -s -X POST "${KONG_ADMIN_URL}/services" \
+    -d "name=event-service" \
+    -d "url=http://event-service:3003" > /dev/null
+
 echo "✅ Services created successfully"
 
 # Create Auth Routes (Public - No JWT required)
@@ -133,6 +145,26 @@ curl -s -X POST "${KONG_ADMIN_URL}/services/notify-service/routes" \
     -d "methods[]=DELETE" \
     -d "strip_path=false" > /dev/null
 
+# Club routes
+curl -s -X POST "${KONG_ADMIN_URL}/services/club-service/routes" \
+    -d "name=club-routes" \
+    -d "paths[]=/api/clubs" \
+    -d "methods[]=GET" \
+    -d "methods[]=POST" \
+    -d "methods[]=PUT" \
+    -d "methods[]=DELETE" \
+    -d "strip_path=false" > /dev/null
+
+# Event routes
+curl -s -X POST "${KONG_ADMIN_URL}/services/event-service/routes" \
+    -d "name=event-routes" \
+    -d "paths[]=/api/events" \
+    -d "methods[]=GET" \
+    -d "methods[]=POST" \
+    -d "methods[]=PUT" \
+    -d "methods[]=DELETE" \
+    -d "strip_path=false" > /dev/null
+
 echo "✅ Routes created successfully"
 
 # Add JWT plugin to protected routes
@@ -145,6 +177,20 @@ curl -s -X POST "${KONG_ADMIN_URL}/routes/auth-protected/plugins" \
     -d "config.claims_to_verify[]=iss" > /dev/null
 
 curl -s -X POST "${KONG_ADMIN_URL}/routes/notify-routes/plugins" \
+    -d "name=jwt" \
+    -d "config.key_claim_name=kid" \
+    -d "config.claims_to_verify[]=exp" \
+    -d "config.claims_to_verify[]=aud" \
+    -d "config.claims_to_verify[]=iss" > /dev/null
+
+curl -s -X POST "${KONG_ADMIN_URL}/routes/club-routes/plugins" \
+    -d "name=jwt" \
+    -d "config.key_claim_name=kid" \
+    -d "config.claims_to_verify[]=exp" \
+    -d "config.claims_to_verify[]=aud" \
+    -d "config.claims_to_verify[]=iss" > /dev/null
+
+curl -s -X POST "${KONG_ADMIN_URL}/routes/event-routes/plugins" \
     -d "name=jwt" \
     -d "config.key_claim_name=kid" \
     -d "config.claims_to_verify[]=exp" \
@@ -164,6 +210,16 @@ curl -s -X POST "${KONG_ADMIN_URL}/routes/auth-protected/plugins" \
 
 # Add JWT claims extraction to notify routes
 curl -s -X POST "${KONG_ADMIN_URL}/routes/notify-routes/plugins" \
+    -d "name=post-function" \
+    --data-urlencode "config.access[]=${JWT_CLAIMS_SCRIPT}" > /dev/null
+
+# Add JWT claims extraction to club routes
+curl -s -X POST "${KONG_ADMIN_URL}/routes/club-routes/plugins" \
+    -d "name=post-function" \
+    --data-urlencode "config.access[]=${JWT_CLAIMS_SCRIPT}" > /dev/null
+
+# Add JWT claims extraction to event routes
+curl -s -X POST "${KONG_ADMIN_URL}/routes/event-routes/plugins" \
     -d "name=post-function" \
     --data-urlencode "config.access[]=${JWT_CLAIMS_SCRIPT}" > /dev/null
 
@@ -201,8 +257,8 @@ echo "   • Kong Proxy: http://localhost:8000"
 echo "   • Consumer: ${CONSUMER_NAME}"
 echo "   • JWT Key ID: ${KEY_ID}"
 echo "   • Algorithm: RS256"
-echo "   • Services: auth-service, notify-service"
-echo "   • Routes: auth-health, auth-public, auth-protected, notify-routes"
+echo "   • Services: auth-service, club-service, event-service, notify-service"
+echo "   • Routes: auth-health, auth-public, auth-protected, club-routes, event-routes, notify-routes"
 echo ""
 echo "🌐 API Gateway is ready to receive requests!"
 echo "   Frontend should send requests to: http://localhost:8000" 
