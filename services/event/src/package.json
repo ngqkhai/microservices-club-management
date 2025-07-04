@@ -1,8 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "express": "^5.1.0",
-    "qrcode": "^1.5.4"
-  }
-  
-}
