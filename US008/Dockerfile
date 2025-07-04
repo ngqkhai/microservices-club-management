@@ -3,11 +3,9 @@ FROM node:18-slim
 WORKDIR /app
 
 COPY src/package*.json ./
-
-RUN npm ci
+RUN npm install
 
 COPY src .
 
 EXPOSE 3000
-
 CMD ["node", "index.js"]
