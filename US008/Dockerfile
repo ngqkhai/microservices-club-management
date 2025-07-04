@@ -2,10 +2,10 @@ FROM node:18-slim
 
 WORKDIR /app
 
-COPY src/package*.json ./
+COPY package*.json ./
 RUN npm install
 
-COPY src .
+COPY . .
 
 EXPOSE 3000
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
