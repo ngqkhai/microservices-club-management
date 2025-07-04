@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import { eventRoutes, rsvpRoutes, joinRoutes } from './routes/eventRoutes.js';
+import { eventRoutes, rsvpRoutes, joinRoutes, leaveRoutes } from './routes/eventRoutes.js';
 import { connectToDatabase } from './config/database.js';
 
 // Load environment variables
@@ -17,6 +17,7 @@ app.use(bodyParser.json());
 app.use(eventRoutes);
 app.use(rsvpRoutes);
 app.use(joinRoutes);
+app.use(leaveRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

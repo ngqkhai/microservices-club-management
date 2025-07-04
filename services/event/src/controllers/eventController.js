@@ -1,5 +1,5 @@
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
-import { getFilteredEvents, rsvpToEvent, joinEventService } from '../services/eventService.js';
+import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService } from '../services/eventService.js';
 
 export const getEvents = (req, res) => {
   try {
@@ -110,6 +110,81 @@ export const joinEvent = async (req, res) => {
       status: 500,
       error: 'INTERNAL_ERROR',
       message: 'An error occurred while joining the event'
+    });
+  }
+};
+
+export const leaveEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id; // Get user ID from API Gateway headers
+    
+    console.log('leaveEvent called:', { eventId, userId });
+    
+    const result = await leaveEventService(eventId, userId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Left event successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('leaveEvent error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      eventId: req.params.id,
+      userId: req.user?.id
+    });
+
+    // Handle specific error types
+    if (error.message === 'Event not found') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+    
+    if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
+      return res.status(503).json({
+        status: 503,
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Service temporarily unavailable. Please try again later.'
+      });
+    }
+    
+    if (error.message === 'You have not joined this event') {
+      return res.status(400).json({
+        status: 400,
+        error: 'NOT_JOINED',
+        message: 'You have not joined this event'
+      });
+    }
+
+    // Handle MongoDB specific errors
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        status: 400,
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid data provided'
+      });
+    }
+    
+    // Generic error handling
+    console.error('Unhandled error in leaveEvent:', error);
+    res.status(500).json({
+      status: 500,
+      error: 'INTERNAL_ERROR',
+      message: 'An error occurred while leaving the event'
     });
   }
 };

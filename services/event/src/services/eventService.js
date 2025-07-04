@@ -101,3 +101,73 @@ export async function joinEventService(eventId, userId) {
     throw error;
   }
 }
+
+export async function leaveEventService(eventId, userId) {
+  try {
+    console.log('leaveEventService called with:', { eventId, userId });
+    
+    // Validate eventId format (MongoDB ObjectId)
+    if (!eventId || !eventId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('Invalid eventId format:', eventId);
+      throw new Error('Event not found');
+    }
+
+    // Check database connection
+    if (!mongoose.connection.readyState) {
+      console.error('Database not connected');
+      throw new Error('Database connection unavailable');
+    }
+
+    console.log('Searching for event with ID:', eventId);
+    
+    // Check if event exists
+    const event = await Event.findById(eventId);
+    console.log('Event found:', event ? 'Yes' : 'No');
+    
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    // Check if user has joined the event
+    const existingParticipant = await Participant.findOne({
+      event_id: eventId,
+      user_id: userId
+    });
+
+    if (!existingParticipant) {
+      throw new Error('You have not joined this event');
+    }
+
+    // Remove participant record
+    await Participant.deleteOne({
+      event_id: eventId,
+      user_id: userId
+    });
+
+    return {
+      eventId,
+      userId,
+      leftAt: new Date(),
+      eventTitle: event.title,
+      eventStartAt: event.start_at
+    };
+  } catch (error) {
+    // Log the actual error for debugging
+    console.error('leaveEventService error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      eventId,
+      userId,
+      dbState: mongoose.connection.readyState
+    });
+    
+    // Handle database connection errors
+    if (error.message === 'Database connection unavailable') {
+      throw new Error('Service temporarily unavailable');
+    }
+    
+    // Re-throw the error to be handled by the controller
+    throw error;
+  }
+}
