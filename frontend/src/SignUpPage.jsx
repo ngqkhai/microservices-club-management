@@ -7,28 +7,61 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const navigate = useNavigate();
 
-  const handleSubmit = () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
     if (!email || !name || !password || !confirmPassword) {
-      alert("Vui lòng điền đầy đủ thông tin.");
+      setError("Vui lòng điền đầy đủ thông tin.");
       return;
     }
     if (password !== confirmPassword) {
-      alert("Mật khẩu không khớp.");
+      setError("Mật khẩu không khớp.");
       return;
     }
-
-    navigate("/verifySignUp", { state: { email } });
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: name,
+          confirmPassword,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+        setTimeout(() => {
+          navigate("/verifySignUp", { state: { email } });
+        }, 1500);
+      } else {
+        setError(result.message || "Đăng ký thất bại");
+      }
+    } catch (err) {
+      setError("Lỗi mạng hoặc server không phản hồi");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page" style={{ fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif' }}>
       <div
         className="background"
         style={{ backgroundImage: `url(${backgroundImage})` }}
@@ -48,6 +81,7 @@ export default function SignUpPage() {
                 textAlign: "center",
                 color: "rgba(51, 44, 85, 1)",
                 fontSize: "16px",
+                fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif',
               }}
             >
               Kết nối, phát triển, tỏa sáng - bắt đầu từ đây!
@@ -58,63 +92,90 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="name">Họ tên</label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Mật khẩu</label>
-            <div className="password-wrapper">
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="name">Họ tên</label>
               <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                style={{ fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif' }}
               />
-              <span
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </span>
             </div>
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="confirm-password">Xác nhận mật khẩu</label>
-            <div className="password-wrapper">
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
               <input
-                id="confirm-password"
-                type={showPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif' }}
               />
-              <span
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </span>
             </div>
-          </div>
 
-          <button onClick={handleSubmit}>Tạo tài khoản mới</button>
+            <div className="form-group">
+              <label htmlFor="password">Mật khẩu</label>
+              <div className="password-wrapper">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif' }}
+                />
+                <span
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirm-password">Xác nhận mật khẩu</label>
+              <div className="password-wrapper">
+                <input
+                  id="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  style={{ fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif' }}
+                />
+                <span
+                  className="toggle-password"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {showConfirmPassword ? "🙈" : "👁️"}
+                </span>
+              </div>
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  fontWeight: "bold",
+                  fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif',
+                  minWidth: 180,
+                  textAlign: "center",
+                }}
+              >
+                {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản mới"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
