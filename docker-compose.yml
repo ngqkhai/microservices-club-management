@@ -285,12 +285,6 @@ services:
         condition: service_healthy
     networks:
       - club_network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3005/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     restart: unless-stopped
 
 volumes:
