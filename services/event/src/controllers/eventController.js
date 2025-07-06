@@ -1,5 +1,5 @@
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
-import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService } from '../services/eventService.js';
+import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService, createEventService, updateEventService, deleteEventService } from '../services/eventService.js';
 
 export const getEvents = (req, res) => {
   try {
@@ -185,6 +185,88 @@ export const leaveEvent = async (req, res) => {
       status: 500,
       error: 'INTERNAL_ERROR',
       message: 'An error occurred while leaving the event'
+    });
+  }
+};
+
+export const createEvent = async (req, res, next) => {
+  try {
+    const eventData = { ...req.body, created_by: req.user.id };
+    const newEvent = await createEventService(eventData);
+    res.status(201).json(newEvent);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateEvent = async (req, res, next) => {
+  try {
+    const eventId = req.params.id;
+    const eventData = req.body;
+    const updatedEvent = await updateEventService(eventId, eventData);
+    res.status(200).json(updatedEvent);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteEvent = async (req, res, next) => {
+  try {
+    const eventId = req.params.id;
+    await deleteEventService(eventId);
+    res.status(200).json({
+      status: 'success',
+      message: 'Event deleted successfully'
+    });
+  } catch (error) {
+    console.error('deleteEvent error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      eventId: req.params.id,
+      userId: req.user?.id
+    });
+
+    // Handle specific error types
+    if (error.message === 'Event not found') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+    
+    if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
+      return res.status(503).json({
+        status: 503,
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Service temporarily unavailable. Please try again later.'
+      });
+    }
+
+    // Handle MongoDB specific errors
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        status: 400,
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid data provided'
+      });
+    }
+    
+    // Generic error handling
+    console.error('Unhandled error in deleteEvent:', error);
+    res.status(500).json({
+      status: 500,
+      error: 'INTERNAL_ERROR',
+      message: 'An error occurred while deleting the event'
     });
   }
 };

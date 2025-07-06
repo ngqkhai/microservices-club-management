@@ -29,8 +29,10 @@ until curl -f -s "${AUTH_SERVICE_URL}/api/auth/health" > /dev/null 2>&1; do
 done
 echo "✅ Auth Service is ready"
 
-# Fetch public key from auth service
-echo "🔑 Fetching RSA public key from auth service..."
+# Fetch public key from auth service (INTERNAL ACCESS)
+# Note: Kong fetches keys internally for JWT validation setup
+# Public key endpoints are NOT exposed through Kong Gateway for security
+echo "🔑 Fetching RSA public key from auth service (internal access)..."
 PUBLIC_KEY=$(curl -s "${AUTH_SERVICE_URL}/api/auth/public-key" | jq -r '.publicKey')
 
 if [ -z "$PUBLIC_KEY" ] || [ "$PUBLIC_KEY" = "null" ]; then
@@ -108,7 +110,7 @@ curl -s -X POST "${KONG_ADMIN_URL}/services/auth-service/routes" \
     -d "methods[]=GET" \
     -d "strip_path=false" > /dev/null
 
-# Auth public routes  
+# Auth public routes (SECURE: Public key endpoints removed for security)
 curl -s -X POST "${KONG_ADMIN_URL}/services/auth-service/routes" \
     -d "name=auth-public" \
     -d "paths[]=/api/auth/register" \
@@ -117,8 +119,6 @@ curl -s -X POST "${KONG_ADMIN_URL}/services/auth-service/routes" \
     -d "paths[]=/api/auth/verify-email" \
     -d "paths[]=/api/auth/forgot-password" \
     -d "paths[]=/api/auth/reset-password" \
-    -d "paths[]=/api/auth/public-key" \
-    -d "paths[]=/api/auth/.well-known/jwks.json" \
     -d "methods[]=GET" \
     -d "methods[]=POST" \
     -d "strip_path=false" > /dev/null
@@ -169,33 +169,57 @@ echo "✅ Routes created successfully"
 
 # Add JWT plugin to protected routes
 echo "🔐 Adding JWT authentication to protected routes..."
-curl -s -X POST "${KONG_ADMIN_URL}/routes/auth-protected/plugins" \
-    -d "name=jwt" \
-    -d "config.key_claim_name=kid" \
-    -d "config.claims_to_verify[]=exp" \
-    -d "config.claims_to_verify[]=aud" \
-    -d "config.claims_to_verify[]=iss" > /dev/null
 
+# Add JWT plugin to auth-protected route
+echo "   Adding JWT plugin to auth-protected route..."
+JWT_PLUGIN_RESPONSE=$(curl -s -X POST "${KONG_ADMIN_URL}/routes/auth-protected/plugins" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "jwt",
+        "config": {
+            "key_claim_name": "kid",
+            "claims_to_verify": ["exp"]
+        }
+    }')
+echo "   JWT plugin response: $JWT_PLUGIN_RESPONSE"
+
+# Add JWT plugin to notify-routes
+echo "   Adding JWT plugin to notify-routes..."
 curl -s -X POST "${KONG_ADMIN_URL}/routes/notify-routes/plugins" \
-    -d "name=jwt" \
-    -d "config.key_claim_name=kid" \
-    -d "config.claims_to_verify[]=exp" \
-    -d "config.claims_to_verify[]=aud" \
-    -d "config.claims_to_verify[]=iss" > /dev/null
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "jwt",
+        "config": {
+            "key_claim_name": "kid",
+            "claims_to_verify": ["exp"]
+        }
+    }' > /dev/null
 
+# Add JWT plugin to club-routes
+echo "   Adding JWT plugin to club-routes..."
 curl -s -X POST "${KONG_ADMIN_URL}/routes/club-routes/plugins" \
-    -d "name=jwt" \
-    -d "config.key_claim_name=kid" \
-    -d "config.claims_to_verify[]=exp" \
-    -d "config.claims_to_verify[]=aud" \
-    -d "config.claims_to_verify[]=iss" > /dev/null
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "jwt",
+        "config": {
+            "key_claim_name": "kid",
+            "claims_to_verify": ["exp"]
+        }
+    }' > /dev/null
 
+# Add JWT plugin to event-routes
+echo "   Adding JWT plugin to event-routes..."
 curl -s -X POST "${KONG_ADMIN_URL}/routes/event-routes/plugins" \
-    -d "name=jwt" \
-    -d "config.key_claim_name=kid" \
-    -d "config.claims_to_verify[]=exp" \
-    -d "config.claims_to_verify[]=aud" \
-    -d "config.claims_to_verify[]=iss" > /dev/null
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "jwt",
+        "config": {
+            "key_claim_name": "kid",
+            "claims_to_verify": ["exp"]
+        }
+    }' > /dev/null
+
+echo "✅ JWT plugins added successfully"
 
 # Add JWT claims extraction for protected routes
 echo "📨 Adding JWT claims extraction for user information..."
