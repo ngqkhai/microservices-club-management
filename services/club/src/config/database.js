@@ -16,9 +16,8 @@ const clubSchema = new mongoose.Schema({
     enum: ['ACTIVE', 'INACTIVE'] 
   },
   created_by: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'User' 
+    type: String, 
+    required: true
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
@@ -35,9 +34,8 @@ const membershipSchema = new mongoose.Schema({
     ref: 'Club' 
   },
   user_id: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'User' 
+    type: String, 
+    required: true 
   },
   role: { 
     type: String, 
@@ -73,8 +71,7 @@ const recruitmentRoundSchema = new mongoose.Schema({
     enum: ['OPEN', 'CLOSED', 'CANCELLED'] 
   },
   created_by: { 
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User' 
+    type: String 
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
@@ -90,9 +87,8 @@ const applicationSchema = new mongoose.Schema({
     ref: 'RecruitmentRound' 
   },
   user_id: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true,
-    ref: 'User' 
+    type: String, 
+    required: true 
   },
   application_data: { type: mongoose.Schema.Types.Mixed, default: {} },
   attachment_url: { type: String },
@@ -110,8 +106,7 @@ const applicationSchema = new mongoose.Schema({
   },
   review_comments: { type: String },
   reviewed_by: { 
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User' 
+    type: String 
   },
   reviewed_at: { type: Date },
   updated_at: { type: Date, default: Date.now }
@@ -130,9 +125,8 @@ const announcementSchema = new mongoose.Schema({
     ref: 'Club' 
   },
   created_by: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true,
-    ref: 'User' 
+    type: String, 
+    required: true
   },
   title: { type: String, required: true },
   body: { type: String, required: true },

@@ -148,6 +148,26 @@ class ClubModel {
       throw error;
     }
   }
+
+  static async findMembership(clubId, userId) {
+    try {
+      const { Membership } = require('../config/database');
+      const membership = await Membership.findOne({ 
+        club_id: clubId, 
+        user_id: userId 
+      }, 'role joined_at');
+
+      if (!membership) return null;
+
+      return {
+        role: membership.role,
+        joined_at: membership.joined_at
+      };
+    } catch (error) {
+      console.error('Error finding membership:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = ClubModel;

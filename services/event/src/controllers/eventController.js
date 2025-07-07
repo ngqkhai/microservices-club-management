@@ -1,5 +1,5 @@
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
-import { getFilteredEvents, rsvpToEvent } from '../services/eventService.js';
+import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService, createEventService, updateEventService, deleteEventService } from '../services/eventService.js';
 
 export const getEvents = (req, res) => {
   try {
@@ -15,10 +15,258 @@ export const handleEventRSVP = async (req, res) => {
   try {
     const event_id = req.params.event_id;
     const dto = new RSVPDTO({ ...req.body, event_id });
-    const user_id = 'u123'; // giả lập
+    const user_id = req.user.id; // Get user ID from API Gateway headers
     const result = await rsvpToEvent(dto.event_id, dto.status, user_id); 
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+export const joinEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id; // Get user ID from API Gateway headers
+    
+    console.log('joinEvent called:', { eventId, userId });
+    
+    const result = await joinEventService(eventId, userId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Joined event successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('joinEvent error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      eventId: req.params.id,
+      userId: req.user?.id
+    });
+
+    // Handle specific error types
+    if (error.message === 'Event not found') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+    
+    if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
+      return res.status(503).json({
+        status: 503,
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Service temporarily unavailable. Please try again later.'
+      });
+    }
+    
+    if (error.message === 'You already joined this event') {
+      return res.status(400).json({
+        status: 400,
+        error: 'ALREADY_JOINED',
+        message: 'You already joined this event'
+      });
+    }
+    
+    if (error.message === 'Event is full') {
+      return res.status(400).json({
+        status: 400,
+        error: 'EVENT_FULL',
+        message: 'Event has reached maximum capacity'
+      });
+    }
+
+    if (error.message === 'Event is not available for joining') {
+      return res.status(400).json({
+        status: 400,
+        error: 'EVENT_NOT_AVAILABLE',
+        message: 'Event is not available for joining'
+      });
+    }
+
+    // Handle MongoDB specific errors
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        status: 400,
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid data provided'
+      });
+    }
+    
+    // Generic error handling
+    console.error('Unhandled error in joinEvent:', error);
+    res.status(500).json({
+      status: 500,
+      error: 'INTERNAL_ERROR',
+      message: 'An error occurred while joining the event'
+    });
+  }
+};
+
+export const leaveEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id; // Get user ID from API Gateway headers
+    
+    console.log('leaveEvent called:', { eventId, userId });
+    
+    const result = await leaveEventService(eventId, userId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Left event successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('leaveEvent error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      eventId: req.params.id,
+      userId: req.user?.id
+    });
+
+    // Handle specific error types
+    if (error.message === 'Event not found') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+    
+    if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
+      return res.status(503).json({
+        status: 503,
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Service temporarily unavailable. Please try again later.'
+      });
+    }
+    
+    if (error.message === 'You have not joined this event') {
+      return res.status(400).json({
+        status: 400,
+        error: 'NOT_JOINED',
+        message: 'You have not joined this event'
+      });
+    }
+
+    // Handle MongoDB specific errors
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        status: 400,
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid data provided'
+      });
+    }
+    
+    // Generic error handling
+    console.error('Unhandled error in leaveEvent:', error);
+    res.status(500).json({
+      status: 500,
+      error: 'INTERNAL_ERROR',
+      message: 'An error occurred while leaving the event'
+    });
+  }
+};
+
+export const createEvent = async (req, res, next) => {
+  try {
+    const eventData = { ...req.body, created_by: req.user.id };
+    const newEvent = await createEventService(eventData);
+    res.status(201).json(newEvent);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateEvent = async (req, res, next) => {
+  try {
+    const eventId = req.params.id;
+    const eventData = req.body;
+    const updatedEvent = await updateEventService(eventId, eventData);
+    res.status(200).json(updatedEvent);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteEvent = async (req, res, next) => {
+  try {
+    const eventId = req.params.id;
+    await deleteEventService(eventId);
+    res.status(200).json({
+      status: 'success',
+      message: 'Event deleted successfully'
+    });
+  } catch (error) {
+    console.error('deleteEvent error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      eventId: req.params.id,
+      userId: req.user?.id
+    });
+
+    // Handle specific error types
+    if (error.message === 'Event not found') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+    
+    if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
+      return res.status(503).json({
+        status: 503,
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Service temporarily unavailable. Please try again later.'
+      });
+    }
+
+    // Handle MongoDB specific errors
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(404).json({
+        status: 404,
+        error: 'EVENT_NOT_FOUND',
+        message: 'Event not found'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        status: 400,
+        error: 'VALIDATION_ERROR',
+        message: 'Invalid data provided'
+      });
+    }
+    
+    // Generic error handling
+    console.error('Unhandled error in deleteEvent:', error);
+    res.status(500).json({
+      status: 500,
+      error: 'INTERNAL_ERROR',
+      message: 'An error occurred while deleting the event'
+    });
   }
 };
