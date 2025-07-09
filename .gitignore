@@ -26,9 +26,9 @@ coverage/
 **/coverage/
 
 # dotenv environment variables
-.env
-**/.env
-.env.*
+# .env
+# **/.env
+# .env.*
 
 # System files
 .DS_Store

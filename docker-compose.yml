@@ -22,6 +22,27 @@ services:
       retries: 10
       start_period: 20s
 
+  # PostgreSQL Database for User Service
+  user-postgres:
+    image: postgres:15-alpine
+    container_name: club_management_user_postgres
+    environment:
+      POSTGRES_DB: club_management_user
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+    networks:
+      - club_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   # Club Service
   club-service:
     build:
@@ -33,7 +54,7 @@ services:
       - ./services/club/.env
     environment:
       # Use MongoDB Atlas or configure local MongoDB
-      PORT: 3002
+      PORT: 3002  
       NODE_ENV: development
       MOCK_DB: false
     ports:
@@ -161,6 +182,57 @@ services:
       retries: 10
       start_period: 60s
 
+  # User Service Database Migration
+  user-migration:
+    build:
+      context: ./services/user
+      dockerfile: Dockerfile
+      target: development
+    container_name: club_management_user_migration
+    env_file:
+      - ./services/user/.env
+    command: ["npm", "run", "migrate"]
+    volumes:
+      - ./services/user:/app
+      - /app/node_modules
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+    networks:
+      - club_network
+    restart: "no"
+
+  # User Service
+  user-service:
+    build:
+      context: ./services/user
+      dockerfile: Dockerfile
+      target: development
+    container_name: club_management_user
+    env_file:
+      - ./services/user/.env
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./services/user:/app
+      - /app/node_modules
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+      user-migration:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_healthy
+    networks:
+      - club_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
   # Kong Configuration Database
   kong-database:
     image: postgres:15-alpine
@@ -255,6 +327,8 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_healthy
+      user-service:
+        condition: service_healthy
       club-service:
         condition: service_healthy
       event-service:
@@ -287,8 +361,29 @@ services:
       - club_network
     restart: unless-stopped
 
+  # pgAdmin for PostgreSQL Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: club_management_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@clubmanagement.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+      - user-postgres
+      - kong-database
+    networks:
+      - club_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  user_postgres_data:
   rabbitmq_data:
   kong_data:
   pgadmin_data:

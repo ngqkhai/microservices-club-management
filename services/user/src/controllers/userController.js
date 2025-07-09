@@ -2,6 +2,29 @@ const userService = require('../services/userService');
 const clubMembershipService = require('../services/clubMembershipService');
 
 class UserController {
+  async createUser(req, res, next) {
+    try {
+      const userData = req.body;
+      const user = await userService.createUser(userData);
+      return res.status(201).json({ 
+        message: 'User created successfully',
+        user: user 
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUser(req, res, next) {
+    try {
+      const userId = req.user.id; // From authMiddleware
+      const user = await userService.getUserProfile(userId);
+      return res.status(200).json(user);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateUser(req, res, next) {
     try {
       const userId = req.user.id; // From authMiddleware

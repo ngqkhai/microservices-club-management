@@ -1,4 +1,4 @@
-const sequelize = require('../src/config/database');
+const { sequelize } = require('../src/config/database');
 const User = require('../src/models/user');
 
 async function seed() {

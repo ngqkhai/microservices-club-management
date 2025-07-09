@@ -96,6 +96,7 @@ curl -s -X POST "${KONG_ADMIN_URL}/services" \
     -d "name=event-service" \
     -d "url=http://event-service:3003" > /dev/null
 
+
 echo "✅ Services created successfully"
 
 # Create Auth Routes (Public - No JWT required)
@@ -251,17 +252,26 @@ curl -s -X POST "${KONG_ADMIN_URL}/routes/event-routes/plugins" \
 echo "🌐 Adding CORS support..."
 curl -s -X POST "${KONG_ADMIN_URL}/plugins" \
     -d "name=cors" \
-    -d "config.origins[]=*" \
+    -d "config.origins[]=http://localhost:3000" \
+    -d "config.origins[]=http://127.0.0.1:3000" \
     -d "config.methods[]=GET" \
     -d "config.methods[]=POST" \
     -d "config.methods[]=PUT" \
     -d "config.methods[]=DELETE" \
     -d "config.methods[]=OPTIONS" \
+    -d "config.methods[]=PATCH" \
     -d "config.headers[]=Accept" \
     -d "config.headers[]=Authorization" \
     -d "config.headers[]=Content-Type" \
+    -d "config.headers[]=X-Requested-With" \
+    -d "config.headers[]=Origin" \
+    -d "config.headers[]=User-Agent" \
+    -d "config.exposed_headers[]=X-Request-ID" \
+    -d "config.exposed_headers[]=X-RateLimit-Limit" \
+    -d "config.exposed_headers[]=X-RateLimit-Remaining" \
     -d "config.credentials=true" \
-    -d "config.max_age=3600" > /dev/null
+    -d "config.max_age=86400" \
+    -d "config.preflight_continue=false" > /dev/null
 
 # Add rate limiting
 echo "⚡ Adding rate limiting..."

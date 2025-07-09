@@ -2,7 +2,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const nock = require('nock');
 const app = require('../src/index');
-const sequelize = require('../src/config/database');
+const { sequelize } = require('../src/config/database');
 const User = require('../src/models/user');
 
 const CLUB_SERVICE_URL = process.env.CLUB_SERVICE_URL || 'http://localhost:3001';

@@ -5,6 +5,10 @@ class UserRepository {
     return User.findByPk(id);
   }
 
+  async createUser(userData) {
+    return User.create(userData);
+  }
+
   async updateUser(id, data) {
     return User.update(
       { ...data, updated_at: new Date() },

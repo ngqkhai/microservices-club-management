@@ -17,6 +17,16 @@ services:
     write_timeout: 60000
     read_timeout: 60000
 
+  # User Service
+  - name: user-service
+    host: user-service
+    port: 3004
+    protocol: http
+    path: /api/users
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+
   # Notification Service
   - name: notify-service
     host: notify-service
@@ -102,6 +112,38 @@ routes:
       - DELETE
     strip_path: false
 
+  # User Service Routes (Internal sync endpoint - no auth required)
+  - name: user-sync
+    service: user-service
+    paths:
+      - /api/users/sync/users
+    methods:
+      - POST
+    strip_path: false
+
+  # User Service Routes (Protected - JWT required)
+  - name: user-protected
+    service: user-service
+    paths:
+      - /api/users/me
+      - /api/users/me/clubs
+    methods:
+      - GET
+      - PUT
+      - DELETE
+    strip_path: false
+
+  # User Service Health Routes (Public)
+  - name: user-health
+    service: user-service
+    paths:
+      - /health
+      - /liveness
+      - /readiness
+    methods:
+      - GET
+    strip_path: false
+
   # Notification Routes (All protected)
   - name: notify-routes
     service: notify-service
@@ -129,6 +171,17 @@ plugins:
       run_on_preflight: true
 
   - name: jwt
+    route: user-protected
+    config:
+      key_claim_name: kid
+      claims_to_verify:
+        - exp
+        - aud
+        - iss
+      secret_is_base64: false
+      run_on_preflight: true
+
+  - name: jwt
     route: notify-routes
     config:
       key_claim_name: kid
@@ -142,6 +195,84 @@ plugins:
   # Post-function plugin to extract JWT claims and inject headers
   - name: post-function
     route: auth-protected
+    config:
+      access:
+        - |
+          -- JWT Claims Extractor for Kong Gateway
+          -- Extracts user claims from validated JWT and injects as headers
+          
+          -- Get JWT token from Kong context (after JWT plugin validation)
+          local jwt_token = kong.ctx.shared.authenticated_jwt_token
+          
+          if jwt_token and jwt_token.claims then
+            -- Kong provides parsed claims after JWT validation
+            local claims = jwt_token.claims
+            
+            -- Extract and inject user headers
+            if claims.id then
+              kong.service.request.set_header("x-user-id", tostring(claims.id))
+            end
+            
+            if claims.email then
+              kong.service.request.set_header("x-user-email", tostring(claims.email))
+            end
+            
+            if claims.role then
+              kong.service.request.set_header("x-user-role", tostring(claims.role))
+            end
+            
+            kong.log.info("JWT claims extracted and headers injected for user: " .. tostring(claims.id or "unknown"))
+          else
+            -- Fallback: Manual JWT parsing if claims not available in context
+            local auth_header = kong.request.get_header("authorization")
+            if auth_header then
+              local token = string.match(auth_header, "Bearer%s+(.+)")
+              if token then
+                -- Simple Base64 decode and JSON parse (no external dependencies)
+                local jwt_parts = {}
+                for part in string.gmatch(token, "[^%.]+") do
+                  table.insert(jwt_parts, part)
+                end
+                
+                if #jwt_parts >= 2 then
+                  -- Decode payload (second part)
+                  local payload_b64 = jwt_parts[2]
+                  
+                  -- Add padding if needed for Base64 decoding
+                  local padding = 4 - (#payload_b64 % 4)
+                  if padding < 4 then
+                    payload_b64 = payload_b64 .. string.rep("=", padding)
+                  end
+                  
+                  -- Base64 decode
+                  local payload_json = ngx.decode_base64(payload_b64)
+                  
+                  if payload_json then
+                    -- Extract claims using string patterns (no cjson in sandbox)
+                    local id = string.match(payload_json, '"id"%s*:%s*"([^"]+)"')
+                    local email = string.match(payload_json, '"email"%s*:%s*"([^"]+)"')
+                    local role = string.match(payload_json, '"role"%s*:%s*"([^"]+)"')
+                    
+                    -- Inject headers
+                    if id then
+                      kong.service.request.set_header("x-user-id", id)
+                    end
+                    if email then
+                      kong.service.request.set_header("x-user-email", email)
+                    end
+                    if role then
+                      kong.service.request.set_header("x-user-role", role)
+                    end
+                    
+                    kong.log.info("JWT claims extracted via fallback method for user: " .. (id or "unknown"))
+                  end
+                end
+              end
+            end
+          end
+
+  - name: post-function
+    route: user-protected
     config:
       access:
         - |

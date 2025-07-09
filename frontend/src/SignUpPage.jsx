@@ -32,7 +32,7 @@ export default function SignUpPage() {
     }
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8080/api/auth/register", {
+      const response = await fetch("http://localhost:8000/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,7 +41,7 @@ export default function SignUpPage() {
           email,
           password,
           full_name: name,
-          confirmPassword,
+          // confirmPassword,
         }),
       });
       const result = await response.json();
