@@ -13,12 +13,18 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --runInBand --detectOpenHandles"
+    "test": "jest --runInBand --detectOpenHandles",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:undo": "sequelize-cli db:migrate:undo",
+    "migrate:status": "sequelize-cli db:migrate:status",
+    "seed": "sequelize-cli db:seed:all",
+    "seed:undo": "sequelize-cli db:seed:undo:all"
   },
   "devDependencies": {
     "jest": "^30.0.0",
     "nock": "^14.0.5",
     "nodemon": "^3.1.10",
+    "sequelize-cli": "^6.6.2",
     "supertest": "^7.1.1"
   }
 }

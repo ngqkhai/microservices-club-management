@@ -26,12 +26,12 @@ const nameSchema = Joi.string()
   .trim()
   .min(2)
   .max(100)
-  .pattern(new RegExp('^[a-zA-Z\\s]+$'))
+  .pattern(new RegExp('^[\\p{L}\\p{M}\\s\\.\\-\']+$', 'u'))
   .required()
   .messages({
     'string.min': 'Name must be at least 2 characters long',
     'string.max': 'Name must not exceed 100 characters',
-    'string.pattern.base': 'Name can only contain letters and spaces',
+    'string.pattern.base': 'Name can only contain letters, spaces, dots, hyphens, and apostrophes',
     'any.required': 'Full name is required'
   });
 

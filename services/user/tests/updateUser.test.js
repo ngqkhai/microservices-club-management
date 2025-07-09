@@ -1,7 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../src/index');
-const sequelize = require('../src/config/database');
+const { sequelize } = require('../src/config/database');
 const User = require('../src/models/user');
 
 const mockUser = {

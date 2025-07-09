@@ -3,6 +3,7 @@ const jwtUtil = require('../utils/jwt');
 const publisher = require('../events/publisher');
 const logger = require('../config/logger');
 const config = require('../config');
+const userSyncService = require('./userSyncService');
 const {
   AppError,
   NotFoundError,
@@ -114,6 +115,28 @@ class AuthService {
         email_verified: true,
         email_verified_at: new Date()
       });
+
+      // Sync user creation with user service after email verification
+      const syncResult = await userSyncService.syncUserCreation({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        phone: user.phone || null,
+        avatar_url: user.avatar_url || null
+      });
+
+      if (syncResult.success !== false) {
+        logger.info('User synced with user service after email verification', {
+          userId: user.id,
+          email: user.email
+        });
+      } else {
+        logger.warn('Failed to sync user with user service, but email verification succeeded', {
+          userId: user.id,
+          email: user.email,
+          syncError: syncResult.error
+        });
+      }
 
       logger.info('Email verified successfully', {
         userId: user.id,

@@ -1,60 +1,38 @@
-const jwt = require('jsonwebtoken');
-const axios = require('axios');
-const logger = require('../utils/logger');
+/**
+ * Middleware to extract user information from request headers
+ * Headers are set by API Gateway after JWT verification
+ */
+const extractUserFromHeaders = (req, res, next) => {
+  const userId = req.headers['x-user-id'];
+  const userEmail = req.headers['x-user-email'];
+  const userFullName = req.headers['x-user-full-name'];
+  const userRoles = req.headers['x-user-roles'];
+  const emailVerified = req.headers['x-user-email-verified'];
 
-let authServicePublicKey = null;
-
-// Function to get public key from auth service
-async function getAuthServicePublicKey() {
-  if (authServicePublicKey) {
-    return authServicePublicKey;
-  }
-
-  try {
-    const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
-    const response = await axios.get(`${authServiceUrl}/api/auth/public-key`);
-    authServicePublicKey = response.data.publicKey;
-    logger.info('Successfully retrieved public key from auth service');
-    return authServicePublicKey;
-  } catch (error) {
-    logger.error('Failed to retrieve public key from auth service:', error.message);
-    throw new Error('Unable to verify JWT: Auth service unavailable');
-  }
-}
-
-const authMiddleware = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ message: 'Không có token xác thực' });
+  // Parse roles from string to array if present
+  let roles = [];
+  if (userRoles) {
+    try {
+      roles = userRoles.split(',').map(role => role.trim());
+    } catch (error) {
+      console.warn('Failed to parse user roles:', error);
     }
-
-    // Get public key from auth service
-    const publicKey = await getAuthServicePublicKey();
-
-    // Verify JWT using the auth service's public key
-    const decoded = jwt.verify(token, publicKey, {
-      algorithms: ['RS256'],
-      issuer: 'auth-service',
-      audience: 'club-management-system'
-    });
-
-    req.user = { 
-      id: decoded.id, 
-      email: decoded.email, 
-      role: decoded.role 
-    };
-    
-    next();
-  } catch (error) {
-    logger.error(`Authentication error: ${error.message}`);
-    
-    if (error.message.includes('Auth service unavailable')) {
-      return res.status(503).json({ message: 'Service temporarily unavailable' });
-    }
-    
-    return res.status(401).json({ message: 'Token không hợp lệ' });
   }
+
+  req.user = {
+    id: userId,
+    email: userEmail,
+    fullName: userFullName,
+    roles: roles,
+    emailVerified: emailVerified === 'true'
+  };
+
+  // For development/testing - log when no user ID is present
+  if (!userId && (process.env.NODE_ENV === 'development' || process.env.MOCK_DB === 'true')) {
+    console.warn('⚠️ No user ID found in request headers. Authentication may be bypassed in development mode.');
+  }
+
+  next();
 };
 
-module.exports = authMiddleware;
+module.exports = extractUserFromHeaders;

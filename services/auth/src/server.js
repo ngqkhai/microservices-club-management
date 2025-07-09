@@ -1,3 +1,14 @@
+// Setup early error handlers
+process.on('uncaughtException', (error) => {
+  console.error('EARLY UNCAUGHT EXCEPTION:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('EARLY UNHANDLED REJECTION:', reason);
+  process.exit(1);
+});
+
 const Application = require('./app');
 const logger = require('./config/logger');
 const { setupGlobalErrorHandlers } = require('./middlewares/errorHandler');
@@ -22,7 +33,8 @@ async function startServer() {
         environment: process.env.NODE_ENV || 'development',
         version: process.env.SERVICE_VERSION || '1.0.0',
         pid: process.pid,
-        documentation: `http://${HOST}:${PORT}/api/auth/docs`
+        documentation: `http://${HOST}:${PORT}/api/auth/docs`,
+        userServiceUrl: process.env.USER_SERVICE_URL 
       });
     });
 
@@ -70,6 +82,7 @@ async function startServer() {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
+      console.error('UNCAUGHT EXCEPTION:', error);
       logger.error('Uncaught Exception:', {
         error: error.message,
         stack: error.stack,
@@ -80,6 +93,7 @@ async function startServer() {
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
+      console.error('UNHANDLED PROMISE REJECTION:', reason);
       logger.error('Unhandled Promise Rejection:', {
         reason: reason,
         promise: promise,
@@ -91,6 +105,7 @@ async function startServer() {
     return server;
 
   } catch (error) {
+    console.error('SERVER START ERROR:', error);
     logger.error('Failed to start server:', {
       error: error.message,
       stack: error.stack,
