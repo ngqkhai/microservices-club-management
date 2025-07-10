@@ -1,7 +1,7 @@
 import React from 'react';
 import './UserLayout.css';
-import logo from '../Picture/Logo.png';
-import avatar from '../Picture/Logo.png'; // Thay bằng avatar thật nếu có
+import logo from '../assets/Logo.png';
+import avatar from '../assets/Logo.png'; // Thay bằng avatar thật nếu có
 
 const UserLayout = ({ user, children, onLogout }) => (
   <div className="layout-container" style={{ fontFamily: 'Quicksand, Arial, sans-serif' }}>

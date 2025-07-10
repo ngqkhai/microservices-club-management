@@ -109,7 +109,6 @@
   flex: 1;
   background-size: cover;
   background-position: center;
-  padding: 2rem;
   position: relative;
   z-index: 1;
 }

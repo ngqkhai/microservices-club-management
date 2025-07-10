@@ -1,9 +1,9 @@
 //import React from "react";
-import "./LoginPage.css";
-import backgroundImage from "./Picture/background.jpg";
-import leftImage from "./Picture/leftLogin.jpg";
+import "../styles/LoginPage.css";
+import backgroundImage from "../assets/background.jpg";
+import leftImage from "../assets/leftLogin.jpg";
 import React, { useState } from "react";
-import logo from "./Picture/Logo.png";
+import logo from "../assets/Logo.png";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function LoginPage() {

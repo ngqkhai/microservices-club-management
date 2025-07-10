@@ -1,13 +1,13 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import HomePage from "./HomePage";
-import LoginPage from "./LoginPage";
-import SignUpPage from "./SignUpPage"; 
-import VerifySignUp from "./VerifySignUp"
-import EmailVerification from "./EmailVerification";
-import ForgotPassword_1 from "./ForgotPassword_1";
-import ForgotPassword_2 from "./ForgotPassword_2";
-import UserProfile from "./UserProfile";
+import HomePage from "./components/HomePage";
+import LoginPage from "./components/LoginPage";
+import SignUpPage from "./components/SignUpPage";
+import VerifySignUp from "./components/VerifySignUp";
+import EmailVerification from "./components/EmailVerification";
+import ForgotPassword_1 from "./components/ForgotPassword_1";
+import ForgotPassword_2 from "./components/ForgotPassword_2";
+import UserProfile from "./components/UserProfile";
 
 function App() {
   return (

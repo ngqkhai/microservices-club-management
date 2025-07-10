@@ -1,6 +1,6 @@
 import React from 'react';
-import UserLayout from './layouts/UserLayout';
-import avatar from './Picture/Logo.png'; // Thay bằng avatar thật nếu có
+import UserLayout from '../layouts/UserLayout';
+import avatar from '../assets/Logo.png'; // Thay bằng avatar thật nếu có
 
 export default function UserProfile() {
   // Dữ liệu mẫu, sau này lấy từ context hoặc API
