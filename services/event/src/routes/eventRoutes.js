@@ -1,5 +1,5 @@
 import express from 'express';
-import { getEvents, handleEventRSVP, joinEvent, leaveEvent, createEvent, updateEvent, deleteEvent } from '../controllers/eventController.js';
+import { getEvents, handleEventRSVP, joinEvent, leaveEvent, createEvent, updateEvent, deleteEvent, getEventsOfClub } from '../controllers/eventController.js';
 import { authMiddleware, requireUser, requireClubManager } from '../middlewares/authMiddleware.js';
 
 const eventRoutes = express.Router();
@@ -9,6 +9,7 @@ const leaveRoutes = express.Router();
 
 // Public routes
 eventRoutes.get('/api/events', getEvents);
+eventRoutes.get('/api/clubs/:id/events', getEventsOfClub);
 
 // Routes for creating, updating, and deleting events
 eventRoutes.post('/api/events', authMiddleware, requireClubManager, createEvent);

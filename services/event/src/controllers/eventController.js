@@ -1,5 +1,5 @@
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
-import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService, createEventService, updateEventService, deleteEventService } from '../services/eventService.js';
+import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService, createEventService, updateEventService, deleteEventService, getEventsOfClubService } from '../services/eventService.js';
 
 export const getEvents = (req, res) => {
   try {
@@ -268,5 +268,30 @@ export const deleteEvent = async (req, res, next) => {
       error: 'INTERNAL_ERROR',
       message: 'An error occurred while deleting the event'
     });
+  }
+};
+
+export const getEventsOfClub = async (req, res, next) => {
+  try {
+    const clubId = req.params.id;
+    const { status, start_from, start_to, page, limit } = req.query;
+    const result = await getEventsOfClubService({
+      clubId,
+      status,
+      start_from,
+      start_to,
+      page,
+      limit
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    if (error.name === 'CLUB_NOT_FOUND') {
+      return res.status(404).json({
+        status: 404,
+        error: 'CLUB_NOT_FOUND',
+        message: 'Club not found'
+      });
+    }
+    next(error);
   }
 };

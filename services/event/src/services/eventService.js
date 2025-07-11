@@ -308,3 +308,49 @@ export const deleteEventService = async (eventId) => {
   
   return { message: 'Event and related data deleted successfully' };
 };
+
+export const getEventsOfClubService = async ({ clubId, status, start_from, start_to, page = 1, limit = 10 }) => {
+  // 1. Validate club exists (call Club Service)
+  const clubServiceUrl = process.env.CLUB_SERVICE_URL || 'http://club-service:3002';
+  try {
+    await axios.get(`${clubServiceUrl}/api/clubs/${clubId}`);
+  } catch (err) {
+    const error = new Error('Club not found');
+    error.name = 'CLUB_NOT_FOUND';
+    throw error;
+  }
+
+  // 2. Build query
+  const query = { club_id: clubId };
+  if (status === 'upcoming') {
+    query.start_at = { $gte: new Date() };
+  }
+  if (start_from || start_to) {
+    query.start_at = query.start_at || {};
+    if (start_from) query.start_at.$gte = new Date(start_from);
+    if (start_to) query.start_at.$lte = new Date(start_to);
+  }
+
+  // 3. Pagination
+  const pageNumber = parseInt(page, 10) || 1;
+  const pageSize = parseInt(limit, 10) || 10;
+  const skip = (pageNumber - 1) * pageSize;
+
+  // 4. Query DB
+  const total = await Event.countDocuments(query);
+  const events = await Event.find(query)
+    .sort({ start_at: 1 })
+    .skip(skip)
+    .limit(pageSize);
+
+  // 5. Format results
+  return {
+    total,
+    results: events.map(e => ({
+      id: e._id,
+      title: e.title,
+      start_at: e.start_at,
+      status: (e.start_at > new Date()) ? 'upcoming' : e.status
+    }))
+  };
+};
