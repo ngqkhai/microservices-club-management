@@ -2,23 +2,19 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  avatar_url?: string
-}
+import { authService, setToken, removeToken, type User, type LoginRequest, type RegisterRequest } from '@/services'
 
 interface AuthState {
   user: User | null
   token: string | null
   isLoading: boolean
+  error: string | null
   login: (email: string, password: string) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
-  logout: () => void
+  logout: () => Promise<void>
   updateProfile: (data: Partial<User>) => Promise<boolean>
+  loadUser: () => Promise<void>
+  clearError: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -27,75 +23,168 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isLoading: false,
+      error: null,
 
       login: async (email: string, password: string) => {
-        set({ isLoading: true })
+        set({ isLoading: true, error: null })
 
-        // Mock API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Mock successful login
-        const mockUser = {
-          id: "user123",
-          name: "Nguyễn Văn An",
-          email: email,
-          phone: "+84 123 456 789",
-          avatar_url: "/placeholder.svg?height=100&width=100",
+        try {
+          const response = await authService.login({ email, password })
+          
+          if (response.success) {
+            const { user, accessToken } = response.data
+            
+            // Store token in localStorage
+            setToken(accessToken)
+            
+            set({
+              user,
+              token: accessToken,
+              isLoading: false,
+              error: null,
+            })
+            
+            return true
+          } else {
+            set({ 
+              isLoading: false, 
+              error: response.message || 'Login failed' 
+            })
+            return false
+          }
+        } catch (error: any) {
+          set({ 
+            isLoading: false, 
+            error: error.message || 'Login failed' 
+          })
+          return false
         }
-
-        const mockToken = "mock-jwt-token-" + Date.now()
-
-        set({
-          user: mockUser,
-          token: mockToken,
-          isLoading: false,
-        })
-
-        return true
       },
 
       signup: async (name: string, email: string, password: string) => {
-        set({ isLoading: true })
+        set({ isLoading: true, error: null })
 
-        // Mock API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Mock successful signup
-        const mockUser = {
-          id: "user123",
-          name: name,
-          email: email,
-          avatar_url: "/placeholder.svg?height=100&width=100",
+        try {
+          const response = await authService.register({ 
+            full_name: name, // Theo API documentation
+            email, 
+            password 
+          })
+          
+          if (response.success) {
+            // Registration thành công - không tự động login
+            // User cần verify email trước
+            set({ 
+              isLoading: false, 
+              error: null 
+            })
+            return true
+          } else {
+            set({ 
+              isLoading: false, 
+              error: response.message || 'Registration failed' 
+            })
+            return false
+          }
+        } catch (error: any) {
+          set({ 
+            isLoading: false, 
+            error: error.message || 'Registration failed' 
+          })
+          return false
         }
-
-        const mockToken = "mock-jwt-token-" + Date.now()
-
-        set({
-          user: mockUser,
-          token: mockToken,
-          isLoading: false,
-        })
-
-        return true
       },
 
-      logout: () => {
-        set({ user: null, token: null })
+      logout: async () => {
+        set({ isLoading: true })
+
+        try {
+          // Call logout API
+          await authService.logout()
+        } catch (error) {
+          console.warn('Logout API call failed:', error)
+        } finally {
+          // Always clear local state
+          removeToken()
+          set({
+            user: null,
+            token: null,
+            isLoading: false,
+            error: null,
+          })
+        }
       },
 
       updateProfile: async (data: Partial<User>) => {
-        const { user } = get()
-        if (!user) return false
+        set({ isLoading: true, error: null })
 
-        set({ isLoading: true })
+        try {
+          // Note: You may need to implement updateProfile in authService
+          // For now, we'll just update local state
+          const currentUser = get().user
+          if (currentUser) {
+            const updatedUser = { ...currentUser, ...data }
+            set({ 
+              user: updatedUser, 
+              isLoading: false 
+            })
+            return true
+          }
+          
+          set({ 
+            isLoading: false, 
+            error: 'No user to update' 
+          })
+          return false
+        } catch (error: any) {
+          set({ 
+            isLoading: false, 
+            error: error.message || 'Update failed' 
+          })
+          return false
+        }
+      },
 
-        // Mock API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+      loadUser: async () => {
+        const token = authService.isAuthenticated()
+        if (!token) return
 
-        const updatedUser = { ...user, ...data }
-        set({ user: updatedUser, isLoading: false })
+        set({ isLoading: true, error: null })
 
-        return true
+        try {
+          const response = await authService.getProfile()
+          
+          if (response.success) {
+            set({
+              user: response.data,
+              token: token ? 'existing' : null,
+              isLoading: false,
+              error: null,
+            })
+          } else {
+            // Token might be invalid, clear it
+            removeToken()
+            set({
+              user: null,
+              token: null,
+              isLoading: false,
+              error: null,
+            })
+          }
+        } catch (error: any) {
+          // Token might be invalid, clear it
+          removeToken()
+          set({
+            user: null,
+            token: null,
+            isLoading: false,
+            error: null,
+          })
+        }
+      },
+
+      clearError: () => {
+        set({ error: null })
       },
     }),
     {

@@ -26,7 +26,8 @@ export function Header() {
     { name: "Club Space", href: "/club-space" },
   ]
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined) => {
+    if (!name) return "U" // Default fallback
     return name
       .split(" ")
       .map((word) => word[0])
@@ -66,9 +67,9 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar_url || "/placeholder.svg"} alt={user.name} />
+                        <AvatarImage src={user.profile_picture_url || "/placeholder.svg"} alt={user.full_name || user.email} />
                         <AvatarFallback className="bg-blue-600 text-white text-xs">
-                          {getInitials(user.name)}
+                          {getInitials(user.full_name)}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -76,7 +77,7 @@ export function Header() {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <div className="flex items-center justify-start gap-2 p-2">
                       <div className="flex flex-col space-y-1 leading-none">
-                        <p className="font-medium">{user.name}</p>
+                        <p className="font-medium">{user.full_name || user.email}</p>
                         <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>
                       </div>
                     </div>
@@ -140,13 +141,13 @@ export function Header() {
                   <>
                     <div className="flex items-center px-3 py-2">
                       <Avatar className="h-8 w-8 mr-3">
-                        <AvatarImage src={user.avatar_url || "/placeholder.svg"} alt={user.name} />
+                        <AvatarImage src={user.profile_picture_url || "/placeholder.svg"} alt={user.full_name || user.email} />
                         <AvatarFallback className="bg-blue-600 text-white text-xs">
-                          {getInitials(user.name)}
+                          {getInitials(user.full_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">{user.name}</p>
+                        <p className="font-medium text-sm">{user.full_name || user.email}</p>
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </div>
