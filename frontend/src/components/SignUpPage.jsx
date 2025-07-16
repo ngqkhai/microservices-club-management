@@ -1,12 +1,11 @@
-"use client"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import "../styles/SignUpPage.css"
 import backgroundImage from "../assets/background.jpg"
 import leftImage from "../assets/leftLogin.jpg"
 import logo from "../assets/Logo.png"
 import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff } from "lucide-react"
+import { registerUser } from "../services/authService"
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -25,29 +24,26 @@ export default function SignUpPage() {
     e.preventDefault()
     setError("")
     setSuccess("")
+    
     if (!email || !name || !password || !confirmPassword) {
       setError("Vui lòng điền đầy đủ thông tin.")
       return
     }
+    
     if (password !== confirmPassword) {
       setError("Mật khẩu không khớp.")
       return
     }
+    
     setLoading(true)
+    
     try {
-      const response = await fetch("http://localhost:8000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: name,
-          // confirmPassword,
-        }),
+      const result = await registerUser({
+        email,
+        password,
+        fullName: name
       })
-      const result = await response.json()
+      
       if (result.success) {
         setSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.")
         setTimeout(() => {
