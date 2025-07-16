@@ -98,7 +98,8 @@ const clubSchema = new mongoose.Schema({
         }
       }
     },
-    default: {}
+    default: {},
+    _id: false  // Prevent automatic _id generation
   },
   settings: {
     type: {
@@ -109,7 +110,15 @@ const clubSchema = new mongoose.Schema({
     default: {
       is_public: true,
       requires_approval: true
-    }
+    },
+    _id: false  // Prevent automatic _id generation
+  },
+  // Member count field
+  member_count: {
+    type: Number,
+    default: 1,
+    min: 0,
+    required: true
   },
   // Deprecated fields (keeping for backward compatibility)
   type: { type: String }, // Will be migrated to category
@@ -150,7 +159,8 @@ const clubSchema = new mongoose.Schema({
         default: Date.now 
       }
     },
-    required: true
+    required: true,
+    _id: false  // Prevent automatic _id generation
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
@@ -285,7 +295,8 @@ const recruitmentCampaignSchema = new mongoose.Schema({
       rejected_applications: 0,
       pending_applications: 0,
       last_updated: new Date()
-    }
+    },
+    _id: false  // Prevent automatic _id generation
   },
   // Backward compatibility fields
   criteria: { type: String }, // Deprecated, use requirements instead

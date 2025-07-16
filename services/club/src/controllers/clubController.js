@@ -1,98 +1,9 @@
-const Club = require('../models/club');
-const authServiceClient = require('../utils/authServiceClient');
-
-// Simple input sanitization function
-const sanitizeInput = (input) => {
-  if (typeof input !== 'string') return input;
-  return input
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
-};
+const clubService = require('../services/clubService');
 
 const getClubs = async (req, res, next) => {
   try {
-    // US007: Enhanced search and filtering parameters
-    const { 
-      name, 
-      type, 
-      category, 
-      status, 
-      location, 
-      search, 
-      page, 
-      limit, 
-      sort 
-    } = req.query;
-    
-    // Validate pagination parameters
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    
-    if (page && (isNaN(pageNumber) || pageNumber < 1)) {
-      const error = new Error('Page must be a positive integer');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    if (limit && (isNaN(limitNumber) || limitNumber < 1 || limitNumber > 100)) {
-      const error = new Error('Limit must be a positive integer between 1 and 100');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // US007: Validate sort parameter
-    const validSortOptions = ['name', 'name_desc', 'category', 'location', 'newest', 'oldest', 'relevance'];
-    if (sort && !validSortOptions.includes(sort)) {
-      const error = new Error(`Invalid sort option. Must be one of: ${validSortOptions.join(', ')}`);
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // US007: Validate category parameter
-    const validCategories = ['academic', 'sports', 'arts', 'technology', 'social', 'volunteer', 'cultural', 'other'];
-    if (category && !validCategories.includes(category)) {
-      const error = new Error(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // Sanitize search inputs
-    const sanitizedParams = {
-      name: name ? sanitizeInput(name) : undefined,
-      type: type ? sanitizeInput(type) : undefined,
-      category: category ? sanitizeInput(category) : undefined,
-      status: status ? sanitizeInput(status) : undefined,
-      location: location ? sanitizeInput(location) : undefined,
-      search: search ? sanitizeInput(search) : undefined,
-      page: pageNumber,
-      limit: limitNumber,
-      sort: sort ? sanitizeInput(sort) : undefined
-    };
-    
-    console.log('🔍 Club search request:', {
-      searchParams: sanitizedParams,
-      userAgent: req.get('User-Agent'),
-      ip: req.ip
-    });
-    
-    const clubs = await Club.findAll(sanitizedParams);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Clubs retrieved successfully',
-      data: clubs,
-      meta: {
-        searchParams: sanitizedParams,
-        timestamp: new Date().toISOString()
-      }
-    });
+    const result = await clubService.getClubs(req.query);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -100,33 +11,8 @@ const getClubs = async (req, res, next) => {
 
 const getClubById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const club = await Club.findById(id);
-    if (!club) {
-      const error = new Error('Club not found');
-      error.status = 404;
-      error.name = 'CLUB_NOT_FOUND';
-      throw error;
-    }
-    res.status(200).json({
-      id: club.id,
-      name: club.name,
-      description: club.description,
-      category: club.category,
-      location: club.location,
-      contact_email: club.contact_email,
-      contact_phone: club.contact_phone,
-      logo_url: club.logo_url,
-      website_url: club.website_url,
-      social_links: club.social_links,
-      settings: club.settings,
-      status: club.status,
-      member_count: club.size || 0,
-      created_by: club.created_by,
-      // Backward compatibility
-      type: club.type,
-      size: club.size || 0
-    });
+    const result = await clubService.getClubById(req.params.id);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -134,246 +20,23 @@ const getClubById = async (req, res, next) => {
 
 const createClub = async (req, res, next) => {
   try {
-    const { 
-      name, 
-      description, 
-      category,
-      location,
-      contact_email,
-      contact_phone,
-      logo_url, 
-      website_url,
-      social_links,
-      settings,
-      // Manager assignment fields
-      manager_user_id,
-      manager_full_name,
-      manager_email, // Optional - manager's email
-      // Backward compatibility
-      type 
-    } = req.body;
-    
-    // Validate required fields
-    if (!name || (!category && !type)) {
-      const error = new Error('Name and category are required');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // Validate manager fields
-    if (!manager_user_id || !manager_full_name) {
-      const error = new Error('Manager user ID and full name are required');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // Validate data types
-    if (name && typeof name !== 'string') {
-      const error = new Error('Name must be a string');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    if (description && typeof description !== 'string') {
-      const error = new Error('Description must be a string');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    if (location && typeof location !== 'string') {
-      const error = new Error('Location must be a string');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    if (typeof manager_user_id !== 'string') {
-      const error = new Error('Manager user ID must be a string');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    if (typeof manager_full_name !== 'string') {
-      const error = new Error('Manager full name must be a string');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // Validate manager email if provided
-    if (manager_email && (typeof manager_email !== 'string' || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(manager_email))) {
-      const error = new Error('Manager email must be a valid email address');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    // Verify that the manager user exists in the auth database
-    let finalManagerEmail = manager_email;
-    let finalManagerFullName = manager_full_name;
-    
-    try {
-      // Pass the current user's context for auth service validation
-      const requestContext = {
-        userId: req.user?.id || req.headers['x-user-id'],
-        userRole: req.user?.role || req.headers['x-user-role']
-      };
-      
-      const managerUser = await authServiceClient.verifyUserExists(manager_user_id, requestContext);
-      if (!managerUser) {
-        const error = new Error('Manager user not found in auth database');
-        error.status = 404;
-        error.name = 'USER_NOT_FOUND';
-        throw error;
-      }
-      
-      // Log manager validation success
-      console.log('✅ Manager user validated:', {
-        user_id: manager_user_id,
-        email: managerUser.data?.user?.email || managerUser.email,
-        full_name: managerUser.data?.user?.full_name || managerUser.full_name,
-        validated_by: requestContext.userId
-      });
-      
-      // Use verified user information for better data integrity
-      // This ensures we have the correct email and full name from auth service
-      const verifiedUser = managerUser.data?.user || managerUser;
-      const verifiedManagerEmail = verifiedUser.email;
-      const verifiedManagerFullName = verifiedUser.full_name;
-      
-      // Use verified information if not provided in request
-      finalManagerEmail = manager_email || verifiedManagerEmail;
-      finalManagerFullName = manager_full_name || verifiedManagerFullName;
-      
-    } catch (authError) {
-      console.error('❌ Manager user validation failed:', {
-        manager_user_id,
-        error: authError.message,
-        name: authError.name,
-        status: authError.status
-      });
-      
-      // Re-throw auth service errors
-      if (authError.name === 'USER_NOT_FOUND') {
-        throw authError;
-      }
-      
-      // Handle auth service unavailable
-      const error = new Error('Unable to verify manager user. Auth service may be unavailable.');
-      error.status = 503;
-      error.name = 'SERVICE_UNAVAILABLE';
-      throw error;
-    }
-    
-    // Sanitize string inputs
-    const sanitizedData = {
-      name: sanitizeInput(name),
-      description: sanitizeInput(description),
-      category: category || type,
-      location: sanitizeInput(location),
-      contact_email: contact_email,
-      contact_phone: contact_phone,
-      logo_url: logo_url,
-      website_url: website_url,
-      social_links: social_links,
-      settings: settings,
-      status: 'ACTIVE',
-      created_by: manager_user_id, // Use manager's user ID as creator
-      // Manager information (snapshot at creation time)
-      manager: {
-        user_id: manager_user_id,
-        full_name: sanitizeInput(finalManagerFullName),
-        email: finalManagerEmail || contact_email, // Use manager's email or fallback to club contact email
-        assigned_at: new Date()
-      },
-      // Backward compatibility
-      type: type || category
+    const userContext = {
+      userId: req.user?.id || req.headers['x-user-id'],
+      userRole: req.user?.role || req.headers['x-user-role'],
+      userEmail: req.user?.email || req.headers['x-user-email']
     };
     
-    const newClub = await Club.create(sanitizedData);
-    
-    // Create membership for the manager
-    const { Membership } = require('../config/database');
-    await Membership.create({
-      club_id: newClub.id, // Use newClub.id instead of newClub._id
-      user_id: manager_user_id,
-      role: 'club_manager',
-      status: 'active',
-      joined_at: new Date()
-    });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Club created successfully with manager assigned',
-      data: {
-        club: newClub,
-        manager: newClub.manager // Use manager info from the created club
-      }
-    });
+    const result = await clubService.createClub(req.body, userContext);
+    res.status(201).json(result);
   } catch (error) {
-    if (error.name === 'MongoServerError' && error.code === 11000) {
-      const duplicateError = new Error('Club with this name already exists');
-      duplicateError.status = 409;
-      duplicateError.name = 'DUPLICATE_ENTITY';
-      return next(duplicateError);
-    }
     next(error);
   }
 };
 
 const getClubRecruitments = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { status, page, limit } = req.query;
-    
-    // Validate pagination parameters
-    const pageNumber = parseInt(page, 10) || 1;
-    const limitNumber = parseInt(limit, 10) || 10;
-    
-    if (page && (isNaN(pageNumber) || pageNumber < 1)) {
-      const error = new Error('Page must be a positive integer');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    if (limit && (isNaN(limitNumber) || limitNumber < 1 || limitNumber > 100)) {
-      const error = new Error('Limit must be a positive integer between 1 and 100');
-      error.status = 400;
-      error.name = 'VALIDATION_ERROR';
-      throw error;
-    }
-    
-    const club = await Club.findById(id);
-    if (!club) {
-      const error = new Error('Club not found');
-      error.status = 404;
-      error.name = 'CLUB_NOT_FOUND';
-      throw error;
-    }
-    
-    const result = await Club.findRecruitments(id, { status, page: pageNumber, limit: limitNumber });
-    
-    // Format response with pagination metadata
-    const response = {
-      total: result.total || 0,
-      page: pageNumber,
-      totalPages: Math.ceil((result.total || 0) / limitNumber),
-      results: result.recruitments?.map(r => ({ 
-        id: r.id, 
-        title: r.title, 
-        start_date: r.start_date,
-        start_at: r.start_at, 
-        status: r.status 
-      })) || []
-    };
-    
-    res.status(200).json(response);
+    const result = await clubService.getClubRecruitments(req.params.id, req.query);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -381,109 +44,35 @@ const getClubRecruitments = async (req, res, next) => {
 
 const getClubMember = async (req, res, next) => {
   try {
-    const { clubId, userId } = req.params;
-    const membership = await Club.findMembership(clubId, userId);
-    if (!membership) {
-      const error = new Error('Membership not found');
-      error.status = 404;
-      error.name = 'MEMBERSHIP_NOT_FOUND';
-      throw error;
-    }
-    res.status(200).json(membership);
+    const result = await clubService.getClubMember(req.params.clubId, req.params.userId);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
 };
 
-// US007: Get available categories for filtering
 const getCategories = async (req, res, next) => {
   try {
-    const categories = await Club.getCategories();
-    res.status(200).json({
-      success: true,
-      message: 'Categories retrieved successfully',
-      data: categories
-    });
+    const result = await clubService.getCategories();
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
 };
 
-// US007: Get available locations for filtering
 const getLocations = async (req, res, next) => {
   try {
-    const locations = await Club.getLocations();
-    res.status(200).json({
-      success: true,
-      message: 'Locations retrieved successfully',
-      data: locations
-    });
+    const result = await clubService.getLocations();
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
 };
 
-// US007: Get club statistics for search context
 const getStats = async (req, res, next) => {
   try {
-    const stats = await Club.getStats();
-    res.status(200).json({
-      success: true,
-      message: 'Club statistics retrieved successfully',
-      data: stats
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Get clubs with member count in descending order
-const getClubsWithMemberCount = async (req, res, next) => {
-  try {
-    const { Membership } = require('../config/database');
-    
-    // Aggregate pipeline to count members for each club
-    const clubsWithMemberCount = await Membership.aggregate([
-      {
-        $match: {
-          status: 'active' // Only count active members
-        }
-      },
-      {
-        $group: {
-          _id: '$club_id',
-          memberCount: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: 'clubs',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'club'
-        }
-      },
-      {
-        $unwind: '$club'
-      },
-      {
-        $project: {
-          club_id: '$_id',
-          club_name: '$club.name',
-          memberCount: 1,
-          _id: 0
-        }
-      },
-      {
-        $sort: { memberCount: -1 } // Descending order
-      }
-    ]);
-
-    res.status(200).json({
-      success: true,
-      message: 'Clubs with member count retrieved successfully',
-      data: clubsWithMemberCount
-    });
+    const result = await clubService.getStats();
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -497,6 +86,5 @@ module.exports = {
   getClubMember,
   getCategories,
   getLocations,
-  getStats,
-  getClubsWithMemberCount
+  getStats
 };

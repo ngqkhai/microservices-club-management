@@ -42,13 +42,6 @@ router.get('/clubs/locations', authMiddleware.validateApiGatewaySecret, clubCont
 router.get('/clubs/stats', authMiddleware.validateApiGatewaySecret, clubController.getStats);
 
 /**
- * @route GET /api/clubs/member-count
- * @desc Get clubs with their member counts in descending order
- * @access Public
- */
-router.get('/clubs/member-count', authMiddleware.validateApiGatewaySecret, clubController.getClubsWithMemberCount);
-
-/**
  * @route GET /api/clubs
  * @desc Get all clubs with advanced filtering and search options
  * @access Public

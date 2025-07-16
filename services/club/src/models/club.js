@@ -120,11 +120,12 @@ class ClubModel {
           logo_url: club.logo_url,
           status: club.status,
           settings: club.settings,
-          member_count: club.size || 0,
+          member_count: club.member_count || 0,
           created_at: club.created_at,
           manager: club.manager, // Added manager field
           // Backward compatibility
-          type: club.type
+          type: club.type,
+          size: club.member_count || 0 // Map member_count to size
         }))
       };
     } catch (error) {
@@ -152,11 +153,12 @@ class ClubModel {
         social_links: club.social_links,
         settings: club.settings,
         status: club.status,
+        member_count: club.member_count || 0,
         created_by: club.created_by,
         manager: club.manager, // Added manager field
         // Backward compatibility
         type: club.type,
-        size: club.size
+        size: club.member_count || 0 // Map member_count to size
       };
     } catch (error) {
       console.error('Error finding club by ID:', error);
@@ -200,6 +202,7 @@ class ClubModel {
           max_members: settings?.max_members
         },
         manager, // Added manager field
+        member_count: 1, // Start with 1 member (the manager)
         // Backward compatibility fields
         type: type || category,
         status: status || 'ACTIVE',
@@ -221,12 +224,12 @@ class ClubModel {
         social_links: newClub.social_links,
         settings: newClub.settings,
         status: newClub.status,
-        member_count: 0, // New clubs start with 0 members
+        member_count: newClub.member_count, // Return the actual member count (1 for new clubs)
         created_by: newClub.created_by,
         manager: newClub.manager, // Added manager field to response
         // Backward compatibility
         type: newClub.type,
-        size: 0
+        size: newClub.member_count // Map member_count to size for backward compatibility
       };
     } catch (error) {
       // Check for duplicate key error (MongoDB error code 11000)
@@ -297,16 +300,41 @@ class ClubModel {
   }
 
   /**
-   * Update club size (number of members)
+   * Update club member count
+   * @param {string} clubId - The ID of the club
+   * @param {number} memberCount - The new member count
+   * @returns {Promise<void>}
+   */
+  static async updateMemberCount(clubId, memberCount) {
+    try {
+      // Find and update the club, only if member count is valid
+      if (memberCount >= 0) {
+        await Club.findByIdAndUpdate(clubId, { 
+          member_count: memberCount,
+          size: memberCount // Update size for backward compatibility
+        });
+      }
+    } catch (error) {
+      // Intentionally swallow error to prevent crashes for invalid IDs
+      console.error('Error updating club member count (gracefully handled):', error.message);
+    }
+  }
+
+  /**
+   * Update club size (number of members) - DEPRECATED
    * @param {string} clubId - The ID of the club
    * @param {number} size - The new size
    * @returns {Promise<void>}
+   * @deprecated Use updateMemberCount instead
    */
   static async updateSize(clubId, size) {
     try {
       // Find and update the club, only if size is valid
       if (size >= 0) {
-        await Club.findByIdAndUpdate(clubId, { size });
+        await Club.findByIdAndUpdate(clubId, { 
+          size: size,
+          member_count: size // Update member_count for consistency
+        });
       }
     } catch (error) {
       // Intentionally swallow error to prevent crashes for invalid IDs
