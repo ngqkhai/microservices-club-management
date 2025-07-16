@@ -664,6 +664,157 @@ router.get('/me', validateApiGatewayHeaders, requireUser, authController.getCurr
 
 /**
  * @swagger
+ * /api/auth/users:
+ *   get:
+ *     summary: Get all users (admin only)
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of users per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name or email
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [user, admin]
+ *         description: Filter by user role
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Users retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           email:
+ *                             type: string
+ *                             format: email
+ *                           full_name:
+ *                             type: string
+ *                           role:
+ *                             type: string
+ *                             enum: [user, admin]
+ *                           email_verified:
+ *                             type: boolean
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         current_page:
+ *                           type: integer
+ *                         total_pages:
+ *                           type: integer
+ *                         total_items:
+ *                           type: integer
+ *                         items_per_page:
+ *                           type: integer
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.get('/users', validateApiGatewayHeaders, requireAdmin, authLimiter, authController.getAllUsers);
+
+/**
+ * @swagger
+ * /api/auth/users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     tags: [User Management]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitExceeded'
+ */
+router.get('/users/:id', validateApiGatewayHeaders, requireAdmin, authLimiter, authController.getUserById);
+
+/**
+ * @swagger
  * /api/auth/change-password:
  *   post:
  *     summary: Change user password
@@ -1055,4 +1206,4 @@ router.get('/.well-known/jwks.json', (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

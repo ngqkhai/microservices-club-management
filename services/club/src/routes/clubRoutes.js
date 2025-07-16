@@ -1,6 +1,8 @@
 const express = require('express');
 const clubController = require('../controllers/clubController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const recruitmentCampaignRoutes = require('./recruitmentCampaignRoutes');
+const publicCampaignRoutes = require('./publicCampaignRoutes');
 
 const router = express.Router();
 
@@ -24,6 +26,13 @@ router.get('/clubs/locations', authMiddleware.validateApiGatewaySecret, clubCont
  * @access Public
  */
 router.get('/clubs/stats', authMiddleware.validateApiGatewaySecret, clubController.getStats);
+
+/**
+ * @route GET /api/clubs/member-count
+ * @desc Get clubs with their member counts in descending order
+ * @access Public
+ */
+router.get('/clubs/member-count', authMiddleware.validateApiGatewaySecret, clubController.getClubsWithMemberCount);
 
 /**
  * @route GET /api/clubs
@@ -73,5 +82,9 @@ router.post('/clubs',
   authMiddleware.requireRoles([ 'admin']), 
   clubController.createClub
 );
+
+// Campaign Routes
+router.use('/clubs', authMiddleware.validateApiGatewayHeaders, recruitmentCampaignRoutes);
+router.use('/campaigns', authMiddleware.validateApiGatewaySecret, publicCampaignRoutes);
 
 module.exports = router;

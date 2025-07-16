@@ -112,6 +112,16 @@ db.createCollection("clubs", {
           }
         },
         created_by: { bsonType: "string" }, // UUID from Auth Service
+        manager: {
+          bsonType: "object",
+          required: ["user_id", "full_name", "assigned_at"],
+          properties: {
+            user_id: { bsonType: "string" }, // UUID from Auth Service
+            full_name: { bsonType: "string", maxLength: 255 },
+            email: { bsonType: "string", pattern: "^[^@]+@[^@]+\\.[^@]+$" },
+            assigned_at: { bsonType: "date" }
+          }
+        },
         created_at: { bsonType: "date" },
         updated_at: { bsonType: "date" },
         deleted_at: { bsonType: ["date", "null"] }

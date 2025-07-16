@@ -1,36 +1,39 @@
-import React, { useState } from "react";
-import "./SignUpPage.css";
-import backgroundImage from "./Picture/background.jpg";
-import leftImage from "./Picture/leftLogin.jpg";
-import logo from "./Picture/Logo.png";
-import { Link, useNavigate } from "react-router-dom";
+"use client"
+
+import { useState } from "react"
+import "../styles/SignUpPage.css"
+import backgroundImage from "../assets/background.jpg"
+import leftImage from "../assets/leftLogin.jpg"
+import logo from "../assets/Logo.png"
+import { Link, useNavigate } from "react-router-dom"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function SignUpPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+    e.preventDefault()
+    setError("")
+    setSuccess("")
     if (!email || !name || !password || !confirmPassword) {
-      setError("Vui lòng điền đầy đủ thông tin.");
-      return;
+      setError("Vui lòng điền đầy đủ thông tin.")
+      return
     }
     if (password !== confirmPassword) {
-      setError("Mật khẩu không khớp.");
-      return;
+      setError("Mật khẩu không khớp.")
+      return
     }
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await fetch("http://localhost:8000/api/auth/register", {
         method: "POST",
@@ -43,39 +46,33 @@ export default function SignUpPage() {
           full_name: name,
           // confirmPassword,
         }),
-      });
-      const result = await response.json();
+      })
+      const result = await response.json()
       if (result.success) {
-        setSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+        setSuccess("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.")
         setTimeout(() => {
-          navigate("/verifySignUp", { state: { email } });
-        }, 1500);
+          navigate("/verifySignUp", { state: { email } })
+        }, 1500)
       } else {
-        setError(result.message || "Đăng ký thất bại");
+        setError(result.message || "Đăng ký thất bại")
       }
     } catch (err) {
-      setError("Lỗi mạng hoặc server không phản hồi");
+      setError("Lỗi mạng hoặc server không phản hồi")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="login-page" style={{ fontFamily: '"Roboto Flex", Roboto, Arial, sans-serif' }}>
-      <div
-        className="background"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-      ></div>
+      <div className="background" style={{ backgroundImage: `url(${backgroundImage})` }}></div>
 
       <div className="login-container">
-        <div
-          className="login-image"
-          style={{ backgroundImage: `url(${leftImage})` }}
-        ></div>
+        <div className="login-image" style={{ backgroundImage: `url(${leftImage})` }}></div>
 
         <div className="login-form">
           <div className="form-top">
-            <img src={logo} alt="UniVibe Logo" className="logo" />
+            <img src={logo || "/placeholder.svg"} alt="UniVibe Logo" className="logo" />
             <h2
               style={{
                 textAlign: "center",
@@ -133,7 +130,7 @@ export default function SignUpPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   style={{ cursor: "pointer" }}
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </span>
               </div>
             </div>
@@ -154,7 +151,7 @@ export default function SignUpPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   style={{ cursor: "pointer" }}
                 >
-                  {showConfirmPassword ? "🙈" : "👁️"}
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </span>
               </div>
             </div>
@@ -179,5 +176,5 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

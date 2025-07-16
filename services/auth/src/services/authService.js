@@ -320,6 +320,98 @@ class AuthService {
   }
 
   /**
+   * Get all users (admin only)
+   * @param {Object} options - Query options
+   * @returns {Object} Users list with pagination
+   */
+  async getAllUsers(options = {}) {
+    try {
+      const { page = 1, limit = 10, search, role } = options;
+      
+      // Build where clause
+      const whereClause = {};
+      
+      if (role) {
+        whereClause.role = role;
+      }
+      
+      if (search) {
+        const { Op } = require('sequelize');
+        whereClause[Op.or] = [
+          { full_name: { [Op.iLike]: `%${search}%` } },
+          { email: { [Op.iLike]: `%${search}%` } }
+        ];
+      }
+      
+      // Only include non-deleted users
+      whereClause.deleted_at = null;
+      
+      const offset = (page - 1) * limit;
+      
+      const { count, rows } = await User.findAndCountAll({
+        where: whereClause,
+        limit: parseInt(limit, 10),
+        offset: parseInt(offset, 10),
+        order: [['created_at', 'DESC']],
+        attributes: ['id', 'email', 'full_name', 'role', 'email_verified', 'created_at']
+      });
+      
+      const users = rows.map(user => user.toJSON());
+      
+      const pagination = {
+        current_page: parseInt(page, 10),
+        total_pages: Math.ceil(count / limit),
+        total_items: count,
+        items_per_page: parseInt(limit, 10)
+      };
+      
+      logger.debug('Retrieved users list', { 
+        page, 
+        limit, 
+        search, 
+        role, 
+        total: count 
+      });
+      
+      return {
+        users,
+        pagination
+      };
+    } catch (error) {
+      logger.error('Get users failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user by ID (admin only)
+   * @param {string} userId - User ID
+   * @returns {Object} User data
+   */
+  async getUserById(userId) {
+    try {
+      const user = await User.findOne({
+        where: { 
+          id: userId,
+          deleted_at: null
+        },
+        attributes: ['id', 'email', 'full_name', 'role', 'email_verified', 'created_at', 'updated_at']
+      });
+      
+      if (!user) {
+        return null;
+      }
+      
+      logger.debug('Retrieved user by ID', { userId });
+      
+      return user.toJSON();
+    } catch (error) {
+      logger.error('Get user by ID failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Initiate password reset process
    * @param {string} email - User email
    * @param {string} ip - Client IP address
@@ -711,4 +803,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService(); 
+module.exports = new AuthService();

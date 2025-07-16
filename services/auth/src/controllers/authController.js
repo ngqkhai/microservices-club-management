@@ -150,6 +150,55 @@ class AuthController {
   });
 
   /**
+   * Get all users (admin only)
+   * @route GET /api/auth/users
+   */
+  getAllUsers = asyncErrorHandler(async (req, res) => {
+    const { page = 1, limit = 10, search, role } = req.query;
+
+    const options = {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      search,
+      role
+    };
+
+    const result = await authService.getAllUsers(options);
+
+    res.status(200).json({
+      success: true,
+      message: 'Users retrieved successfully',
+      data: {
+        users: result.users,
+        pagination: result.pagination
+      }
+    });
+  });
+
+  /**
+   * Get user by ID (admin only)
+   * @route GET /api/auth/users/:id
+   */
+  getUserById = asyncErrorHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const user = await authService.getUserById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User retrieved successfully',
+      data: { user }
+    });
+  });
+
+  /**
    * Forgot password
    * @route POST /api/auth/forgot-password
    */
@@ -394,4 +443,4 @@ class AuthController {
   });
 }
 
-module.exports = new AuthController(); 
+module.exports = new AuthController();

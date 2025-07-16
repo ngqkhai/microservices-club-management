@@ -1,4 +1,5 @@
 const Club = require('../models/club');
+const authServiceClient = require('../utils/authServiceClient');
 
 // Simple input sanitization function
 const sanitizeInput = (input) => {
@@ -144,6 +145,10 @@ const createClub = async (req, res, next) => {
       website_url,
       social_links,
       settings,
+      // Manager assignment fields
+      manager_user_id,
+      manager_full_name,
+      manager_email, // Optional - manager's email
       // Backward compatibility
       type 
     } = req.body;
@@ -151,6 +156,14 @@ const createClub = async (req, res, next) => {
     // Validate required fields
     if (!name || (!category && !type)) {
       const error = new Error('Name and category are required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    // Validate manager fields
+    if (!manager_user_id || !manager_full_name) {
+      const error = new Error('Manager user ID and full name are required');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
       throw error;
@@ -178,6 +191,85 @@ const createClub = async (req, res, next) => {
       throw error;
     }
     
+    if (typeof manager_user_id !== 'string') {
+      const error = new Error('Manager user ID must be a string');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    if (typeof manager_full_name !== 'string') {
+      const error = new Error('Manager full name must be a string');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    // Validate manager email if provided
+    if (manager_email && (typeof manager_email !== 'string' || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(manager_email))) {
+      const error = new Error('Manager email must be a valid email address');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    // Verify that the manager user exists in the auth database
+    let finalManagerEmail = manager_email;
+    let finalManagerFullName = manager_full_name;
+    
+    try {
+      // Pass the current user's context for auth service validation
+      const requestContext = {
+        userId: req.user?.id || req.headers['x-user-id'],
+        userRole: req.user?.role || req.headers['x-user-role']
+      };
+      
+      const managerUser = await authServiceClient.verifyUserExists(manager_user_id, requestContext);
+      if (!managerUser) {
+        const error = new Error('Manager user not found in auth database');
+        error.status = 404;
+        error.name = 'USER_NOT_FOUND';
+        throw error;
+      }
+      
+      // Log manager validation success
+      console.log('✅ Manager user validated:', {
+        user_id: manager_user_id,
+        email: managerUser.data?.user?.email || managerUser.email,
+        full_name: managerUser.data?.user?.full_name || managerUser.full_name,
+        validated_by: requestContext.userId
+      });
+      
+      // Use verified user information for better data integrity
+      // This ensures we have the correct email and full name from auth service
+      const verifiedUser = managerUser.data?.user || managerUser;
+      const verifiedManagerEmail = verifiedUser.email;
+      const verifiedManagerFullName = verifiedUser.full_name;
+      
+      // Use verified information if not provided in request
+      finalManagerEmail = manager_email || verifiedManagerEmail;
+      finalManagerFullName = manager_full_name || verifiedManagerFullName;
+      
+    } catch (authError) {
+      console.error('❌ Manager user validation failed:', {
+        manager_user_id,
+        error: authError.message,
+        name: authError.name,
+        status: authError.status
+      });
+      
+      // Re-throw auth service errors
+      if (authError.name === 'USER_NOT_FOUND') {
+        throw authError;
+      }
+      
+      // Handle auth service unavailable
+      const error = new Error('Unable to verify manager user. Auth service may be unavailable.');
+      error.status = 503;
+      error.name = 'SERVICE_UNAVAILABLE';
+      throw error;
+    }
+    
     // Sanitize string inputs
     const sanitizedData = {
       name: sanitizeInput(name),
@@ -191,13 +283,38 @@ const createClub = async (req, res, next) => {
       social_links: social_links,
       settings: settings,
       status: 'ACTIVE',
-      created_by: req.user?.id,
+      created_by: manager_user_id, // Use manager's user ID as creator
+      // Manager information (snapshot at creation time)
+      manager: {
+        user_id: manager_user_id,
+        full_name: sanitizeInput(finalManagerFullName),
+        email: finalManagerEmail || contact_email, // Use manager's email or fallback to club contact email
+        assigned_at: new Date()
+      },
       // Backward compatibility
       type: type || category
     };
     
     const newClub = await Club.create(sanitizedData);
-    res.status(201).json(newClub);
+    
+    // Create membership for the manager
+    const { Membership } = require('../config/database');
+    await Membership.create({
+      club_id: newClub.id, // Use newClub.id instead of newClub._id
+      user_id: manager_user_id,
+      role: 'club_manager',
+      status: 'active',
+      joined_at: new Date()
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Club created successfully with manager assigned',
+      data: {
+        club: newClub,
+        manager: newClub.manager // Use manager info from the created club
+      }
+    });
   } catch (error) {
     if (error.name === 'MongoServerError' && error.code === 11000) {
       const duplicateError = new Error('Club with this name already exists');
@@ -320,6 +437,58 @@ const getStats = async (req, res, next) => {
   }
 };
 
+// Get clubs with member count in descending order
+const getClubsWithMemberCount = async (req, res, next) => {
+  try {
+    const { Membership } = require('../config/database');
+    
+    // Aggregate pipeline to count members for each club
+    const clubsWithMemberCount = await Membership.aggregate([
+      {
+        $match: {
+          status: 'active' // Only count active members
+        }
+      },
+      {
+        $group: {
+          _id: '$club_id',
+          memberCount: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'clubs',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'club'
+        }
+      },
+      {
+        $unwind: '$club'
+      },
+      {
+        $project: {
+          club_id: '$_id',
+          club_name: '$club.name',
+          memberCount: 1,
+          _id: 0
+        }
+      },
+      {
+        $sort: { memberCount: -1 } // Descending order
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: 'Clubs with member count retrieved successfully',
+      data: clubsWithMemberCount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getClubs,
   getClubById,
@@ -328,5 +497,6 @@ module.exports = {
   getClubMember,
   getCategories,
   getLocations,
-  getStats
+  getStats,
+  getClubsWithMemberCount
 };

@@ -124,6 +124,34 @@ const clubSchema = new mongoose.Schema({
     type: String, 
     required: true
   },
+  // Manager information (snapshot at creation time)
+  manager: {
+    type: {
+      user_id: { 
+        type: String, 
+        required: true 
+      },
+      full_name: { 
+        type: String, 
+        required: true,
+        maxLength: 255
+      },
+      email: { 
+        type: String,
+        validate: {
+          validator: function(v) {
+            return !v || /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
+          },
+          message: 'Invalid email format'
+        }
+      },
+      assigned_at: { 
+        type: Date, 
+        default: Date.now 
+      }
+    },
+    required: true
+  },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   deleted_at: { type: Date }
@@ -151,7 +179,7 @@ const membershipSchema = new mongoose.Schema({
   role: { 
     type: String, 
     required: true,
-    enum: ['member', 'organizer', 'admin'],
+    enum: ['member', 'organizer',  'club_manager'],
     default: 'member'
   },
   status: {

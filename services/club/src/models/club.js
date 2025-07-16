@@ -122,6 +122,7 @@ class ClubModel {
           settings: club.settings,
           member_count: club.size || 0,
           created_at: club.created_at,
+          manager: club.manager, // Added manager field
           // Backward compatibility
           type: club.type
         }))
@@ -152,6 +153,7 @@ class ClubModel {
         settings: club.settings,
         status: club.status,
         created_by: club.created_by,
+        manager: club.manager, // Added manager field
         // Backward compatibility
         type: club.type,
         size: club.size
@@ -176,6 +178,7 @@ class ClubModel {
         social_links,
         settings,
         created_by,
+        manager, // Added manager field
         // Backward compatibility
         type,
         status
@@ -196,6 +199,7 @@ class ClubModel {
           requires_approval: settings?.requires_approval !== undefined ? settings.requires_approval : true,
           max_members: settings?.max_members
         },
+        manager, // Added manager field
         // Backward compatibility fields
         type: type || category,
         status: status || 'ACTIVE',
@@ -219,6 +223,7 @@ class ClubModel {
         status: newClub.status,
         member_count: 0, // New clubs start with 0 members
         created_by: newClub.created_by,
+        manager: newClub.manager, // Added manager field to response
         // Backward compatibility
         type: newClub.type,
         size: 0

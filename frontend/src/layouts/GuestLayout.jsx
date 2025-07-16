@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './GuestLayout.css';
-import logo from '../Picture/Logo.png';
-import background from '../Picture/background.jpg';
+import logo from '../assets/Logo.png';
 
 const GuestLayout = ({ children }) => (
   <div className="layout-container" style={{ fontFamily: 'Quicksand, Arial, sans-serif' }}>
@@ -10,7 +9,7 @@ const GuestLayout = ({ children }) => (
       <div className="header-left">
         <img src={logo} alt="UniVibe Logo" className="logo-img" />
         <nav className="nav-menu">
-          <Link to="/" className="nav-link home-link">DASHBOARD</Link>
+          <Link to="/" className="nav-link home-link">HOME</Link>
           <Link to="/clubs" className="nav-link">CLUBS</Link>
           <Link to="/events" className="nav-link">EVENTS</Link>
         </nav>
@@ -20,7 +19,7 @@ const GuestLayout = ({ children }) => (
         <Link to="/signup" className="signup-btn">Sign up</Link>
       </div>
     </header>
-    <div className="main-content-container" style={{ backgroundImage: `url(${background})` }}>
+    <div className="main-content-container">
       {children}
     </div>
     <footer className="footer">
@@ -44,4 +43,4 @@ const GuestLayout = ({ children }) => (
   </div>
 );
 
-export default GuestLayout; 
+export default GuestLayout;
