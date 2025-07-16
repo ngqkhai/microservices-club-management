@@ -47,8 +47,10 @@ export default function SignupPage() {
 
     if (!formData.password) {
       newErrors.password = "Password is required"
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters"
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     }
 
     if (!formData.confirmPassword) {
@@ -73,15 +75,21 @@ export default function SignupPage() {
     try {
       const success = await signup(formData.name, formData.email, formData.password)
       if (success) {
+        // Lưu email để có thể resend verification
+        localStorage.setItem('registrationEmail', formData.email)
+        
         toast({
-          title: "Account created successfully!",
-          description: "Welcome to UniClubs. You can now explore clubs and events.",
+          title: "Registration successful!",
+          description: "Please check your email and click the verification link to activate your account.",
         })
-        router.push("/")
+        // Redirect to check-email page theo flow
+        router.push("/check-email")
       } else {
+        // Error message sẽ được hiển thị từ auth store
+        const { error } = useAuthStore.getState()
         toast({
-          title: "Signup failed",
-          description: "Unable to create account. Please try again.",
+          title: "Registration failed",
+          description: error || "Unable to create account. Please try again.",
           variant: "destructive",
         })
       }
