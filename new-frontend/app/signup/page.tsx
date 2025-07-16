@@ -117,7 +117,7 @@ export default function SignupPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Create your account</CardTitle>
             <CardDescription className="text-center">
-              Join UniClubs and start connecting with your community
+              Join UniVibe and start connecting with your community
             </CardDescription>
           </CardHeader>
           <CardContent>

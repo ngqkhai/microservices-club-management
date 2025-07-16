@@ -161,8 +161,8 @@ class ClubService {
   /**
    * Get club categories
    */
-  async getCategories(): Promise<ApiResponse<ClubCategory[]>> {
-    return api.get<ClubCategory[]>(config.endpoints.clubs.categories, { skipAuth: true });
+  async getCategories(): Promise<ApiResponse<string[]>> {
+    return api.get<string[]>(config.endpoints.clubs.categories, { skipAuth: true });
   }
 
   /**

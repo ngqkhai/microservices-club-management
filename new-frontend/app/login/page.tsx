@@ -51,21 +51,21 @@ export default function LoginPage() {
       const success = await login(email, password)
       if (success) {
         toast({
-          title: "Welcome back!",
-          description: "You have successfully signed in.",
+          title: "Chào mừng trở lại!",
+          description: "Bạn đã đăng nhập thành công.",
         })
         router.push("/")
       } else {
         toast({
-          title: "Login failed",
-          description: "Invalid email or password. Please try again.",
+          title: "Đăng nhập thất bại",
+          description: "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại.",
           variant: "destructive",
         })
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Lỗi",
+        description: "Đã xảy ra sự cố. Vui lòng thử lại.",
         variant: "destructive",
       })
     }

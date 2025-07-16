@@ -10,7 +10,7 @@ import { AuthProvider } from "@/components/providers/auth-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "UniClubs - University Club Management",
+  title: "UniVibe - University Club Management",
   description: "Connect with clubs and events at your university",
     generator: 'v0.dev'
 }

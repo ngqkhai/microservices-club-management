@@ -9,6 +9,7 @@ import { ClubCard } from "@/components/club-card"
 import { Pagination } from "@/components/pagination"
 import { RecruitmentBanner } from "@/components/recruitment-banner"
 import { useClubsStore } from "@/stores/clubs-store"
+import { clubService } from "@/services/club.service"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -46,8 +47,6 @@ const mockActiveRecruitments = [
   },
 ]
 
-const categories = ["All", "academic", "sports", "arts", "technology", "social", "volunteer", "cultural", "other"]
-
 export default function ClubsPage() {
   // Use the clubs store
   const {
@@ -61,9 +60,11 @@ export default function ClubsPage() {
     setPage
   } = useClubsStore()
 
-  // Local state for form inputs
+  // Local state for form inputs and categories
   const [searchInput, setSearchInput] = useState("")
   const [categoryInput, setCategoryInput] = useState("All")
+  const [categories, setCategories] = useState<string[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
 
   // Load clubs on component mount
   useEffect(() => {
@@ -71,6 +72,27 @@ export default function ClubsPage() {
       loadAllClubs()
     }
   }, [cache.isLoaded, cache.isLoading, loadAllClubs])
+
+  // Load categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      setCategoriesLoading(true)
+      try {
+        const response = await clubService.getCategories()
+        if (response.success && response.data) {
+          setCategories(["All", ...response.data])
+        }
+      } catch (error) {
+        console.error("Failed to load categories:", error)
+        // Fallback to default categories
+        setCategories(["All", "academic", "sports", "arts", "technology", "social", "volunteer", "cultural", "other"])
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
 
   // Update filters when inputs change (with debouncing for search)
   useEffect(() => {
@@ -146,23 +168,15 @@ export default function ClubsPage() {
               />
             </div>
             <div className="flex gap-2">
-              <Select value={categoryInput} onValueChange={handleCategoryChange}>
+              <Select value={categoryInput} onValueChange={handleCategoryChange} disabled={categoriesLoading}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Danh mục" />
+                  <SelectValue placeholder={categoriesLoading ? "Đang tải..." : "Danh mục"} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {category === "All" ? "Tất cả" : 
-                       category === "academic" ? "Học thuật" :
-                       category === "sports" ? "Thể thao" :
-                       category === "arts" ? "Nghệ thuật" :
-                       category === "technology" ? "Công nghệ" :
-                       category === "social" ? "Xã hội" :
-                       category === "volunteer" ? "Tình nguyện" :
-                       category === "cultural" ? "Văn hóa" :
-                       category === "other" ? "Khác" : category}
+                      {category === "All" ? "Tất cả" : category}
                     </SelectItem>
                   ))}
                 </SelectContent>
