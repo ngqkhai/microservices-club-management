@@ -35,6 +35,13 @@ const nameSchema = Joi.string()
     'any.required': 'Full name is required'
   });
 
+const genderSchema = Joi.string()
+  .valid('Nam', 'Nữ', 'Khác', 'Không muốn nói')
+  .optional()
+  .messages({
+    'any.only': 'Gender must be one of: Nam, Nữ, Khác, Không muốn nói'
+  });
+
 // User registration validation
 const registerSchema = Joi.object({
   email: emailSchema,
@@ -153,6 +160,63 @@ const gatewayHeadersSchema = Joi.object({
     })
 }).unknown(true);
 
+// Profile update validation
+const profileUpdateSchema = Joi.object({
+  full_name: nameSchema.optional(),
+  phone: Joi.string()
+    .trim()
+    .pattern(/^[\+]?[1-9][\d]{0,15}$/)
+    .allow('')
+    .optional()
+    .messages({
+      'string.pattern.base': 'Phone number must be a valid international format'
+    }),
+  profile_picture_url: Joi.string()
+    .uri()
+    .max(500)
+    .allow('')
+    .optional()
+    .messages({
+      'string.uri': 'Profile picture must be a valid URL',
+      'string.max': 'Profile picture URL must not exceed 500 characters'
+    }),
+  bio: Joi.string()
+    .max(500)
+    .allow('')
+    .optional()
+    .messages({
+      'string.max': 'Bio must not exceed 500 characters'
+    }),
+  date_of_birth: Joi.date()
+    .iso()
+    .max('now')
+    .optional()
+    .messages({
+      'date.max': 'Date of birth must be in the past'
+    }),
+  gender: genderSchema,
+  address: Joi.string()
+    .max(200)
+    .allow('')
+    .optional()
+    .messages({
+      'string.max': 'Address must not exceed 200 characters'
+    }),
+  social_links: Joi.object({
+    facebook: Joi.string().max(100).optional(),
+    twitter: Joi.string().max(100).optional(),
+    instagram: Joi.string().max(100).optional(),
+    linkedin: Joi.string().max(100).optional(),
+    github: Joi.string().max(100).optional()
+  })
+    .optional()
+    .messages({
+      'object.unknown': 'Invalid social platform'
+    })
+}).min(1).messages({
+  'object.min': 'At least one field must be provided for update'
+});
+
 // Validation middleware factory
 const validate = (schema, property = 'body') => {
   return (req, res, next) => {
@@ -226,6 +290,7 @@ module.exports = {
   accountDeletionSchema,
   userIdParamSchema,
   gatewayHeadersSchema,
+  profileUpdateSchema,
   
   // Validation middleware
   validate,
@@ -241,9 +306,11 @@ module.exports = {
   validateEmailVerification: validate(emailVerificationSchema),
   validateAccountDeletion: validate(accountDeletionSchema),
   validateUserIdParam: validate(userIdParamSchema, 'params'),
+  validateProfileUpdate: validate(profileUpdateSchema),
   
   // Common patterns
   emailSchema,
   passwordSchema,
-  nameSchema
-}; 
+  nameSchema,
+  genderSchema
+};

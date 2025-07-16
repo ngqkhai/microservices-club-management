@@ -107,6 +107,16 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    gender: {
+      type: DataTypes.ENUM('Nam', 'Nữ', 'Khác', 'Không muốn nói'),
+      allowNull: true,
+      validate: {
+        isIn: {
+          args: [['Nam', 'Nữ', 'Khác', 'Không muốn nói']],
+          msg: 'Gender must be one of: Nam, Nữ, Khác, Không muốn nói'
+        }
+      }
+    },
     address: {
       type: DataTypes.TEXT,
       allowNull: true,

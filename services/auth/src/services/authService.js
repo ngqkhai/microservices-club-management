@@ -730,7 +730,8 @@ class AuthService {
       // Allowed profile fields for update
       const allowedFields = [
         'full_name', 'phone', 'bio', 'date_of_birth', 
-        'address', 'social_links', 'profile_picture_url'
+        'address', 'social_links', 'profile_picture_url',
+        'gender'
       ];
 
       // Filter only allowed fields

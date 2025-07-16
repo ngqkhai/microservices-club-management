@@ -218,7 +218,8 @@ const {
   validateRefreshToken,
   validateEmailVerification,
   validateAccountDeletion,
-  validateUserIdParam
+  validateUserIdParam,
+  validateProfileUpdate
 } = require('../utils/validation');
 
 // Import security middleware
@@ -931,6 +932,9 @@ router.get('/profile', validateApiGatewayHeaders, requireUser, authController.ge
  *               date_of_birth:
  *                 type: string
  *                 format: date
+ *               gender:
+ *                 type: string
+ *                 enum: [male, female, other, prefer_not_to_say]
  *               address:
  *                 type: string
  *                 maxLength: 200
@@ -974,7 +978,7 @@ router.get('/profile', validateApiGatewayHeaders, requireUser, authController.ge
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.put('/profile', validateApiGatewayHeaders, requireUser, authController.updateProfile);
+router.put('/profile', validateApiGatewayHeaders, requireUser, validateProfileUpdate, authController.updateProfile);
 
 /**
  * @swagger
