@@ -7,6 +7,20 @@ const publicCampaignRoutes = require('./publicCampaignRoutes');
 const router = express.Router();
 
 /**
+ * @route OPTIONS /api/clubs/*
+ * @desc Handle CORS preflight requests for all club routes
+ * @access Public
+ */
+router.options('/clubs*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '3600');
+  res.status(200).end();
+});
+
+/**
  * @route GET /api/clubs/categories
  * @desc Get available club categories for filtering
  * @access Public

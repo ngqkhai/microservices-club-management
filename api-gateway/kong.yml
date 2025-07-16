@@ -75,7 +75,8 @@ routes:
       - /api/clubs/categories
       - /api/clubs/locations
       - /api/clubs/stats
-    methods: [GET]
+      - /api/clubs/member-count
+    methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, public]
     plugins:
@@ -156,7 +157,7 @@ routes:
             - email
             - role
           header_prefix: "x-user-"
-
+    
 consumers:
   - username: club-management-app
     custom_id: club-app-001

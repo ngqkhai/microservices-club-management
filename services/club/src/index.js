@@ -13,7 +13,14 @@ const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+
+// Configure CORS to allow frontend origin
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Requested-With', 'X-API-Gateway-Secret']
+}));
 
 // Health check endpoint (BEFORE auth middleware to allow Docker health checks)
 app.get('/health', (req, res) => {

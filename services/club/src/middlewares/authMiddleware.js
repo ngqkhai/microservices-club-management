@@ -3,6 +3,11 @@
  * This checks that the request comes through the API Gateway but doesn't require JWT headers
  */
 const validateApiGatewaySecret = (req, res, next) => {
+  // Skip validation for OPTIONS requests (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
   // MANDATORY: Validate API Gateway secret header first
   const gatewaySecret = req.headers['x-api-gateway-secret'];
   const expectedSecret = process.env.API_GATEWAY_SECRET;
