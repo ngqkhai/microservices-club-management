@@ -203,10 +203,10 @@ plugins:
       max_age: 3600
     tags: [global, cors]
     
-  # Global rate limiting
-  - name: rate-limiting
-    config:
-      minute: 100
-      hour: 1000
-      policy: local
-    tags: [global, rate-limiting]
+  # Global rate limiting (DISABLED)
+  # - name: rate-limiting
+  #   config:
+  #     minute: 100
+  #     hour: 1000
+  #     policy: local
+  #   tags: [global, rate-limiting]

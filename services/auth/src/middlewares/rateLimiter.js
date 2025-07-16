@@ -3,22 +3,14 @@ const logger = require('../config/logger');
 const { TooManyRequestsError } = require('../utils/errors');
 const config = require('../config');
 
-// Rate limiting configuration
+// Rate limiting configuration (DISABLED)
 const rateLimitConfig = {
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   standardizeHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting for health checks
-    if (req.path === '/api/auth/health') return true;
-    
-    // In test mode, only skip if the test doesn't explicitly want rate limiting
-    if (config.isTest()) {
-      // Allow rate limiting if the test sets a special header
-      return !req.headers['x-test-rate-limiting'];
-    }
-    
-    return false;
+    // Skip ALL rate limiting (disabled for development)
+    return true;
   },
   keyGenerator: (req) => {
     // Use user ID if available, otherwise fall back to IP

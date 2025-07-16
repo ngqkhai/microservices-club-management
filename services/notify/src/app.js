@@ -43,10 +43,11 @@ function createApp() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }));
 
-  // Rate limiting
+  // Rate limiting (DISABLED)
   const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+    skip: () => true, // Skip all rate limiting (disabled for development)
     message: {
       error: 'Too many requests from this IP, please try again later.',
       retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000) / 1000)
