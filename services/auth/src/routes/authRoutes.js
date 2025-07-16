@@ -223,6 +223,7 @@ const {
 
 // Import security middleware
 const {
+  validateApiGatewaySecret,
   validateApiGatewayHeaders,
   requireAdmin,
   requireUser
@@ -284,7 +285,7 @@ const router = express.Router();
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.post('/register', registrationLimiter, validateRegister, authController.register);
+router.post('/register', validateApiGatewaySecret, registrationLimiter, validateRegister, authController.register);
 
 /**
  * @swagger
@@ -344,7 +345,7 @@ router.post('/register', registrationLimiter, validateRegister, authController.r
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/verify-email', validateEmailVerification, authController.verifyEmail);
+router.post('/verify-email', validateApiGatewaySecret, validateEmailVerification, authController.verifyEmail);
 
 /**
  * @swagger
@@ -388,7 +389,7 @@ router.post('/verify-email', validateEmailVerification, authController.verifyEma
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.post('/login', authLimiter, validateLogin, authController.login);
+router.post('/login', validateApiGatewaySecret, authLimiter, validateLogin, authController.login);
 
 /**
  * @swagger
@@ -424,7 +425,7 @@ router.post('/login', authLimiter, validateLogin, authController.login);
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.post('/refresh', refreshLimiter, validateRefreshToken, authController.refreshToken);
+router.post('/refresh', validateApiGatewaySecret, refreshLimiter, validateRefreshToken, authController.refreshToken);
 
 /**
  * @swagger
@@ -466,7 +467,7 @@ router.post('/refresh', refreshLimiter, validateRefreshToken, authController.ref
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.post('/forgot-password', passwordResetLimiter, validateForgotPassword, authController.forgotPassword);
+router.post('/forgot-password', validateApiGatewaySecret, passwordResetLimiter, validateForgotPassword, authController.forgotPassword);
 
 /**
  * @swagger
@@ -519,7 +520,7 @@ router.post('/forgot-password', passwordResetLimiter, validateForgotPassword, au
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.post('/reset-password', authLimiter, validateResetPassword, authController.resetPassword);
+router.post('/reset-password', validateApiGatewaySecret, authLimiter, validateResetPassword, authController.resetPassword);
 
 /**
  * @swagger
@@ -535,7 +536,7 @@ router.post('/reset-password', authLimiter, validateResetPassword, authControlle
  *             schema:
  *               $ref: '#/components/schemas/HealthResponse'
  */
-router.get('/health', authController.health);
+router.get('/health', validateApiGatewaySecret, authController.health);
 
 /**
  * @swagger
@@ -558,7 +559,7 @@ router.get('/health', authController.health);
  *                   type: string
  *                   format: date-time
  */
-router.get('/liveness', authController.liveness);
+router.get('/liveness', validateApiGatewaySecret, authController.liveness);
 
 /**
  * @swagger
@@ -590,7 +591,7 @@ router.get('/liveness', authController.liveness);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/readiness', authController.readiness);
+router.get('/readiness', validateApiGatewaySecret, authController.readiness);
 
 /**
  * @swagger
@@ -722,6 +723,156 @@ router.post('/change-password',
   validateChangePassword, 
   authController.changePassword
 );
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Get user profile
+ *     tags: [User Profile]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.get('/profile', validateApiGatewayHeaders, requireUser, authController.getProfile);
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   put:
+ *     summary: Update user profile
+ *     tags: [User Profile]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *               phone:
+ *                 type: string
+ *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
+ *               bio:
+ *                 type: string
+ *                 maxLength: 500
+ *               date_of_birth:
+ *                 type: string
+ *                 format: date
+ *               address:
+ *                 type: string
+ *                 maxLength: 200
+ *               social_links:
+ *                 type: object
+ *                 properties:
+ *                   facebook:
+ *                     type: string
+ *                   twitter:
+ *                     type: string
+ *                   instagram:
+ *                     type: string
+ *                   linkedin:
+ *                     type: string
+ *                   github:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Profile updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       409:
+ *         description: Phone number already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.put('/profile', validateApiGatewayHeaders, requireUser, authController.updateProfile);
+
+/**
+ * @swagger
+ * /api/auth/profile/picture:
+ *   put:
+ *     summary: Update profile picture
+ *     tags: [User Profile]
+ *     parameters:
+ *       - $ref: '#/components/parameters/GatewayUserId'
+ *       - $ref: '#/components/parameters/GatewayUserRole'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - profile_picture_url
+ *             properties:
+ *               profile_picture_url:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL of the new profile picture
+ *     responses:
+ *       200:
+ *         description: Profile picture updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Profile picture updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     profile_picture_url:
+ *                       type: string
+ *                       format: uri
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.put('/profile/picture', validateApiGatewayHeaders, requireUser, authController.updateProfilePicture);
 
 /**
  * @swagger
@@ -880,34 +1031,7 @@ router.delete('/users/:id',
   authController.deleteUser
 );
 
-// Token verification endpoint for Kong API Gateway
-router.get('/verify-token', (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
 
-    // Verify the token using our JWT utility
-    const decoded = jwtUtil.verifyAccessToken(token);
-    
-    // Return user information as headers that Kong can use
-    res.set('X-User-Id', decoded.id);
-    res.set('X-User-Email', decoded.email);
-    res.set('X-User-Role', decoded.role);
-    
-    res.json({
-      success: true,
-      user: {
-        id: decoded.id,
-        email: decoded.email,
-        role: decoded.role
-      }
-    });
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
 
 // Public key endpoint for Kong API Gateway
 router.get('/public-key', (req, res) => {

@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const logger = require('./config/logger');
 const healthRoutes = require('./routes/health');
+const { authMiddleware } = require('./middlewares/authMiddleware');
 
 /**
  * Create and configure Express application
@@ -118,8 +119,11 @@ function createApp() {
     next();
   });
 
-  // Health check routes
+  // Health check routes (no auth required)
   app.use('/health', healthRoutes);
+
+  // API Gateway authentication middleware for all other routes
+  app.use('/api', authMiddleware);
 
   // Root route
   app.get('/', (req, res) => {

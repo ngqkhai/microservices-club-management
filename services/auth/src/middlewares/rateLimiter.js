@@ -1,15 +1,24 @@
 const rateLimit = require('express-rate-limit');
 const logger = require('../config/logger');
 const { TooManyRequestsError } = require('../utils/errors');
+const config = require('../config');
 
 // Rate limiting configuration
-const config = {
+const rateLimitConfig = {
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   standardizeHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
     // Skip rate limiting for health checks
-    return req.path === '/api/auth/health';
+    if (req.path === '/api/auth/health') return true;
+    
+    // In test mode, only skip if the test doesn't explicitly want rate limiting
+    if (config.isTest()) {
+      // Allow rate limiting if the test sets a special header
+      return !req.headers['x-test-rate-limiting'];
+    }
+    
+    return false;
   },
   keyGenerator: (req) => {
     // Use user ID if available, otherwise fall back to IP
@@ -33,7 +42,7 @@ const config = {
 
 // General rate limiter
 const generalLimiter = rateLimit({
-  ...config,
+  ...rateLimitConfig,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   message: {
     success: false,
@@ -44,9 +53,9 @@ const generalLimiter = rateLimit({
 
 // Strict rate limiter for authentication endpoints
 const authLimiter = rateLimit({
-  ...config,
+  ...rateLimitConfig,
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per windowMs
+  max: config.isTest() ? 3 : 10, // Lower limit for testing
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again later',
@@ -57,7 +66,7 @@ const authLimiter = rateLimit({
 
 // Very strict rate limiter for password reset
 const passwordResetLimiter = rateLimit({
-  ...config,
+  ...rateLimitConfig,
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // Limit each IP to 3 password reset requests per hour
   message: {
@@ -69,7 +78,7 @@ const passwordResetLimiter = rateLimit({
 
 // Rate limiter for registration
 const registrationLimiter = rateLimit({
-  ...config,
+  ...rateLimitConfig,
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // Limit each IP to 5 registration attempts per hour
   message: {
@@ -81,7 +90,7 @@ const registrationLimiter = rateLimit({
 
 // Rate limiter for token refresh
 const refreshLimiter = rateLimit({
-  ...config,
+  ...rateLimitConfig,
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // Allow more frequent token refreshes
   message: {
@@ -94,24 +103,24 @@ const refreshLimiter = rateLimit({
 // Dynamic rate limiter based on user behavior
 const createDynamicLimiter = (baseMax = 100, factor = 1) => {
   return rateLimit({
-    ...config,
+    ...rateLimitConfig,
     max: (req) => {
       // Reduce limit for suspicious behavior
       const suspiciousFactors = [
         req.get('User-Agent')?.includes('bot') ? 0.5 : 1,
         req.headers['x-forwarded-for'] ? 0.8 : 1, // Proxy/VPN detection
-        req.user?.role === 'ADMIN' ? 2 : 1 // Higher limit for admins
+        req.user?.role === 'admin' ? 2 : 1 // Higher limit for admins
       ];
       
       const adjustedMax = suspiciousFactors.reduce((acc, curr) => acc * curr, baseMax * factor);
       return Math.floor(adjustedMax);
     },
-    message: (req) => ({
-      success: false,
-      message: 'Request limit exceeded based on usage patterns',
-      code: 'DYNAMIC_RATE_LIMIT_EXCEEDED',
-      retryAfter: Math.ceil(config.windowMs / 1000)
-    })
+          message: (req) => ({
+        success: false,
+        message: 'Request limit exceeded based on usage patterns',
+        code: 'DYNAMIC_RATE_LIMIT_EXCEEDED',
+        retryAfter: Math.ceil(rateLimitConfig.windowMs / 1000)
+      })
   });
 };
 
@@ -160,7 +169,7 @@ const createProgressiveLimiter = () => {
 // Whitelist-based rate limiter
 const createWhitelistLimiter = (whitelist = []) => {
   return rateLimit({
-    ...config,
+    ...rateLimitConfig,
     skip: (req) => {
       // Skip rate limiting for whitelisted IPs
       return whitelist.includes(req.ip) || req.path === '/api/auth/health';
@@ -171,7 +180,7 @@ const createWhitelistLimiter = (whitelist = []) => {
 // Rate limiter with custom store (for Redis clustering)
 const createClusterLimiter = (store) => {
   return rateLimit({
-    ...config,
+    ...rateLimitConfig,
     store: store,
     max: 100
   });

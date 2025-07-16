@@ -45,13 +45,13 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     role: {
-      type: DataTypes.ENUM('USER', 'ADMIN'),
-      defaultValue: 'USER',
+      type: DataTypes.ENUM('user', 'admin'),
+      defaultValue: 'user',
       allowNull: false,
       validate: {
         isIn: {
-          args: [['USER', 'ADMIN']],
-          msg: 'Role must be either USER or ADMIN'
+          args: [['user', 'admin']],
+          msg: 'Role must be either user or admin'
         }
       }
     },
@@ -63,17 +63,80 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
-    last_login: {
-      type: DataTypes.DATE,
-      allowNull: true
+    // Profile fields from schema
+    phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      unique: true,
+      validate: {
+        is: {
+          args: /^[\+]?[1-9][\d]{0,15}$/,
+          msg: 'Phone number must be a valid international format'
+        }
+      }
     },
-    failed_login_attempts: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
+    profile_picture_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      validate: {
+        isUrl: {
+          msg: 'Profile picture must be a valid URL'
+        }
+      }
     },
-    locked_until: {
-      type: DataTypes.DATE,
-      allowNull: true
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 500],
+          msg: 'Bio must not exceed 500 characters'
+        }
+      }
+    },
+    date_of_birth: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      validate: {
+        isDate: {
+          msg: 'Date of birth must be a valid date'
+        },
+        isBefore: {
+          args: new Date().toISOString().split('T')[0],
+          msg: 'Date of birth must be in the past'
+        }
+      }
+    },
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      validate: {
+        len: {
+          args: [0, 200],
+          msg: 'Address must not exceed 200 characters'
+        }
+      }
+    },
+    social_links: {
+      type: DataTypes.JSONB,
+      defaultValue: {},
+      allowNull: true,
+      validate: {
+        isValidSocialLinks(value) {
+          if (value && typeof value === 'object') {
+            const allowedPlatforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'github'];
+            const keys = Object.keys(value);
+            for (const key of keys) {
+              if (!allowedPlatforms.includes(key)) {
+                throw new Error(`Invalid social platform: ${key}`);
+              }
+              if (typeof value[key] !== 'string' || value[key].length > 100) {
+                throw new Error(`Invalid URL for ${key}`);
+              }
+            }
+          }
+        }
+      }
     }
   }, {
     tableName: 'users',
@@ -155,7 +218,7 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   User.createUser = async function(userData) {
-    const { email, full_name, password, role = 'USER' } = userData;
+    const { email, full_name, password, role = 'user' } = userData;
     
     return this.create({
       email: email.toLowerCase(),

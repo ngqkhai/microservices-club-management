@@ -8,10 +8,37 @@ import { Event } from '../models/event.js';
 
 /**
  * Authentication middleware that extracts user info from Kong-injected headers
+ * REQUIRES trusted internal header validation first
  */
 export const authMiddleware = (req, res, next) => {
   try {
-    // Extract user information from Kong-injected headers
+    // MANDATORY: Validate API Gateway secret header first
+    const gatewaySecret = req.headers['x-api-gateway-secret'];
+    const expectedSecret = process.env.API_GATEWAY_SECRET;
+    
+    if (!gatewaySecret || gatewaySecret !== expectedSecret) {
+      console.warn('EVENT SERVICE: Request rejected - Invalid or missing gateway secret', {
+        ip: req.ip,
+        path: req.path,
+        method: req.method,
+        userAgent: req.get('User-Agent'),
+        hasSecret: !!gatewaySecret,
+        timestamp: new Date().toISOString()
+      });
+      
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized: Request must come through API Gateway',
+        code: 'INVALID_GATEWAY'
+      });
+    }
+
+    console.debug('EVENT SERVICE: Gateway validation passed', {
+      path: req.path,
+      method: req.method
+    });
+
+    // Extract user information from validated Kong-injected headers
     const userId = req.headers['x-user-id'];
     const userEmail = req.headers['x-user-email'];
     const userRole = req.headers['x-user-role'];

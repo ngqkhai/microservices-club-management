@@ -3,6 +3,7 @@ const handlebars = require('handlebars');
 const fs = require('fs-extra');
 const path = require('path');
 const logger = require('../config/logger');
+const { getEmailConfig, isEmailConfigured } = require('../config/email');
 
 /**
  * Email Service for sending various types of emails
@@ -12,8 +13,9 @@ class EmailService {
   constructor() {
     this.transporter = null;
     this.templateCache = new Map();
-    this.templateDir = process.env.TEMPLATE_DIR || 'templates';
-    this.templateCacheTTL = parseInt(process.env.TEMPLATE_CACHE_TTL) || 3600000; // 1 hour
+    this.config = getEmailConfig();
+    this.templateDir = this.config.templates.dir;
+    this.templateCacheTTL = this.config.templates.cacheTTL;
     this.isConfigured = false;
     this.stats = {
       sent: 0,
@@ -29,40 +31,41 @@ class EmailService {
    */
   setupTransporter() {
     try {
-      const emailService = process.env.EMAIL_SERVICE;
-      const emailUser = process.env.EMAIL_USER;
-      const emailPassword = process.env.EMAIL_PASSWORD;
       const nodeEnv = process.env.NODE_ENV || 'development';
 
-      // Skip actual email setup in development if not configured
-      if (nodeEnv === 'development' && (!emailUser || !emailPassword)) {
-        logger.email('Email service not configured - emails will be logged only', {
-          mode: 'development'
-        });
-        this.isConfigured = false;
-        return;
+      // Check if email service is properly configured
+      if (!isEmailConfigured()) {
+        if (nodeEnv === 'development') {
+          logger.email('Email service not configured - emails will be logged only', {
+            mode: 'development'
+          });
+          this.isConfigured = false;
+          return;
+        } else {
+          throw new Error('Email service configuration is incomplete for production');
+        }
       }
 
       let transporterConfig;
 
-      if (emailService && emailService !== 'custom') {
+      if (this.config.service && this.config.service !== 'custom') {
         // Use predefined service (gmail, yahoo, etc.)
         transporterConfig = {
-          service: emailService,
+          service: this.config.service,
           auth: {
-            user: emailUser,
-            pass: emailPassword
+            user: this.config.auth.user,
+            pass: this.config.auth.pass
           }
         };
       } else {
         // Use custom SMTP configuration
         transporterConfig = {
-          host: process.env.SMTP_HOST || 'smtp.gmail.com',
-          port: parseInt(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true',
+          host: this.config.smtp.host,
+          port: this.config.smtp.port,
+          secure: this.config.smtp.secure,
           auth: {
-            user: emailUser,
-            pass: emailPassword
+            user: this.config.auth.user,
+            pass: this.config.auth.pass
           }
         };
       }
@@ -71,7 +74,7 @@ class EmailService {
       this.isConfigured = true;
 
       logger.email('Email service configured successfully', {
-        service: emailService || 'custom',
+        service: this.config.service || 'custom',
         host: transporterConfig.host,
         port: transporterConfig.port
       });
@@ -168,7 +171,7 @@ class EmailService {
       }
 
       const mailOptions = {
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        from: this.config.from,
         ...emailOptions
       };
 
@@ -226,7 +229,7 @@ class EmailService {
       const templateData = {
         fullName,
         verificationLink: link,
-        frontendUrl: process.env.FRONTEND_BASE_URL
+        frontendUrl: this.config.frontend.baseUrl
       };
 
       const emailOptions = {
@@ -272,7 +275,7 @@ class EmailService {
       const templateData = {
         fullName,
         resetLink: link,
-        frontendUrl: process.env.FRONTEND_BASE_URL
+        frontendUrl: this.config.frontend.baseUrl
       };
 
       const emailOptions = {
@@ -321,7 +324,7 @@ class EmailService {
         eventDate,
         eventLocation,
         rsvpLink,
-        frontendUrl: process.env.FRONTEND_BASE_URL,
+        frontendUrl: this.config.frontend.baseUrl,
         unsubscribeUrl: process.env.UNSUBSCRIBE_URL
       };
 
@@ -375,7 +378,7 @@ class EmailService {
             fullName: recipient.fullName,
             title,
             content,
-            frontendUrl: process.env.FRONTEND_BASE_URL,
+            frontendUrl: this.config.frontend.baseUrl,
             unsubscribeUrl: process.env.UNSUBSCRIBE_URL
           };
 

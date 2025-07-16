@@ -47,7 +47,7 @@ class AuthService {
         email: email.toLowerCase(),
         full_name,
         password,
-        role: 'USER'
+        role: 'user'
       });
 
       // Generate email verification token (expires in 1 hour)
@@ -73,7 +73,8 @@ class AuthService {
 
       return {
         message: 'Registration successful. Please check your email and click the verification link to activate your account.',
-        email: user.email
+        email: user.email,
+        user: user.toJSON()
       };
     } catch (error) {
       logger.error('User registration failed:', error);
@@ -89,7 +90,19 @@ class AuthService {
   async verifyEmail(token) {
     try {
       // Verify and decode the token
-      const decoded = jwtUtil.verifyEmailVerificationToken(token);
+      let decoded;
+      try {
+        decoded = jwtUtil.verifyEmailVerificationToken(token);
+      } catch (jwtError) {
+        // Convert JWT errors to proper auth errors
+        if (jwtError.message.includes('expired')) {
+          throw new EmailVerificationTokenError('Email verification token has expired');
+        } else if (jwtError.message.includes('Invalid') || jwtError.message.includes('invalid')) {
+          throw new EmailVerificationTokenError('Invalid email verification token');
+        } else {
+          throw new EmailVerificationTokenError('Email verification token is invalid');
+        }
+      }
       
       // Find the user
       const user = await User.findByPk(decoded.userId);
@@ -192,11 +205,7 @@ class AuthService {
       const { accessToken, refreshToken } = jwtUtil.generateTokenPair(user);
 
       // Store refresh token in database
-      const refreshTokenRecord = await RefreshToken.createToken(user.id, {
-        userAgent,
-        ip,
-        rememberMe
-      });
+      const refreshTokenRecord = await RefreshToken.createToken(user.id);
 
       logger.info('User logged in successfully', {
         userId: user.id,
@@ -268,7 +277,7 @@ class AuthService {
       const { accessToken, refreshToken: newRefreshToken } = jwtUtil.generateTokenPair(user);
 
       // Create new refresh token record
-      const newRefreshTokenRecord = await RefreshToken.createToken(user.id, tokenRecord.device_info);
+      const newRefreshTokenRecord = await RefreshToken.createToken(user.id);
 
       // Revoke old refresh token
       await tokenRecord.revoke();
@@ -522,7 +531,7 @@ class AuthService {
       }
 
       // Prevent admin self-deletion for security
-      if (user.role === 'ADMIN') {
+      if (user.role === 'admin') {
         throw new AuthorizationError('Admin accounts cannot be self-deleted for security reasons');
       }
 
@@ -584,6 +593,119 @@ class AuthService {
       return { message: 'User account deleted successfully' };
     } catch (error) {
       logger.error('User deletion failed:', error, { targetUserId });
+      throw error;
+    }
+  }
+
+  /**
+   * Get user profile information
+   * @param {string} userId - User ID
+   * @returns {Object} User profile data
+   */
+  async getUserProfile(userId) {
+    try {
+      const user = await User.findByPk(userId, {
+        attributes: { 
+          exclude: ['password_hash', 'failed_login_attempts', 'locked_until'] 
+        }
+      });
+
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      logger.info('User profile retrieved', { userId });
+      return user;
+    } catch (error) {
+      logger.error('Failed to get user profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user profile information
+   * @param {string} userId - User ID
+   * @param {Object} profileData - Profile data to update
+   * @returns {Object} Updated user profile
+   */
+  async updateProfile(userId, profileData) {
+    try {
+      const user = await User.findByPk(userId);
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      // Allowed profile fields for update
+      const allowedFields = [
+        'full_name', 'phone', 'bio', 'date_of_birth', 
+        'address', 'social_links', 'profile_picture_url'
+      ];
+
+      // Filter only allowed fields
+      const updateData = {};
+      Object.keys(profileData).forEach(key => {
+        if (allowedFields.includes(key)) {
+          updateData[key] = profileData[key];
+        }
+      });
+
+      // Check if phone number is already taken by another user
+      if (updateData.phone && updateData.phone !== user.phone) {
+        const existingUser = await User.findOne({ 
+          where: { phone: updateData.phone } 
+        });
+        if (existingUser && existingUser.id !== userId) {
+          throw new ConflictError('Phone number already exists');
+        }
+      }
+
+      await user.update(updateData);
+      
+      // Return updated user without sensitive fields
+      const updatedUser = await User.findByPk(userId, {
+        attributes: { 
+          exclude: ['password_hash', 'failed_login_attempts', 'locked_until'] 
+        }
+      });
+
+      // Sync with user service if needed (can be removed after full consolidation)
+      try {
+        await userSyncService.syncUserUpdate(updatedUser);
+      } catch (syncError) {
+        logger.warn('User sync failed during profile update:', syncError);
+        // Don't fail the request if sync fails
+      }
+
+      logger.info('User profile updated', { userId, updatedFields: Object.keys(updateData) });
+      return updatedUser;
+    } catch (error) {
+      logger.error('Failed to update user profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user's profile picture
+   * @param {string} userId - User ID
+   * @param {string} imageUrl - New profile picture URL
+   * @returns {Object} Updated user profile
+   */
+  async updateProfilePicture(userId, imageUrl) {
+    try {
+      const user = await User.findByPk(userId);
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      await user.update({ profile_picture_url: imageUrl });
+
+      logger.info('Profile picture updated', { userId });
+      return { 
+        message: 'Profile picture updated successfully',
+        profile_picture_url: imageUrl 
+      };
+    } catch (error) {
+      logger.error('Failed to update profile picture:', error);
       throw error;
     }
   }

@@ -8,18 +8,25 @@ const eventInterestSchema = new mongoose.Schema({
     index: true
   },
   user_id: {
-    type: String, // User ID reference to auth service
+    type: String, // UUID from Auth Service
     required: true
   },
-  created_at: {
+  notifications_enabled: {
+    type: Boolean,
+    default: true
+  },
+  marked_at: {
     type: Date,
+    required: true,
     default: Date.now
   }
 }, {
   collection: 'event_interests'
 });
 
-// Compound index for unique interest per user per event
+// Add indexes for better performance (matching schema requirements)
 eventInterestSchema.index({ event_id: 1, user_id: 1 }, { unique: true });
+eventInterestSchema.index({ user_id: 1 });
+eventInterestSchema.index({ marked_at: 1 });
 
 export const EventInterest = mongoose.model('EventInterest', eventInterestSchema);

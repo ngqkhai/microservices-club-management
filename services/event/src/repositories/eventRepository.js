@@ -6,10 +6,10 @@ export async function getEventsFromMock({ filter, club_id }) {
     query.club_id = club_id;
   }
   if (filter === 'upcoming') {
-    query.start_at = { $gte: new Date() };
+    query.start_date = { $gte: new Date() };
   }
   
-  return await Event.find(query).sort({ start_at: 1 });
+  return await Event.find(query).sort({ start_date: 1 });
 }
 
 export async function findEventById(eventId) {

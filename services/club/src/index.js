@@ -6,7 +6,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const clubRoutes = require('./routes/clubRoutes');
 const { connectToDatabase } = require('./config/database');
-const { extractUserFromHeaders } = require('./middlewares/authMiddleware');
 
 // Initialize Express app
 const app = express();
@@ -16,16 +15,13 @@ const PORT = process.env.PORT || 3002;
 app.use(bodyParser.json());
 app.use(cors());
 
-// Extract user information from headers
-app.use(extractUserFromHeaders);
-
-// Routes
-app.use('/api', clubRoutes);
-
-// Health check endpoint
+// Health check endpoint (BEFORE auth middleware to allow Docker health checks)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'club-service' });
 });
+
+// Routes (middleware is now applied per route)
+app.use('/api', clubRoutes);
 
 // Error handling middleware
 const { errorHandler } = require('./middlewares/errorMiddleware');

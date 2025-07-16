@@ -1,48 +1,5 @@
 services:
 
-  # PostgreSQL Database for Auth Service
-  postgres:
-    image: postgres:15-alpine
-    container_name: club_management_postgres
-    environment:
-      POSTGRES_DB: club_management_auth
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./services/auth/src/migrations:/docker-entrypoint-initdb.d
-    networks:
-      - club_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-
-  # PostgreSQL Database for User Service
-  user-postgres:
-    image: postgres:15-alpine
-    container_name: club_management_user_postgres
-    environment:
-      POSTGRES_DB: club_management_user
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5434:5432"
-    volumes:
-      - user_postgres_data:/var/lib/postgresql/data
-    networks:
-      - club_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-
   # Club Service
   club-service:
     build:
@@ -50,13 +7,12 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: club_management_club
-    env_file:
-      - ./services/club/.env
     environment:
-      # Use MongoDB Atlas or configure local MongoDB
-      PORT: 3002  
+      PORT: 3002
       NODE_ENV: development
       MOCK_DB: false
+      MONGODB_URI: ${CLUB_MONGODB_URI}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
     ports:
       - "3002:3002"
     volumes:
@@ -79,12 +35,11 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: club_management_event
-    env_file:
-      - ./services/event/.env
     environment:
-      # Use MongoDB Atlas from .env file (cloud database)
       PORT: 3003
       NODE_ENV: development
+      MONGODB_URI: ${EVENT_MONGODB_URI}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
     ports:
       - "3003:3003"
     volumes:
@@ -100,78 +55,36 @@ services:
       start_period: 40s
     restart: unless-stopped
 
-  # RabbitMQ Message Broker with correct Erlang cookie permissions on first run
-  rabbitmq:
-    build:
-      context: ./docker/rabbitmq
-      dockerfile: Dockerfile
-      args:
-        RABBITMQ_ERLANG_COOKIE: my-secret-cookie
-    image: club_management_rabbitmq:latest
-    container_name: club_management_rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - club_network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
-  # Auth Service Database Migration
-  auth-migration:
-    build:
-      context: ./services/auth
-      dockerfile: Dockerfile
-    container_name: club_management_auth_migration
-    env_file:
-      - ./services/auth/.env
-    environment:
-      DB_HOST: postgres
-      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
-    command: ["npm", "run", "migrate"]
-    volumes:
-      - ./services/auth:/app
-      - /app/node_modules
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - club_network
-    restart: "no"
-
   # Auth Service
   auth-service:
     build:
       context: ./services/auth
       dockerfile: Dockerfile
     container_name: club_management_auth
-    env_file:
-      - ./services/auth/.env
     environment:
-      DB_HOST: postgres
-      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      DATABASE_URL: ${AUTH_DATABASE_URL}
+      RABBITMQ_URL: ${AUTH_RABBITMQ_URL}
+      NODE_ENV: development
+      PORT: 3001
+      DB_DIALECT: postgres
+      DB_SSL: true
+      JWT_ALGORITHM: RS256
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_SECRET: auth-refresh-secret-change-in-production-min-32-chars
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      BCRYPT_ROUNDS: 12
+      MAX_LOGIN_ATTEMPTS: 5
+      ACCOUNT_LOCK_TIME_MS: 1800000
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
     ports:
       - "3001:3001"
     volumes:
       - ./services/auth:/app
       - /app/node_modules
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      auth-migration:
-        condition: service_completed_successfully
     networks:
       - club_network
     restart: unless-stopped
@@ -182,213 +95,64 @@ services:
       retries: 10
       start_period: 60s
 
-  # User Service Database Migration
-  user-migration:
-    build:
-      context: ./services/user
-      dockerfile: Dockerfile
-      target: development
-    container_name: club_management_user_migration
-    env_file:
-      - ./services/user/.env
-    command: ["npm", "run", "migrate"]
-    volumes:
-      - ./services/user:/app
-      - /app/node_modules
-    depends_on:
-      user-postgres:
-        condition: service_healthy
-    networks:
-      - club_network
-    restart: "no"
-
-  # User Service
-  user-service:
-    build:
-      context: ./services/user
-      dockerfile: Dockerfile
-      target: development
-    container_name: club_management_user
-    env_file:
-      - ./services/user/.env
-    ports:
-      - "3004:3004"
-    volumes:
-      - ./services/user:/app
-      - /app/node_modules
-    depends_on:
-      user-postgres:
-        condition: service_healthy
-      user-migration:
-        condition: service_completed_successfully
-      auth-service:
-        condition: service_healthy
-    networks:
-      - club_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3004/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
-
-  # Kong Configuration Database
-  kong-database:
-    image: postgres:15-alpine
-    container_name: club_management_kong_db
-    environment:
-      POSTGRES_DB: kong
-      POSTGRES_USER: kong
-      POSTGRES_PASSWORD: kong123
-    ports:
-      - "5433:5432"
-    volumes:
-      - kong_data:/var/lib/postgresql/data
-    networks:
-      - club_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kong"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-
-  # Kong Migrations Bootstrap
-  kong-migration:
-    image: kong:latest
-    container_name: club_management_kong_migration
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-database
-      KONG_PG_PORT: 5432
-      KONG_PG_DATABASE: kong
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong123
-    command: ["kong", "migrations", "bootstrap"]
-    depends_on:
-      kong-database:
-        condition: service_healthy
-    networks:
-      - club_network
-    restart: "no"
-
-  # Kong API Gateway
+  # Kong API Gateway (DB-less)
   kong:
-    image: kong:latest
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
     container_name: club_management_kong
     environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-database
-      KONG_PG_PORT: 5432
-      KONG_PG_DATABASE: kong
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong123
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PLUGINS: bundled,jwt-claims-headers,api-gateway-secret
+      KONG_LOG_LEVEL: debug
       KONG_PROXY_ACCESS_LOG: /dev/stdout
-      KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ERROR_LOG: /dev/stderr
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
-      KONG_ADMIN_GUI_URL: http://localhost:8002
     ports:
-      - "8000:8000"    # Proxy
-      - "8001:8001"    # Admin API
-      - "8002:8002"    # Manager GUI
-    depends_on:
-      kong-migration:
-        condition: service_completed_successfully
-      auth-service:
-        condition: service_healthy
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    volumes:
+      - ./api-gateway/kong.yml:/etc/kong/kong.yml:ro
     networks:
       - club_network
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "kong health"]
-      interval: 10s
+      test: ["CMD", "kong", "health"]
+      interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
-    restart: unless-stopped
-
-  # Kong Auto-Configurator
-  kong-setup:
-    image: alpine:latest
-    container_name: club_management_kong_setup
-    entrypoint:
-      - /bin/sh
-      - -c
-    command:
-      - |
-        apk add --no-cache curl jq bash \
-          && bash /scripts/setup-kong.sh
-    volumes:
-      - ./api-gateway/scripts:/scripts:ro
-    depends_on:
-      kong:
-        condition: service_healthy
-      auth-service:
-        condition: service_healthy
-      user-service:
-        condition: service_healthy
-      club-service:
-        condition: service_healthy
-      event-service:
-        condition: service_healthy
-    networks:
-      - club_network
-    restart: "no"
+      start_period: 40s
 
   # Notification Service
   notify-service:
     build:
       context: ./services/notify
       dockerfile: Dockerfile
-      target: development
     container_name: club_management_notify
     env_file:
       - ./services/notify/.env
     environment:
-      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      RABBITMQ_URL: ${NOTIFY_RABBITMQ_URL}
+      PORT: 3005
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
     ports:
       - "3005:3005"
     volumes:
       - ./services/notify:/app
       - /app/node_modules
       - notify_logs:/app/logs
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - club_network
-    restart: unless-stopped
-
-  # pgAdmin for PostgreSQL Management
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: club_management_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@clubmanagement.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "8080:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
-      - user-postgres
-      - kong-database
     networks:
       - club_network
     restart: unless-stopped
 
 volumes:
-  postgres_data:
-  user_postgres_data:
-  rabbitmq_data:
   kong_data:
-  pgadmin_data:
   notify_logs:
 
 networks:
   club_network:
-    driver: bridge 
+    driver: bridge

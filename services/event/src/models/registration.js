@@ -9,37 +9,102 @@ const registrationSchema = new mongoose.Schema({
     index: true
   },
   user_id: {
-    type: String, // User ID reference to auth service
+    type: String, // UUID from Auth Service
     required: true,
     index: true
   },
   ticket_id: {
     type: String,
     unique: true,
+    maxLength: 50,
     default: () => uuidv4()
   },
-  payment_id: {
-    type: String, // Reference to finance service transaction
-    index: true
+  registration_data: {
+    type: {
+      answers: [{
+        type: mongoose.Schema.Types.Mixed
+      }],
+      special_requirements: {
+        type: String,
+        maxLength: 1000
+      },
+      emergency_contact: {
+        type: String,
+        maxLength: 200
+      }
+    },
+    default: {}
   },
-  ticket_url: {
-    type: String
+  payment_info: {
+    type: {
+      amount: {
+        type: Number,
+        min: 0
+      },
+      currency: {
+        type: String,
+        maxLength: 3,
+        default: 'USD'
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'paid', 'refunded'],
+        default: 'pending'
+      },
+      transaction_id: {
+        type: String,
+        maxLength: 200
+      },
+      payment_method: {
+        type: String,
+        maxLength: 50
+      }
+    },
+    default: {}
   },
-  qr_code_url: {
-    type: String
+  ticket_info: {
+    type: {
+      qr_code_url: {
+        type: String,
+        maxLength: 500
+      },
+      check_in_time: {
+        type: Date
+      }
+    },
+    default: {}
   },
   status: {
     type: String,
-    enum: ['REGISTERED', 'CANCELLED', 'ATTENDED'],
+    enum: ['registered', 'cancelled', 'attended', 'no_show'],
     required: true,
-    default: 'REGISTERED'
+    default: 'registered'
+  },
+  registered_at: {
+    type: Date,
+    required: true,
+    default: Date.now
+  },
+  cancelled_at: {
+    type: Date
+  },
+  cancellation_reason: {
+    type: String,
+    maxLength: 500
   }
 }, {
   timestamps: { 
     createdAt: 'created_at', 
     updatedAt: 'updated_at' 
   },
-  collection: 'registrations'
+  collection: 'event_registrations'
 });
+
+// Add indexes for better performance (matching schema requirements)
+registrationSchema.index({ event_id: 1, user_id: 1 }, { unique: true });
+registrationSchema.index({ event_id: 1, status: 1 });
+registrationSchema.index({ user_id: 1, status: 1 });
+registrationSchema.index({ registered_at: 1 });
+registrationSchema.index({ ticket_id: 1 }, { unique: true });
 
 export const Registration = mongoose.model('Registration', registrationSchema);

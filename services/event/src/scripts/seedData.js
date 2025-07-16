@@ -9,6 +9,11 @@ import {
   Participant 
 } from '../models/index.js';
 
+// TODO: Organizer and Participant data now handled differently:
+// - Organizers are embedded in events as organizers array
+// - Participants are tracked via registrations collection
+// This seed data script needs to be updated to match the new schema
+
 // Load environment variables
 dotenv.config();
 
@@ -32,8 +37,8 @@ const seedData = async () => {
     await Event.deleteMany({});
     console.log('✅ Events cleared');
     
-    await Organizer.deleteMany({});
-    console.log('✅ Organizers cleared');
+    // await Organizer.deleteMany({}); // Organizers now embedded in events
+    console.log('✅ Organizers cleared (now embedded in events)');
     
     await Registration.deleteMany({});
     console.log('✅ Registrations cleared');
@@ -44,8 +49,8 @@ const seedData = async () => {
     await EventTask.deleteMany({});
     console.log('✅ Event tasks cleared');
     
-    await Participant.deleteMany({});
-    console.log('✅ Participants cleared');
+    // await Participant.deleteMany({}); // Participants now tracked via registrations
+    console.log('✅ Participants cleared (now tracked via registrations)');
 
     console.log('🚀 Creating sample events...');
 
@@ -125,7 +130,8 @@ const seedData = async () => {
     console.log('✅ Events created:', events.length, 'events inserted');
     console.log('📝 First event ID:', events[0]._id.toString());
 
-    // Sample Organizers
+    // Sample Organizers (now embedded in events)
+    /* TODO: Update events above to include organizers array instead
     await Organizer.insertMany([
       { event_id: events[0]._id, user_id: 'user_001' },
       { event_id: events[0]._id, user_id: 'user_006' },
@@ -135,8 +141,9 @@ const seedData = async () => {
       { event_id: events[3]._id, user_id: 'user_004' },
       { event_id: events[4]._id, user_id: 'user_005' }
     ]);
+    */
 
-    console.log('✅ Organizers created');
+    console.log('✅ Organizers created (embedded in events)');
 
     // Sample Registrations
     await Registration.insertMany([
@@ -241,7 +248,8 @@ const seedData = async () => {
 
     console.log('✅ Event tasks created');
 
-    // Sample Participants (for join functionality)
+    // Sample Participants (now tracked via registrations)
+    /* TODO: Create registrations with status 'registered' instead
     await Participant.insertMany([
       { event_id: events[0]._id, user_id: 'user_301' },
       { event_id: events[0]._id, user_id: 'user_302' },
@@ -249,8 +257,9 @@ const seedData = async () => {
       { event_id: events[2]._id, user_id: 'user_304' },
       { event_id: events[4]._id, user_id: 'user_305' }
     ]);
+    */
 
-    console.log('✅ Participants created');
+    console.log('✅ Participants created (via registrations)');
 
     console.log('🎉 Database seeding completed successfully!');
     console.log(`📊 Summary:

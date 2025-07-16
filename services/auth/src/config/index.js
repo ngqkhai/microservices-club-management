@@ -30,30 +30,51 @@ class ConfigManager {
         .default('1.0.0'),
 
       // Database Configuration
+      DATABASE_URL: Joi.string()
+        .uri({ scheme: 'postgresql' })
+        .optional(),
+
       DB_HOST: Joi.string()
         .hostname()
-        .default('localhost'),
+        .when('DATABASE_URL', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.string().hostname().default('localhost')
+        }),
       
       DB_PORT: Joi.number()
         .port()
-        .default(5432),
+        .when('DATABASE_URL', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.number().port().default(5432)
+        }),
       
       DB_NAME: Joi.string()
-        .required()
-        .messages({
-          'any.required': 'Database name (DB_NAME) is required'
+        .when('DATABASE_URL', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.required().messages({
+            'any.required': 'Database name (DB_NAME) is required when DATABASE_URL is not provided'
+          })
         }),
       
       DB_USERNAME: Joi.string()
-        .required()
-        .messages({
-          'any.required': 'Database username (DB_USERNAME) is required'
+        .when('DATABASE_URL', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.required().messages({
+            'any.required': 'Database username (DB_USERNAME) is required when DATABASE_URL is not provided'
+          })
         }),
       
       DB_PASSWORD: Joi.string()
-        .required()
-        .messages({
-          'any.required': 'Database password (DB_PASSWORD) is required'
+        .when('DATABASE_URL', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.required().messages({
+            'any.required': 'Database password (DB_PASSWORD) is required when DATABASE_URL is not provided'
+          })
         }),
       
       DB_DIALECT: Joi.string()
@@ -203,6 +224,7 @@ class ConfigManager {
       SERVICE_VERSION: process.env.SERVICE_VERSION,
       
       // Database
+      DATABASE_URL: process.env.DATABASE_URL,
       DB_HOST: process.env.DB_HOST,
       DB_PORT: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : undefined,
       DB_NAME: process.env.DB_NAME,
@@ -338,6 +360,48 @@ class ConfigManager {
    * Get database configuration for current environment
    */
   getDatabaseConfig() {
+    // Support both individual DB config variables and DATABASE_URL
+    const databaseUrl = process.env.DATABASE_URL || 
+      `postgresql://${this.config.DB_USERNAME}:${this.config.DB_PASSWORD}@${this.config.DB_HOST}:${this.config.DB_PORT}/${this.config.DB_NAME}`;
+    
+    if (process.env.DATABASE_URL) {
+      // Parse DATABASE_URL for Supabase/cloud providers
+      const url = new URL(databaseUrl);
+      
+      const baseConfig = {
+        host: url.hostname,
+        port: parseInt(url.port) || 5432,
+        database: url.pathname.slice(1), // Remove leading slash
+        username: url.username,
+        password: url.password,
+        dialect: this.config.DB_DIALECT,
+        logging: this.config.DB_LOGGING ? console.log : false,
+        pool: {
+          max: this.isProduction() ? 20 : 5,
+          min: this.isProduction() ? 5 : 0,
+          acquire: 30000,
+          idle: 10000
+        },
+        define: {
+          timestamps: true,
+          underscored: true,
+          paranoid: true
+        }
+      };
+
+      // Add SSL configuration for cloud databases
+      if (url.hostname.includes('supabase.com') || url.hostname.includes('amazonaws.com') || this.config.DB_SSL) {
+        baseConfig.dialectOptions = {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false
+          }
+        };
+      }
+
+      return baseConfig;
+    }
+
     const baseConfig = {
       host: this.config.DB_HOST,
       port: this.config.DB_PORT,
@@ -376,13 +440,10 @@ class ConfigManager {
    * Get test database configuration
    */
   getTestDatabaseConfig() {
+    // Use in-memory SQLite for tests to avoid database setup complexity
     return {
-      host: this.config.TEST_DB_HOST,
-      port: this.config.TEST_DB_PORT,
-      database: this.config.TEST_DB_NAME,
-      username: this.config.TEST_DB_USERNAME,
-      password: this.config.TEST_DB_PASSWORD,
-      dialect: this.config.DB_DIALECT,
+      dialect: 'sqlite',
+      storage: ':memory:',
       logging: false,
       pool: {
         max: 5,

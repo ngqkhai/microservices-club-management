@@ -1,23 +1,64 @@
 const { Club } = require('../config/database');
+const mongoose = require('mongoose');
 
 class ClubModel {
-  static async findAll({ name, type, status, page, limit }) {
+  static async findAll({ name, type, category, status, location, search, page, limit, sort }) {
     try {
       // Build the query
       const query = {};
       
-      // Add filters if provided
-      if (name) {
-        // Case-insensitive search with regex
-        query.name = { $regex: name, $options: 'i' };
+      // US007: Advanced search and filtering
+      if (search) {
+        // Full-text search across multiple fields
+        const searchRegex = { $regex: search, $options: 'i' };
+        query.$or = [
+          { name: searchRegex },
+          { description: searchRegex },
+          { category: searchRegex },
+          { location: searchRegex }
+        ];
+      } else {
+        // Individual field filters
+        if (name) {
+          query.name = { $regex: name, $options: 'i' };
+        }
+        
+        if (location) {
+          query.location = { $regex: location, $options: 'i' };
+        }
       }
       
-      if (type) {
-        query.type = type;
+      if (category) {
+        query.category = category;
+      } else if (type) {
+        // Backward compatibility - check both category and type fields
+        query.$or = [
+          { category: type },
+          { type: type }
+        ];
       }
       
       if (status) {
         query.status = status;
+      }
+      // Note: No default status filter since clubs don't have a status field by default
+      
+      // Only show non-deleted clubs (deleted_at is null or doesn't exist)
+      // Handle this carefully to avoid conflicts with existing $or conditions
+      const deletedFilter = [
+        { deleted_at: { $exists: false } },
+        { deleted_at: null }
+      ];
+      
+      if (query.$or) {
+        // If there's already an $or condition, wrap everything in $and
+        query.$and = [
+          { $or: query.$or },
+          { $or: deletedFilter }
+        ];
+        delete query.$or;
+      } else {
+        query.$or = deletedFilter;
       }
       
       // Pagination
@@ -28,20 +69,61 @@ class ClubModel {
       // Get total count for pagination
       const total = await Club.countDocuments(query);
       
-      // Execute the query with pagination
-      const results = await Club.find(query, 'id name type status logo_url')
-        .sort({ name: 1 })
+      // US007: Sorting options
+      let sortOption = {};
+      switch (sort) {
+        case 'name':
+          sortOption = { name: 1 };
+          break;
+        case 'name_desc':
+          sortOption = { name: -1 };
+          break;
+        case 'category':
+          sortOption = { category: 1, name: 1 };
+          break;
+        case 'location':
+          sortOption = { location: 1, name: 1 };
+          break;
+        case 'newest':
+          sortOption = { created_at: -1 };
+          break;
+        case 'oldest':
+          sortOption = { created_at: 1 };
+          break;
+        case 'relevance':
+        default:
+          // For search queries, sort by name (simplified)
+          sortOption = { name: 1 };
+          break;
+      }
+      
+      // Execute the query with pagination and sorting
+      const results = await Club.find(query)
+        .sort(sortOption)
         .skip(skip)
         .limit(pageSize);
       
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(total / pageSize);
+      
       return {
         total,
+        page: pageNumber,
+        totalPages,
+        limit: pageSize,
         results: results.map(club => ({
           id: club._id,
           name: club.name,
-          type: club.type,
+          description: club.description,
+          category: club.category,
+          location: club.location,
+          logo_url: club.logo_url,
           status: club.status,
-          logo_url: club.logo_url
+          settings: club.settings,
+          member_count: club.size || 0,
+          created_at: club.created_at,
+          // Backward compatibility
+          type: club.type
         }))
       };
     } catch (error) {
@@ -52,7 +134,7 @@ class ClubModel {
   
   static async findById(id) {
     try {
-      const club = await Club.findById(id, 'name description type status logo_url website_url');
+      const club = await Club.findById(id);
       
       if (!club) return null;
       
@@ -60,10 +142,19 @@ class ClubModel {
         id: club._id,
         name: club.name,
         description: club.description,
-        type: club.type,
-        status: club.status,
+        category: club.category,
+        location: club.location,
+        contact_email: club.contact_email,
+        contact_phone: club.contact_phone,
         logo_url: club.logo_url,
-        website_url: club.website_url
+        website_url: club.website_url,
+        social_links: club.social_links,
+        settings: club.settings,
+        status: club.status,
+        created_by: club.created_by,
+        // Backward compatibility
+        type: club.type,
+        size: club.size
       };
     } catch (error) {
       console.error('Error finding club by ID:', error);
@@ -73,14 +164,41 @@ class ClubModel {
   
   static async create(clubData) {
     try {
-      const { name, description, type, status, logo_url, created_by } = clubData;
+      const { 
+        name, 
+        description, 
+        category,
+        location,
+        contact_email,
+        contact_phone,
+        logo_url, 
+        website_url,
+        social_links,
+        settings,
+        created_by,
+        // Backward compatibility
+        type,
+        status
+      } = clubData;
       
       const newClub = new Club({
         name,
         description,
-        type,
-        status: status || 'ACTIVE',
+        category: category || type, // Use category or fallback to type for backward compatibility
+        location,
+        contact_email,
+        contact_phone,
         logo_url,
+        website_url,
+        social_links: social_links || {},
+        settings: {
+          is_public: settings?.is_public !== undefined ? settings.is_public : true,
+          requires_approval: settings?.requires_approval !== undefined ? settings.requires_approval : true,
+          max_members: settings?.max_members
+        },
+        // Backward compatibility fields
+        type: type || category,
+        status: status || 'ACTIVE',
         created_by
       });
       
@@ -90,10 +208,20 @@ class ClubModel {
         id: newClub._id,
         name: newClub.name,
         description: newClub.description,
-        type: newClub.type,
-        status: newClub.status,
+        category: newClub.category,
+        location: newClub.location,
+        contact_email: newClub.contact_email,
+        contact_phone: newClub.contact_phone,
         logo_url: newClub.logo_url,
-        created_by: newClub.created_by
+        website_url: newClub.website_url,
+        social_links: newClub.social_links,
+        settings: newClub.settings,
+        status: newClub.status,
+        member_count: 0, // New clubs start with 0 members
+        created_by: newClub.created_by,
+        // Backward compatibility
+        type: newClub.type,
+        size: 0
       };
     } catch (error) {
       // Check for duplicate key error (MongoDB error code 11000)
@@ -108,26 +236,55 @@ class ClubModel {
   }
 
   /**
-   * Find all recruitment rounds for a specific club
+   * Find all recruitment campaigns for a specific club
    * @param {string} clubId - The ID of the club
-   * @returns {Promise<Array>} - Array of recruitment rounds
+   * @param {Object} options - Query options (status, page, limit)
+   * @returns {Promise<Array>} - Array of recruitment campaigns
    */
-  static async findRecruitments(clubId) {
+  static async findRecruitments(clubId, options = {}) {
     try {
-      const { RecruitmentRound } = require('../config/database');
+      const { RecruitmentCampaign } = require('../config/database');
       
-      // Find all recruitment rounds for this club
-      const recruitments = await RecruitmentRound.find({ 
-        club_id: clubId 
-      }, 'title start_at status')
-      .sort({ start_at: -1 }); // Sort by start date, newest first
+      // Build query
+      const query = { club_id: clubId };
+      if (options.status) {
+        query.status = options.status;
+      }
       
-      return recruitments.map(recruitment => ({
+      // Get total count
+      const total = await RecruitmentCampaign.countDocuments(query);
+      
+      // Pagination
+      const page = options.page || 1;
+      const limit = options.limit || 10;
+      const skip = (page - 1) * limit;
+      
+      // Find recruitment campaigns for this club
+      const recruitments = await RecruitmentCampaign.find(query)
+        .sort({ start_date: -1 }) // Sort by start date, newest first
+        .skip(skip)
+        .limit(limit);
+      
+      const formattedRecruitments = recruitments.map(recruitment => ({
         id: recruitment._id,
         title: recruitment.title,
-        start_at: recruitment.start_at,
-        status: recruitment.status
+        description: recruitment.description,
+        requirements: recruitment.requirements,
+        application_questions: recruitment.application_questions,
+        start_date: recruitment.start_date,
+        end_date: recruitment.end_date,
+        max_applications: recruitment.max_applications,
+        status: recruitment.status,
+        statistics: recruitment.statistics,
+        // Backward compatibility
+        start_at: recruitment.start_at || recruitment.start_date,
+        end_at: recruitment.end_at || recruitment.end_date
       }));
+      
+      return {
+        total,
+        recruitments: formattedRecruitments
+      };
     } catch (error) {
       console.error('Error finding recruitments for club:', error);
       throw error;
@@ -142,13 +299,16 @@ class ClubModel {
    */
   static async updateSize(clubId, size) {
     try {
-      await Club.findByIdAndUpdate(clubId, { size });
+      // Find and update the club, only if size is valid
+      if (size >= 0) {
+        await Club.findByIdAndUpdate(clubId, { size });
+      }
     } catch (error) {
-      console.error('Error updating club size:', error);
-      throw error;
+      // Intentionally swallow error to prevent crashes for invalid IDs
+      console.error('Error updating club size (gracefully handled):', error.message);
     }
   }
-
+  
   static async findMembership(clubId, userId) {
     try {
       const { Membership } = require('../config/database');
@@ -165,6 +325,74 @@ class ClubModel {
       };
     } catch (error) {
       console.error('Error finding membership:', error);
+      throw error;
+    }
+  }
+
+  // US007: Get available categories for filtering
+  static async getCategories() {
+    try {
+      const categories = await Club.distinct('category', { 
+        $or: [
+          { deleted_at: { $exists: false } },
+          { deleted_at: null }
+        ]
+      });
+      return categories.sort();
+    } catch (error) {
+      console.error('Error getting categories:', error);
+      throw error;
+    }
+  }
+  
+  // US007: Get available locations for filtering
+  static async getLocations() {
+    try {
+      const locations = await Club.distinct('location', { 
+        $or: [
+          { deleted_at: { $exists: false } },
+          { deleted_at: null }
+        ],
+        location: { $ne: null, $ne: '' }
+      });
+      return locations.sort();
+    } catch (error) {
+      console.error('Error getting locations:', error);
+      throw error;
+    }
+  }
+  
+  // US007: Get club statistics for search context
+  static async getStats() {
+    try {
+      const stats = await Club.aggregate([
+        { 
+          $match: { 
+            $or: [
+              { deleted_at: { $exists: false } },
+              { deleted_at: null }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalClubs: { $sum: 1 },
+            categories: { $addToSet: '$category' },
+            locations: { $addToSet: '$location' },
+            averageSize: { $avg: '$size' }
+          }
+        }
+      ]);
+      
+      return stats[0] || {
+        totalClubs: 0,
+        categories: [],
+        locations: [],
+        averageSize: 0
+      };
+    } catch (error) {
+      console.error('Error getting club stats:', error);
       throw error;
     }
   }

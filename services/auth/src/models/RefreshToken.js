@@ -29,18 +29,11 @@ module.exports = (sequelize, DataTypes) => {
     revoked: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
-    },
-    revoked_at: {
-      type: DataTypes.DATE,
-      allowNull: true
-    },
-    device_info: {
-      type: DataTypes.JSONB,
-      allowNull: true
     }
   }, {
     tableName: 'refresh_tokens',
     underscored: true,
+    timestamps: false, // Disable automatic timestamps since DB schema doesn't have updated_at
     paranoid: false, // Explicitly disable soft deletes for refresh tokens
     indexes: [
       {
@@ -66,8 +59,7 @@ module.exports = (sequelize, DataTypes) => {
 
   RefreshToken.prototype.revoke = async function() {
     return this.update({
-      revoked: true,
-      revoked_at: new Date()
+      revoked: true
     });
   };
 
@@ -76,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
     return crypto.randomBytes(64).toString('hex');
   };
 
-  RefreshToken.createToken = async function(userId, deviceInfo = null) {
+  RefreshToken.createToken = async function(userId) {
     const expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
     const expiresAt = new Date();
     
@@ -101,8 +93,7 @@ module.exports = (sequelize, DataTypes) => {
     return this.create({
       user_id: userId,
       token: this.generateToken(),
-      expires_at: expiresAt,
-      device_info: deviceInfo
+      expires_at: expiresAt
     });
   };
 
@@ -122,8 +113,7 @@ module.exports = (sequelize, DataTypes) => {
   RefreshToken.revokeAllUserTokens = async function(userId) {
     return this.update(
       { 
-        revoked: true,
-        revoked_at: new Date()
+        revoked: true
       },
       {
         where: {
@@ -137,9 +127,16 @@ module.exports = (sequelize, DataTypes) => {
   RefreshToken.cleanupExpiredTokens = async function() {
     return this.destroy({
       where: {
-        expires_at: {
-          [sequelize.Sequelize.Op.lt]: new Date()
-        }
+        [sequelize.Sequelize.Op.or]: [
+          {
+            revoked: true
+          },
+          {
+            expires_at: {
+              [sequelize.Sequelize.Op.lt]: new Date()
+            }
+          }
+        ]
       }
     });
   };

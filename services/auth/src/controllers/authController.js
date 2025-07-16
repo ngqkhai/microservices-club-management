@@ -26,7 +26,8 @@ class AuthController {
       success: true,
       message: result.message,
       data: {
-        email: result.email
+        email: result.email,
+        user: result.user
       }
     });
   });
@@ -310,6 +311,85 @@ class AuthController {
     res.status(200).json({
       success: true,
       message: result.message
+    });
+  });
+
+  /**
+   * Get user profile
+   * @route GET /api/auth/profile
+   */
+  getProfile = asyncErrorHandler(async (req, res) => {
+    const userId = req.user?.id; // From API Gateway headers
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const user = await authService.getUserProfile(userId);
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  });
+
+  /**
+   * Update user profile
+   * @route PUT /api/auth/profile
+   */
+  updateProfile = asyncErrorHandler(async (req, res) => {
+    const userId = req.user?.id; // From API Gateway headers
+    const profileData = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const updatedUser = await authService.updateProfile(userId, profileData);
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser
+    });
+  });
+
+  /**
+   * Update profile picture
+   * @route PUT /api/auth/profile/picture
+   */
+  updateProfilePicture = asyncErrorHandler(async (req, res) => {
+    const userId = req.user?.id; // From API Gateway headers
+    const { profile_picture_url } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    if (!profile_picture_url) {
+      return res.status(400).json({
+        success: false,
+        message: 'Profile picture URL is required'
+      });
+    }
+
+    const result = await authService.updateProfilePicture(userId, profile_picture_url);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        profile_picture_url: result.profile_picture_url
+      }
     });
   });
 }

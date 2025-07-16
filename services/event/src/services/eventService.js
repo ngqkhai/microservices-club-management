@@ -1,12 +1,13 @@
 import { getEventsFromMock, createEventInDB, findEventById, updateEventInDB, deleteEventFromDB } from '../repositories/eventRepository.js';
 import { generateRSVPQRCode } from '../utils/logger.js';
 import { Event } from '../models/event.js';
-import { Participant } from '../models/participant.js';
+
+import { Registration } from '../models/registration.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
 
-export function getFilteredEvents({ filter, club_id }) {
-  return getEventsFromMock({ filter, club_id });
+export async function getFilteredEvents({ filter, club_id }) {
+  return await getEventsFromMock({ filter, club_id });
 }
 
 export async function rsvpToEvent(event_id, status, user_id) {
@@ -41,46 +42,50 @@ export async function joinEventService(eventId, userId) {
     }
 
     // Check if event is published and not cancelled
-    if (event.status !== 'PUBLISHED') {
+    if (event.status !== 'published') {
       throw new Error('Event is not available for joining');
     }
 
-    // Check if user has already joined
-    const existingParticipant = await Participant.findOne({
+    // Check if user has already registered
+    const existingRegistration = await Registration.findOne({
       event_id: eventId,
-      user_id: userId
+      user_id: userId,
+      status: { $in: ['registered', 'attended'] } // Active registrations
     });
 
-    if (existingParticipant) {
+    if (existingRegistration) {
       throw new Error('You already joined this event');
     }
 
     // Check if event has reached maximum capacity
-    if (event.max_attendees) {
-      const currentParticipants = await Participant.countDocuments({
-        event_id: eventId
+    const maxCapacity = event.max_participants;
+    if (maxCapacity) {
+      const currentParticipants = await Registration.countDocuments({
+        event_id: eventId,
+        status: { $in: ['registered', 'attended'] } // Only count active registrations
       });
 
-      if (currentParticipants >= event.max_attendees) {
+      if (currentParticipants >= maxCapacity) {
         throw new Error('Event is full');
       }
     }
 
-    // Create new participant record
-    const participant = new Participant({
+    // Create new registration record (joining event = registering for event)
+    const registration = new Registration({
       event_id: eventId,
       user_id: userId,
-      joined_at: new Date()
+      status: 'registered',
+      registered_at: new Date()
     });
 
-    await participant.save();
+    await registration.save();
 
     return {
       eventId,
       userId,
-      joinedAt: participant.joined_at,
+      joinedAt: registration.registered_at,
       eventTitle: event.title,
-      eventStartAt: event.start_at
+      eventStartAt: event.start_date
     };
   } catch (error) {
     // Log the actual error for debugging
@@ -129,28 +134,33 @@ export async function leaveEventService(eventId, userId) {
       throw new Error('Event not found');
     }
 
-    // Check if user has joined the event
-    const existingParticipant = await Participant.findOne({
+    // Check if user has registered for the event
+    const existingRegistration = await Registration.findOne({
       event_id: eventId,
-      user_id: userId
+      user_id: userId,
+      status: { $in: ['registered', 'attended'] } // Active registrations
     });
 
-    if (!existingParticipant) {
+    if (!existingRegistration) {
       throw new Error('You have not joined this event');
     }
 
-    // Remove participant record
-    await Participant.deleteOne({
-      event_id: eventId,
-      user_id: userId
-    });
+    // Update registration status to cancelled (or delete the record)
+    await Registration.updateOne(
+      { event_id: eventId, user_id: userId },
+      { 
+        status: 'cancelled', 
+        cancelled_at: new Date(),
+        cancellation_reason: 'User left event'
+      }
+    );
 
     return {
       eventId,
       userId,
       leftAt: new Date(),
       eventTitle: event.title,
-      eventStartAt: event.start_at
+      eventStartAt: event.start_date
     };
   } catch (error) {
     // Log the actual error for debugging
@@ -174,30 +184,62 @@ export async function leaveEventService(eventId, userId) {
 }
 
 export const createEventService = async (eventData) => {
-  let { title, description, location, start_at, end_at, max_attendees, fee, status, created_by, club_id } = eventData;
+  let { 
+    title, 
+    description, 
+    short_description,
+    category,
+    location, 
+    start_date,
+    end_date,
+    registration_deadline,
+    max_participants,
+    participation_fee,
+    currency,
+    requirements,
+    tags,
+    images,
+    attachments,
+    status, 
+    visibility,
+    organizers,
+    created_by, 
+    club_id,
+    // Backward compatibility
+    start_at,
+    end_at,
+    max_attendees,
+    fee
+  } = eventData;
+
+  // Handle field mapping for backward compatibility
+  const startDate = start_date || start_at;
+  const endDate = end_date || end_at;
+  const maxCapacity = max_participants || max_attendees;
+  const eventFee = participation_fee !== undefined ? participation_fee : fee;
 
   // 3.1: Validate required fields
-  if (!title || !description || !location || !start_at || !end_at || !max_attendees) {
-    const error = new Error('Missing required fields: title, description, location, start_at, end_at, and max_attendees are required.');
+  if (!title || !description || !startDate || !endDate || !created_by) {
+    const error = new Error('Missing required fields: title, description, start_date, end_date, and created_by are required.');
     error.status = 400;
     throw error;
   }
 
   // 3.2: Validate rules
-  if (new Date(start_at) <= new Date()) {
-    const error = new Error('Event start_at must be a future date.');
+  if (new Date(startDate) <= new Date()) {
+    const error = new Error('Event start date must be a future date.');
     error.status = 400;
     throw error;
   }
 
-  if (new Date(end_at) <= new Date(start_at)) {
-    const error = new Error('Event end_at must be after start_at.');
+  if (new Date(endDate) <= new Date(startDate)) {
+    const error = new Error('Event end date must be after start date.');
     error.status = 400;
     throw error;
   }
 
-  if (!Number.isInteger(max_attendees) || max_attendees <= 0) {
-    const error = new Error('max_attendees must be a positive integer.');
+  if (maxCapacity && (!Number.isInteger(maxCapacity) || maxCapacity <= 0)) {
+    const error = new Error('max_participants must be a positive integer.');
     error.status = 400;
     throw error;
   }
@@ -229,14 +271,34 @@ export const createEventService = async (eventData) => {
   const newEventData = {
     title,
     description,
+    short_description,
+    category: category || 'other',
     location,
-    start_at,
-    end_at,
-    max_attendees,
-    fee: fee || 0,
-    status: status || 'DRAFT',
+    start_date: startDate,
+    end_date: endDate,
+    registration_deadline,
+    max_participants: maxCapacity,
+    participation_fee: eventFee || 0,
+    currency: currency || 'USD',
+    requirements: requirements || [],
+    tags: tags || [],
+    images: images || [],
+    attachments: attachments || [],
+    status: status || 'draft',
+    visibility: visibility || 'club_members',
+    organizers: organizers || [],
+    statistics: {
+      total_registrations: 0,
+      total_interested: 0,
+      total_attended: 0
+    },
     created_by,
-    club_id
+    club_id,
+    // Backward compatibility fields
+    start_at: startDate,
+    end_at: endDate,
+    max_attendees: maxCapacity,
+    fee: eventFee || 0
   };
   
   const newEvent = await createEventInDB(newEventData);
@@ -288,18 +350,17 @@ export const deleteEventService = async (eventId) => {
     throw error;
   }
 
-  // 5.2: Check if event has participants - optionally prevent deletion if there are participants
-  const participantCount = await Participant.countDocuments({ event_id: eventId });
-  if (participantCount > 0) {
+  // 5.2: Check if event has registrations - optionally prevent deletion if there are active registrations
+  const registrationCount = await Registration.countDocuments({ 
+    event_id: eventId,
+    status: { $in: ['registered', 'attended'] }
+  });
+  if (registrationCount > 0) {
     // Optional: You can either prevent deletion or allow it with cascade deletion
     // For now, let's allow deletion but clean up related data
-    console.log(`Deleting event with ${participantCount} participants. Related data will be cleaned up.`);
+    console.log(`Deleting event with ${registrationCount} active registrations. Related data will be cleaned up.`);
     
-    // Clean up related participant records
-    await Participant.deleteMany({ event_id: eventId });
-    
-    // Clean up related registration records if they exist
-    const Registration = (await import('../models/registration.js')).Registration;
+    // Clean up related registration records
     await Registration.deleteMany({ event_id: eventId });
   }
 

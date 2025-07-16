@@ -25,40 +25,81 @@ const securityHeaders = helmet({
   }
 });
 
-// API Gateway header validation
+// API Gateway secret validation (for public routes)
+const validateApiGatewaySecret = (req, res, next) => {
+  //DEBUG: Log all headers for debugging Kong JWT claims injection
+  logger.info('🔍 DEBUG: Incoming headers from Kong (Public Route)', {
+    path: req.path,
+    method: req.method,
+    allHeaders: req.headers
+  });
+  
+  // Check if request is from API Gateway - MANDATORY for all requests
+  const gatewaySecret = req.headers['x-api-gateway-secret'];
+  const expectedSecret = process.env.API_GATEWAY_SECRET;
+  
+  if (!gatewaySecret || gatewaySecret !== expectedSecret) {
+    logger.warn('Request rejected: Invalid or missing gateway secret', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+      userAgent: req.get('User-Agent'),
+      hasSecret: !!gatewaySecret,
+      secretMatch: gatewaySecret === expectedSecret
+    });
+    
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized: Request must come through API Gateway',
+      code: 'INVALID_GATEWAY'
+    });
+  }
+  
+  logger.debug('Gateway secret validation passed', {
+    path: req.path,
+    method: req.method
+  });
+
+  next();
+};
+
+// API Gateway header validation (for protected routes)
 const validateApiGatewayHeaders = (req, res, next) => {
   const requiredHeaders = ['x-user-id', 'x-user-role'];
   const optionalHeaders = ['x-user-email', 'x-request-id'];
   
-  // DEBUG: Log all headers for debugging Kong JWT claims injection
-  logger.info('🔍 DEBUG: Incoming headers from Kong', {
+  //DEBUG: Log all headers for debugging Kong JWT claims injection
+  logger.info('🔍 DEBUG: Incoming headers from Kong (Protected Route)', {
     path: req.path,
     method: req.method,
-    allHeaders: req.headers,
-    'x-user-id': req.headers['x-user-id'],
-    'x-user-role': req.headers['x-user-role'], 
-    'x-user-email': req.headers['x-user-email'],
-    'x-user-id-type': typeof req.headers['x-user-id'],
-    'authorization': req.headers['authorization']
+    allHeaders: req.headers
   });
   
-  // Check if request is from API Gateway
-  // const gatewaySecret = req.headers['x-gateway-secret'];
-  // if (!gatewaySecret || gatewaySecret !== process.env.API_GATEWAY_SECRET) {
-  //   logger.warn('Request without valid gateway secret', {
-  //     ip: req.ip,
-  //     path: req.path,
-  //     userAgent: req.get('User-Agent')
-  //   });
+  // Check if request is from API Gateway - MANDATORY for all requests
+  const gatewaySecret = req.headers['x-api-gateway-secret'];
+  const expectedSecret = process.env.API_GATEWAY_SECRET;
+  
+  if (!gatewaySecret || gatewaySecret !== expectedSecret) {
+    logger.warn('Request rejected: Invalid or missing gateway secret', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+      userAgent: req.get('User-Agent'),
+      hasSecret: !!gatewaySecret,
+      secretMatch: gatewaySecret === expectedSecret
+    });
     
-  //   return next(new AuthenticationError('Unauthorized: Invalid gateway signature'));
-  // }
-
-  // Skip header validation for public endpoints
-  const publicEndpoints = ['/api/auth/health', '/api/auth/docs'];
-  if (publicEndpoints.includes(req.path)) {
-    return next();
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized: Request must come through API Gateway',
+      code: 'INVALID_GATEWAY'
+    });
   }
+  
+  logger.debug('Gateway secret validation passed', {
+    path: req.path,
+    method: req.method
+  });
 
   // Validate required headers for protected endpoints
   const missingHeaders = requiredHeaders.filter(header => !req.headers[header]);
@@ -85,7 +126,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
   }
 
   // Validate role
-  if (!['USER', 'ADMIN'].includes(userRole)) {
+  if (!['user', 'admin'].includes(userRole)) {
     return next(new AuthenticationError('Invalid user role'));
   }
 
@@ -137,10 +178,10 @@ const requireRole = (allowedRoles) => {
 };
 
 // Admin only middleware
-const requireAdmin = requireRole(['ADMIN']);
+const requireAdmin = requireRole(['admin']);
 
 // User or Admin middleware
-const requireUser = requireRole(['USER', 'ADMIN']);
+const requireUser = requireRole(['user', 'admin']);
 
 // Self or Admin access middleware (user can only access their own data)
 const requireSelfOrAdmin = (userIdParam = 'id') => {
@@ -152,7 +193,7 @@ const requireSelfOrAdmin = (userIdParam = 'id') => {
     const requestedUserId = req.params[userIdParam] || req.body.userId || req.query.userId;
     
     // Admin can access any user's data
-    if (req.user.role === 'ADMIN') {
+    if (req.user.role === 'admin') {
       return next();
     }
 
@@ -295,7 +336,7 @@ const corsOptions = {
     'X-User-Role',
     'X-User-Email',
     'X-Request-ID',
-    'X-Gateway-Secret',
+    'x-api-gateway-secret',
     'Accept',
     'Origin',
     'User-Agent',
@@ -311,6 +352,7 @@ const corsOptions = {
 
 module.exports = {
   securityHeaders,
+  validateApiGatewaySecret,
   validateApiGatewayHeaders,
   requireRole,
   requireAdmin,

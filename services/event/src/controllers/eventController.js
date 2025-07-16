@@ -1,10 +1,10 @@
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
 import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService, createEventService, updateEventService, deleteEventService } from '../services/eventService.js';
 
-export const getEvents = (req, res) => {
+export const getEvents = async (req, res) => {
   try {
     const dto = new GetEventsDTO(req.query);
-    const events = getFilteredEvents(dto);
+    const events = await getFilteredEvents(dto);
     res.status(200).json(events);
   } catch (error) {
     res.status(400).json({ message: error.message });

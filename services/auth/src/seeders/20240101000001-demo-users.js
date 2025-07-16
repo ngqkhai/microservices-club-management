@@ -14,7 +14,7 @@ module.exports = {
         email: 'admin@clubmanagement.com',
         full_name: 'System Administrator',
         password_hash: await bcrypt.hash('AdminPassword123!', saltRounds),
-        role: 'ADMIN',
+        role: 'admin',
         email_verified: true,
         created_at: now,
         updated_at: now
@@ -24,7 +24,7 @@ module.exports = {
         email: 'user@clubmanagement.com',
         full_name: 'Demo User',
         password_hash: await bcrypt.hash('UserPassword123!', saltRounds),
-        role: 'USER',
+        role: 'user',
         email_verified: true,
         created_at: now,
         updated_at: now
@@ -34,7 +34,7 @@ module.exports = {
         email: 'john.doe@example.com',
         full_name: 'John Doe',
         password_hash: await bcrypt.hash('JohnPassword123!', saltRounds),
-        role: 'USER',
+        role: 'user',
         email_verified: false,
         created_at: now,
         updated_at: now
@@ -44,7 +44,7 @@ module.exports = {
         email: 'jane.smith@example.com',
         full_name: 'Jane Smith',
         password_hash: await bcrypt.hash('JanePassword123!', saltRounds),
-        role: 'USER',
+        role: 'user',
         email_verified: true,
         created_at: now,
         updated_at: now

@@ -1,0 +1,633 @@
+
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+		"name": "Auth Service",
+		"description": "Postman collection for the Auth service, accessed via the API Gateway.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register a new user",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"email\": \"user@example.com\", \"password\": \"SecurePass123!\", \"full_name\": \"John Doe\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify email address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"token\": \"<your_email_verification_token>\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify-email",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"verify-email"
+							]
+						},
+						"description": "Verify email address using a token sent to the user."
+					},
+					"response": []
+				},
+				{
+					"name": "Login user",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const response = pm.response.json();",
+									"if (response.data && response.data.access_token) {",
+									"    pm.collectionVariables.set(\"access_token\", response.data.access_token);",
+									"}",
+									"if (response.data && response.data.user) {",
+									"    pm.collectionVariables.set(\"user_id\", response.data.user.id);",
+									"    pm.collectionVariables.set(\"user_role\", response.data.user.role);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"email\": \"user@example.com\", \"password\": \"SecurePass123!\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with email and password to receive an access token and a refresh token cookie."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh access token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Use the refreshToken (sent as an httpOnly cookie) to get a new access token."
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"email\": \"user@example.com\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Request a password reset link to be sent to the user's email."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"token\": \"<your_password_reset_token>\", \"newPassword\": \"NewSecurePass123!\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Reset the user's password using a token from the password reset email."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout the user and invalidate their refresh tokens."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get current user profile (me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get the profile of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Change password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"currentPassword\": \"SecurePass123!\", \"newPassword\": \"NewSecurePass456!\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/change-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"change-password"
+							]
+						},
+						"description": "Change the password for the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get user profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Get the extended profile of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update user profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"full_name\": \"Johnathan Doe\", \"phone\": \"+1234567890\", \"bio\": \"Software developer and tech enthusiast.\", \"date_of_birth\": \"1990-01-15\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Update the profile of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update profile picture",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"profile_picture_url\": \"https://example.com/new-profile-pic.jpg\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile/picture",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile",
+								"picture"
+							]
+						},
+						"description": "Update the profile picture URL for the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete own account (self-deletion)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "{{user_role}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"password\": \"CurrentPassword123!\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Delete the account of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Admin: Delete user account",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "x-user-id",
+								"value": "{{admin_user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "ADMIN"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/users/{{user_id_to_delete}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"users",
+								"{{user_id_to_delete}}"
+							]
+						},
+						"description": "Admin-only endpoint to delete a specific user account."
+					},
+					"response": []
+				},
+				{
+					"name": "Admin: Cleanup expired tokens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-user-id",
+								"value": "{{admin_user_id}}"
+							},
+							{
+								"key": "x-user-role",
+								"value": "ADMIN"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/cleanup",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"cleanup"
+							]
+						},
+						"description": "Admin-only endpoint to clean up expired tokens and sessions from the database."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health & Keys",
+			"item": [
+				{
+					"name": "Health check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"health"
+							]
+						},
+						"description": "Provides a detailed health status of the service."
+					},
+					"response": []
+				},
+				{
+					"name": "Liveness probe",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/liveness",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"liveness"
+							]
+						},
+						"description": "Kubernetes liveness probe to check if the service is running."
+					},
+					"response": []
+				},
+				{
+					"name": "Readiness probe",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/readiness",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"readiness"
+							]
+						},
+						"description": "Kubernetes readiness probe to check if the service is ready to handle traffic."
+					},
+					"response": []
+				},
+				{
+					"name": "Get public key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/public-key",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"public-key"
+							]
+						},
+						"description": "Get the public key used for signing JWTs. Useful for gateway configuration."
+					},
+					"response": []
+				},
+				{
+					"name": "Get JWKS",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/.well-known/jwks.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								".well-known",
+								"jwks.json"
+							]
+						},
+						"description": "Get the JSON Web Key Set (JWKS) for verifying tokens."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000"
+		},
+		{
+			"key": "access_token",
+			"value": ""
+		},
+		{
+			"key": "user_id",
+			"value": ""
+		},
+		{
+			"key": "user_role",
+			"value": ""
+		},
+		{
+			"key": "admin_user_id",
+			"value": ""
+		},
+		{
+			"key": "user_id_to_delete",
+			"value": ""
+		}
+	]
+}

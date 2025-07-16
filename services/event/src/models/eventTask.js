@@ -9,23 +9,32 @@ const eventTaskSchema = new mongoose.Schema({
   },
   title: {
     type: String,
-    required: true
+    required: true,
+    maxLength: 200
   },
   description: {
-    type: String
+    type: String,
+    maxLength: 1000
+  },
+  assigned_to: {
+    type: String, // UUID from Auth Service
+    index: true
   },
   status: {
     type: String,
-    enum: ['TODO', 'IN_PROGRESS', 'DONE'],
+    enum: ['pending', 'in_progress', 'completed', 'cancelled'],
     required: true,
-    default: 'TODO'
-  },
-  assignee_id: {
-    type: String, // User ID reference to auth service
-    index: true
+    default: 'pending'
   },
   due_date: {
     type: Date
+  },
+  completed_at: {
+    type: Date
+  },
+  notes: {
+    type: String,
+    maxLength: 1000
   }
 }, {
   timestamps: { 
@@ -34,5 +43,11 @@ const eventTaskSchema = new mongoose.Schema({
   },
   collection: 'event_tasks'
 });
+
+// Add indexes for better performance (matching schema requirements)
+eventTaskSchema.index({ event_id: 1 });
+eventTaskSchema.index({ assigned_to: 1 });
+eventTaskSchema.index({ status: 1 });
+eventTaskSchema.index({ due_date: 1 });
 
 export const EventTask = mongoose.model('EventTask', eventTaskSchema);

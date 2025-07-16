@@ -47,10 +47,10 @@ const registerSchema = Joi.object({
       'any.only': 'Passwords do not match'
     }),
   role: Joi.string()
-    .valid('USER', 'ADMIN')
-    .default('USER')
+    .valid('user', 'admin')
+    .default('user')
     .messages({
-      'any.only': 'Role must be either USER or ADMIN'
+      'any.only': 'Role must be either user or admin'
     })
 });
 
@@ -139,10 +139,10 @@ const gatewayHeadersSchema = Joi.object({
       'any.required': 'User ID header is required'
     }),
   'x-user-role': Joi.string()
-    .valid('USER', 'ADMIN')
+    .valid('user', 'admin')
     .required()
     .messages({
-      'any.only': 'User role must be either USER or ADMIN',
+      'any.only': 'User role must be either user or admin',
       'any.required': 'User role header is required'
     }),
   'x-user-email': Joi.string()

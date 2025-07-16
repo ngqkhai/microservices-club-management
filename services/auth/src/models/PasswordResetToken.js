@@ -29,18 +29,11 @@ module.exports = (sequelize, DataTypes) => {
     used: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
-    },
-    used_at: {
-      type: DataTypes.DATE,
-      allowNull: true
-    },
-    ip_address: {
-      type: DataTypes.STRING,
-      allowNull: true
     }
   }, {
     tableName: 'password_reset_tokens',
     underscored: true,
+    timestamps: false, // Disable automatic timestamps since DB schema doesn't have updated_at
     paranoid: false, // Explicitly disable soft deletes for password reset tokens
     indexes: [
       {
@@ -66,9 +59,7 @@ module.exports = (sequelize, DataTypes) => {
 
   PasswordResetToken.prototype.markAsUsed = async function(ipAddress = null) {
     return this.update({
-      used: true,
-      used_at: new Date(),
-      ip_address: ipAddress
+      used: true
     });
   };
 
@@ -80,9 +71,9 @@ module.exports = (sequelize, DataTypes) => {
   PasswordResetToken.createToken = async function(userId, ipAddress = null) {
     // Invalidate all existing tokens for this user
     await this.update(
-      { used: true, used_at: new Date() },
-      { 
-        where: { 
+      { used: true },
+      {
+        where: {
           user_id: userId,
           used: false 
         } 
@@ -96,8 +87,7 @@ module.exports = (sequelize, DataTypes) => {
     return this.create({
       user_id: userId,
       token: this.generateToken(),
-      expires_at: expiresAt,
-      ip_address: ipAddress
+      expires_at: expiresAt
     });
   };
 
@@ -125,9 +115,6 @@ module.exports = (sequelize, DataTypes) => {
           },
           {
             used: true,
-            used_at: {
-              [sequelize.Sequelize.Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
-            }
           }
         ]
       }

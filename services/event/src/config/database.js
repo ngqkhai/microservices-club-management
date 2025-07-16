@@ -3,12 +3,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/event_service';
+// Use MongoDB connection string from environment variable
+const MONGODB_URI = process.env.MONGODB_URI || 
+                    process.env.MONGO_URI ||
+                    'mongodb://localhost:27017/event_service';
 
 export const connectToDatabase = async () => {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB Atlas - Event Service');
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // Connection timeout: 5 seconds
+      socketTimeoutMS: 45000, // Socket timeout: 45 seconds
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      minPoolSize: 1, // Maintain at least 1 connection
+      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+      maxConnecting: 2, // Maximum number of connections that can be in the "connecting" state
+    });
+    console.log('✅ Connected to MongoDB Atlas - Event Service Database');
+    console.log('🔗 Database:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     return true;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);

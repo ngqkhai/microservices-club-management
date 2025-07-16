@@ -1,437 +1,192 @@
 _format_version: "3.0"
-_transform: true
 
-# JWT Consumers (will be configured via setup script)
-consumers:
-  - username: club-management-system
-
-# Services
 services:
   # Auth Service
   - name: auth-service
-    host: auth-service
-    port: 3001
-    protocol: http
-    path: /api/auth
-    connect_timeout: 60000
-    write_timeout: 60000
-    read_timeout: 60000
-
-  # User Service
-  - name: user-service
-    host: user-service
-    port: 3004
-    protocol: http
-    path: /api/users
-    connect_timeout: 60000
-    write_timeout: 60000
-    read_timeout: 60000
-
+    url: http://auth-service:3001
+    tags: [club-management-system, auth]
+    
+  # Club Service  
+  - name: club-service
+    url: http://club-service:3002
+    tags: [club-management-system, club]
+    
+  # Event Service
+  - name: event-service
+    url: http://event-service:3003
+    tags: [club-management-system, event]
+    
   # Notification Service
   - name: notify-service
-    host: notify-service
-    port: 3005
-    protocol: http
-    path: /api/notifications
-    connect_timeout: 60000
-    write_timeout: 60000
-    read_timeout: 60000
+    url: http://notify-service:3005
+    tags: [club-management-system, notify]
 
-# Routes
 routes:
-  # Auth Routes (Public - No JWT required)
-  - name: auth-register
-    service: auth-service
-    paths:
-      - /api/auth/register
-    methods:
-      - POST
-    strip_path: false
-
-  - name: auth-login
+  # Auth Service Public Routes (no JWT required)
+  - name: auth-public-route
     service: auth-service
     paths:
       - /api/auth/login
-    methods:
-      - POST
-    strip_path: false
-
-  - name: auth-refresh
-    service: auth-service
-    paths:
-      - /api/auth/refresh
-    methods:
-      - POST
-    strip_path: false
-
-  - name: auth-verify-email
-    service: auth-service
-    paths:
+      - /api/auth/register
       - /api/auth/verify-email
-    methods:
-      - POST
-    strip_path: false
-
-  - name: auth-forgot-password
-    service: auth-service
-    paths:
       - /api/auth/forgot-password
-    methods:
-      - POST
-    strip_path: false
-
-  - name: auth-reset-password
-    service: auth-service
-    paths:
       - /api/auth/reset-password
-    methods:
-      - POST
-    strip_path: false
-
-  - name: auth-health
-    service: auth-service
-    paths:
+      - /api/auth/refresh
       - /api/auth/health
       - /api/auth/liveness
       - /api/auth/readiness
-    methods:
-      - GET
     strip_path: false
-
-  # Protected Auth Routes (JWT required)
-  - name: auth-protected
+    tags: [auth, public]
+    
+  # Auth Service Protected Routes (JWT required)
+  - name: auth-protected-route
     service: auth-service
     paths:
-      - /api/auth/me
-      - /api/auth/logout
+      - /api/auth/profile
       - /api/auth/change-password
-    methods:
-      - GET
-      - POST
-      - PUT
-      - DELETE
+      - /api/auth/logout
+      - /api/auth/me
+      - /api/auth/cleanup
+      - /api/auth/users
     strip_path: false
-
-  # User Service Routes (Internal sync endpoint - no auth required)
-  - name: user-sync
-    service: user-service
+    tags: [auth, protected]
+    plugins:
+      - name: jwt
+        tags: [auth-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [auth-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+    
+  # Club Service Public Routes (US007 - Search & Filter)
+  - name: club-public-routes
+    service: club-service
     paths:
-      - /api/users/sync/users
-    methods:
-      - POST
+      - /api/clubs
+      - /api/clubs/categories
+      - /api/clubs/locations
+      - /api/clubs/stats
+    methods: [GET]
     strip_path: false
-
-  # User Service Routes (Protected - JWT required)
-  - name: user-protected
-    service: user-service
+    tags: [club, public]
+    plugins:
+      - name: api-gateway-secret
+        tags: [club-secret]
+    
+  # Club Service Protected Routes (JWT required)
+  - name: club-protected-routes
+    service: club-service
     paths:
-      - /api/users/me
-      - /api/users/me/clubs
-    methods:
-      - GET
-      - PUT
-      - DELETE
+      - /api/clubs
+    methods: [POST, PUT, DELETE]
     strip_path: false
-
-  # User Service Health Routes (Public)
-  - name: user-health
-    service: user-service
+    tags: [club, protected]
+    plugins:
+      - name: jwt
+        tags: [club-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [club-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+      - name: api-gateway-secret
+        tags: [club-secret]
+    
+  # Event Service Routes (JWT required)
+  - name: event-service-route
+    service: event-service
     paths:
-      - /health
-      - /liveness
-      - /readiness
-    methods:
-      - GET
+      - /api/events
     strip_path: false
-
-  # Notification Routes (All protected)
-  - name: notify-routes
+    tags: [event, protected]
+    plugins:
+      - name: jwt
+        tags: [event-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [event-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+    
+  # Notification Service Routes (JWT required)
+  - name: notify-service-route
     service: notify-service
     paths:
       - /api/notifications
-    methods:
-      - GET
-      - POST
-      - PUT
-      - DELETE
     strip_path: false
+    tags: [notify, protected]
+    plugins:
+      - name: jwt
+        tags: [notify-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [notify-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
 
-# Plugins
+consumers:
+  - username: club-management-app
+    custom_id: club-app-001
+    tags: [club-management-system]
+    jwt_secrets:
+      - key: auth-service  # This must match the 'iss' claim in JWT
+        algorithm: RS256
+        # Public key from the auth service
+        rsa_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2EhYreDkbolZ8FytzEA0
+          ZkSmwQdG7AcID214WFfaeqFyBLE/JQLkihTDit9WT/mRR87ul0Bb05ZeWTlcDuL4
+          O+F3kl3T0kF3IFYINaE3su6jTROV85EJPd51AezLfgZHi2fX5tvf3DS8A6G1537h
+          v9ir/m6N5Dpp/zGYJ39vJSsyKCGLV5/wQZkpBERw5QZd7SiphWyK241r/l6w/bm7
+          VfpDujgozypl6piR7rGxpFJvW83M7F3yEDx24VKIJUSanPHuShg+H87QYUKmXFnW
+          GRIVloTZnrMlU21TELuEn8dc7rAF8VkFSli+FBvea7jDO1Fk7K7gXCn7EsTWpXfz
+          ZwIDAQAB
+          -----END PUBLIC KEY-----
+
 plugins:
-  # JWT Plugin for Protected Routes
-  - name: jwt
-    route: auth-protected
-    config:
-      key_claim_name: kid
-      claims_to_verify:
-        - exp
-        - aud
-        - iss
-      secret_is_base64: false
-      run_on_preflight: true
-
-  - name: jwt
-    route: user-protected
-    config:
-      key_claim_name: kid
-      claims_to_verify:
-        - exp
-        - aud
-        - iss
-      secret_is_base64: false
-      run_on_preflight: true
-
-  - name: jwt
-    route: notify-routes
-    config:
-      key_claim_name: kid
-      claims_to_verify:
-        - exp
-        - aud
-        - iss
-      secret_is_base64: false
-      run_on_preflight: true
-
-  # Post-function plugin to extract JWT claims and inject headers
-  - name: post-function
-    route: auth-protected
-    config:
-      access:
-        - |
-          -- JWT Claims Extractor for Kong Gateway
-          -- Extracts user claims from validated JWT and injects as headers
-          
-          -- Get JWT token from Kong context (after JWT plugin validation)
-          local jwt_token = kong.ctx.shared.authenticated_jwt_token
-          
-          if jwt_token and jwt_token.claims then
-            -- Kong provides parsed claims after JWT validation
-            local claims = jwt_token.claims
-            
-            -- Extract and inject user headers
-            if claims.id then
-              kong.service.request.set_header("x-user-id", tostring(claims.id))
-            end
-            
-            if claims.email then
-              kong.service.request.set_header("x-user-email", tostring(claims.email))
-            end
-            
-            if claims.role then
-              kong.service.request.set_header("x-user-role", tostring(claims.role))
-            end
-            
-            kong.log.info("JWT claims extracted and headers injected for user: " .. tostring(claims.id or "unknown"))
-          else
-            -- Fallback: Manual JWT parsing if claims not available in context
-            local auth_header = kong.request.get_header("authorization")
-            if auth_header then
-              local token = string.match(auth_header, "Bearer%s+(.+)")
-              if token then
-                -- Simple Base64 decode and JSON parse (no external dependencies)
-                local jwt_parts = {}
-                for part in string.gmatch(token, "[^%.]+") do
-                  table.insert(jwt_parts, part)
-                end
-                
-                if #jwt_parts >= 2 then
-                  -- Decode payload (second part)
-                  local payload_b64 = jwt_parts[2]
-                  
-                  -- Add padding if needed for Base64 decoding
-                  local padding = 4 - (#payload_b64 % 4)
-                  if padding < 4 then
-                    payload_b64 = payload_b64 .. string.rep("=", padding)
-                  end
-                  
-                  -- Base64 decode
-                  local payload_json = ngx.decode_base64(payload_b64)
-                  
-                  if payload_json then
-                    -- Extract claims using string patterns (no cjson in sandbox)
-                    local id = string.match(payload_json, '"id"%s*:%s*"([^"]+)"')
-                    local email = string.match(payload_json, '"email"%s*:%s*"([^"]+)"')
-                    local role = string.match(payload_json, '"role"%s*:%s*"([^"]+)"')
-                    
-                    -- Inject headers
-                    if id then
-                      kong.service.request.set_header("x-user-id", id)
-                    end
-                    if email then
-                      kong.service.request.set_header("x-user-email", email)
-                    end
-                    if role then
-                      kong.service.request.set_header("x-user-role", role)
-                    end
-                    
-                    kong.log.info("JWT claims extracted via fallback method for user: " .. (id or "unknown"))
-                  end
-                end
-              end
-            end
-          end
-
-  - name: post-function
-    route: user-protected
-    config:
-      access:
-        - |
-          -- JWT Claims Extractor for Kong Gateway
-          -- Extracts user claims from validated JWT and injects as headers
-          
-          -- Get JWT token from Kong context (after JWT plugin validation)
-          local jwt_token = kong.ctx.shared.authenticated_jwt_token
-          
-          if jwt_token and jwt_token.claims then
-            -- Kong provides parsed claims after JWT validation
-            local claims = jwt_token.claims
-            
-            -- Extract and inject user headers
-            if claims.id then
-              kong.service.request.set_header("x-user-id", tostring(claims.id))
-            end
-            
-            if claims.email then
-              kong.service.request.set_header("x-user-email", tostring(claims.email))
-            end
-            
-            if claims.role then
-              kong.service.request.set_header("x-user-role", tostring(claims.role))
-            end
-            
-            kong.log.info("JWT claims extracted and headers injected for user: " .. tostring(claims.id or "unknown"))
-          else
-            -- Fallback: Manual JWT parsing if claims not available in context
-            local auth_header = kong.request.get_header("authorization")
-            if auth_header then
-              local token = string.match(auth_header, "Bearer%s+(.+)")
-              if token then
-                -- Simple Base64 decode and JSON parse (no external dependencies)
-                local jwt_parts = {}
-                for part in string.gmatch(token, "[^%.]+") do
-                  table.insert(jwt_parts, part)
-                end
-                
-                if #jwt_parts >= 2 then
-                  -- Decode payload (second part)
-                  local payload_b64 = jwt_parts[2]
-                  
-                  -- Add padding if needed for Base64 decoding
-                  local padding = 4 - (#payload_b64 % 4)
-                  if padding < 4 then
-                    payload_b64 = payload_b64 .. string.rep("=", padding)
-                  end
-                  
-                  -- Base64 decode
-                  local payload_json = ngx.decode_base64(payload_b64)
-                  
-                  if payload_json then
-                    -- Extract claims using string patterns (no cjson in sandbox)
-                    local id = string.match(payload_json, '"id"%s*:%s*"([^"]+)"')
-                    local email = string.match(payload_json, '"email"%s*:%s*"([^"]+)"')
-                    local role = string.match(payload_json, '"role"%s*:%s*"([^"]+)"')
-                    
-                    -- Inject headers
-                    if id then
-                      kong.service.request.set_header("x-user-id", id)
-                    end
-                    if email then
-                      kong.service.request.set_header("x-user-email", email)
-                    end
-                    if role then
-                      kong.service.request.set_header("x-user-role", role)
-                    end
-                    
-                    kong.log.info("JWT claims extracted via fallback method for user: " .. (id or "unknown"))
-                  end
-                end
-              end
-            end
-          end
-
-  - name: post-function
-    route: notify-routes
-    config:
-      access:
-        - |
-          -- JWT Claims Extractor for Kong Gateway
-          -- Extracts user claims from validated JWT and injects as headers
-          
-          -- Get JWT token from Kong context (after JWT plugin validation)
-          local jwt_token = kong.ctx.shared.authenticated_jwt_token
-          
-          if jwt_token and jwt_token.claims then
-            -- Kong provides parsed claims after JWT validation
-            local claims = jwt_token.claims
-            
-            -- Extract and inject user headers
-            if claims.id then
-              kong.service.request.set_header("x-user-id", tostring(claims.id))
-            end
-            
-            if claims.email then
-              kong.service.request.set_header("x-user-email", tostring(claims.email))
-            end
-            
-            if claims.role then
-              kong.service.request.set_header("x-user-role", tostring(claims.role))
-            end
-            
-            kong.log.info("JWT claims extracted and headers injected for user: " .. tostring(claims.id or "unknown"))
-          else
-            -- Fallback: Manual JWT parsing if claims not available in context
-            local auth_header = kong.request.get_header("authorization")
-            if auth_header then
-              local token = string.match(auth_header, "Bearer%s+(.+)")
-              if token then
-                -- Simple Base64 decode and JSON parse (no external dependencies)
-                local jwt_parts = {}
-                for part in string.gmatch(token, "[^%.]+") do
-                  table.insert(jwt_parts, part)
-                end
-                
-                if #jwt_parts >= 2 then
-                  -- Decode payload (second part)
-                  local payload_b64 = jwt_parts[2]
-                  
-                  -- Add padding if needed for Base64 decoding
-                  local padding = 4 - (#payload_b64 % 4)
-                  if padding < 4 then
-                    payload_b64 = payload_b64 .. string.rep("=", padding)
-                  end
-                  
-                  -- Base64 decode
-                  local payload_json = ngx.decode_base64(payload_b64)
-                  
-                  if payload_json then
-                    -- Extract claims using string patterns (no cjson in sandbox)
-                    local id = string.match(payload_json, '"id"%s*:%s*"([^"]+)"')
-                    local email = string.match(payload_json, '"email"%s*:%s*"([^"]+)"')
-                    local role = string.match(payload_json, '"role"%s*:%s*"([^"]+)"')
-                    
-                    -- Inject headers
-                    if id then
-                      kong.service.request.set_header("x-user-id", id)
-                    end
-                    if email then
-                      kong.service.request.set_header("x-user-email", email)
-                    end
-                    if role then
-                      kong.service.request.set_header("x-user-role", role)
-                    end
-                    
-                    kong.log.info("JWT claims extracted via fallback method for user: " .. (id or "unknown"))
-                  end
-                end
-              end
-            end
-          end
-
-  # CORS Plugin
+  # Global API Gateway Secret plugin (applies to all routes)
+  - name: api-gateway-secret
+    tags: [global, api-gateway-secret]
+    
+  # Global CORS plugin
   - name: cors
     config:
       origins:
-        - "*"
+        - "http://localhost:3000"
+        - "https://localhost:3000"
       methods:
         - GET
         - POST
@@ -440,21 +195,17 @@ plugins:
         - OPTIONS
       headers:
         - Accept
-        - Accept-Version
-        - Content-Length
-        - Content-MD5
-        - Content-Type
-        - Date
         - Authorization
-        - X-Auth-Token
-      exposed_headers:
-        - X-Auth-Token
+        - Content-Type
+        - X-Requested-With
       credentials: true
       max_age: 3600
-
-  # Rate Limiting
+    tags: [global, cors]
+    
+  # Global rate limiting
   - name: rate-limiting
     config:
       minute: 100
       hour: 1000
-      policy: local 
+      policy: local
+    tags: [global, rate-limiting]
