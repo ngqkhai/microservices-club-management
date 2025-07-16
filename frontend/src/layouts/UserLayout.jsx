@@ -1,8 +1,9 @@
-"use client"
+import React from 'react';
+import { Link } from 'react-router-dom';
 import "./UserLayout.css"
 import logo from "../assets/Logo.png"
-import avatar from "../assets/Logo.png" // Thay bằng avatar thật nếu có
 import { Bell, MessageCircle } from "lucide-react"
+import ProfileDropdown from "../components/ProfileDropdown"
 
 const UserLayout = ({ user, children, onLogout }) => (
   <div className="layout-container" style={{ fontFamily: "Quicksand, Arial, sans-serif" }}>
@@ -10,15 +11,15 @@ const UserLayout = ({ user, children, onLogout }) => (
       <div className="header-left">
         <img src={logo || "/placeholder.svg"} alt="UniVibe Logo" className="logo-img" />
         <nav className="nav-menu">
-          <a href="/" className="nav-link">
+          <Link to="/" className="nav-link">
             DASHBOARD
-          </a>
-          <a href="/clubs" className="nav-link">
+          </Link>
+          <Link to="/clubs" className="nav-link">
             CLUBS
-          </a>
-          <a href="/events" className="nav-link">
+          </Link>
+          <Link to="/events" className="nav-link">
             EVENTS
-          </a>
+          </Link>
         </nav>
       </div>
       <div className="user-actions">
@@ -28,13 +29,7 @@ const UserLayout = ({ user, children, onLogout }) => (
         <button className="icon-btn" title="Messages">
           <MessageCircle size={20} />
         </button>
-        <div className="profile">
-          <img src={avatar || "/placeholder.svg"} alt="avatar" className="avatar" />
-          <span className="profile-name">{user?.name || "User"}</span>
-        </div>
-        <button className="logout-btn" onClick={onLogout}>
-          Logout
-        </button>
+        <ProfileDropdown user={user} onLogout={onLogout} />
       </div>
     </header>
     <div className="main-content-container">{children}</div>

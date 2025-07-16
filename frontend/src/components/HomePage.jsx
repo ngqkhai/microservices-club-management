@@ -1,4 +1,3 @@
-import GuestLayout from "../layouts/GuestLayout"
 import "../styles/HomePage.css"
 import heroBg from "../assets/Home-bg.jpeg"
 
@@ -44,7 +43,7 @@ export default function HomePage() {
   ]
 
   return (
-    <GuestLayout>
+    <div>
       {/* Hero Section */}
       <section className="home-hero">
         <img src={heroBg || "/placeholder.svg"} alt="UniVibe Hero" className="home-hero-bg" />
@@ -97,6 +96,6 @@ export default function HomePage() {
           </div>
         </section>
       </div>
-    </GuestLayout>
+    </div>
   )
 }

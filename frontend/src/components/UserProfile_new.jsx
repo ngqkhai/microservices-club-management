@@ -17,19 +17,41 @@ export default function UserProfile() {
     bio: "",
     date_of_birth: "",
     gender: "",
-    address: "",
-    profile_picture_url: "",
+    country: "",
+    city: "",
   });
+
+  console.log('UserProfile - user from context:', user);
 
   useEffect(() => {
     loadUserProfile();
   }, []);
 
+  useEffect(() => {
+    // Load data from user context if available and formData is empty
+    if (user && !formData.full_name) {
+      console.log('Loading data from user context:', user);
+      setFormData({
+        full_name: user.full_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        bio: user.bio || "",
+        date_of_birth: user.date_of_birth || "",
+        gender: user.gender || "",
+        country: user.country || "",
+        city: user.city || "",
+      });
+    }
+  }, [user]);
+
   const loadUserProfile = async () => {
     setLoading(true);
     try {
       const result = await getUserProfile();
+      console.log('getUserProfile result:', result);
+      
       if (result.success) {
+        console.log('Profile data:', result.data);
         setFormData({
           full_name: result.data.full_name || "",
           email: result.data.email || "",
@@ -37,12 +59,42 @@ export default function UserProfile() {
           bio: result.data.bio || "",
           date_of_birth: result.data.date_of_birth || "",
           gender: result.data.gender || "",
-          address: result.data.address || "",
-          profile_picture_url: result.data.profile_picture_url || "",
+          country: result.data.country || "",
+          city: result.data.city || "",
         });
+      } else {
+        console.error('Failed to get profile:', result.message);
+        // Fallback to user data from context
+        if (user) {
+          console.log('Using fallback user data:', user);
+          setFormData({
+            full_name: user.full_name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            bio: user.bio || "",
+            date_of_birth: user.date_of_birth || "",
+            gender: user.gender || "",
+            country: user.country || "",
+            city: user.city || "",
+          });
+        }
       }
     } catch (error) {
       console.error("Error loading profile:", error);
+      // Fallback to user data from context
+      if (user) {
+        console.log('Using fallback user data after error:', user);
+        setFormData({
+          full_name: user.full_name || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          bio: user.bio || "",
+          date_of_birth: user.date_of_birth || "",
+          gender: user.gender || "",
+          country: user.country || "",
+          city: user.city || "",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -141,13 +193,17 @@ export default function UserProfile() {
           <div className="avatar-section">
             <div className="avatar-container">
               <img 
-                src={formData.profile_picture_url || user?.profile_picture_url || avatar} 
+                src={user?.avatar || avatar} 
                 alt="User Avatar" 
                 className="user-avatar"
-                onError={(e) => {
-                  e.target.src = avatar; // Fallback to default avatar if URL fails
-                }}
               />
+              <button 
+                className="avatar-upload-btn"
+                onClick={handleAvatarChange}
+                disabled={!isEditing}
+              >
+                <Upload size={16} />
+              </button>
             </div>
             <div className="avatar-info">
               <h2 className="user-name">
@@ -165,31 +221,6 @@ export default function UserProfile() {
               <h3 className="section-title">Thông tin cá nhân</h3>
               
               <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="profile_picture_url">Ảnh đại diện (URL)</label>
-                  {isEditing ? (
-                    <input
-                      type="url"
-                      id="profile_picture_url"
-                      name="profile_picture_url"
-                      value={formData.profile_picture_url}
-                      onChange={handleInputChange}
-                      className="form-input"
-                      placeholder="https://example.com/avatar.jpg"
-                    />
-                  ) : (
-                    <div className="form-value">
-                      {formData.profile_picture_url ? (
-                        <a href={formData.profile_picture_url ? "đã cập nhật" : ""} target="_blank" rel="noopener noreferrer">
-                          {formData.profile_picture_url ? "Đã cập nhật" : "Chưa cập nhật"}
-                        </a>
-                      ) : (
-                        "Chưa cập nhật"
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 <div className="form-group">
                   <label htmlFor="full_name">Họ và tên</label>
                   {isEditing ? (
@@ -290,26 +321,43 @@ export default function UserProfile() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="address">Địa chỉ</label>
+                  <label htmlFor="country">Quốc gia</label>
                   {isEditing ? (
                     <input
                       type="text"
-                      id="address"
-                      name="address"
-                      value={formData.address}
+                      id="country"
+                      name="country"
+                      value={formData.country}
                       onChange={handleInputChange}
                       className="form-input"
-                      placeholder="Nhập địa chỉ của bạn"
                     />
                   ) : (
                     <div className="form-value">
-                      {formData.address || "Chưa cập nhật"}
+                      {formData.country || "Chưa cập nhật"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="city">Thành phố</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="form-input"
+                    />
+                  ) : (
+                    <div className="form-value">
+                      {formData.city || "Chưa cập nhật"}
                     </div>
                   )}
                 </div>
 
                 <div className="form-group full-width">
-                  <label htmlFor="bio">Giới thiệu bản thân</label>
+                  <label htmlFor="bio">Giới thiệu bản thânn</label>
                   {isEditing ? (
                     <textarea
                       id="bio"
