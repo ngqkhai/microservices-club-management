@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import "./VerifySignUp.css"; // Reuse existing styles
-import backgroundImage from "./Picture/background.jpg";
-import leftImage from "./Picture/leftLogin.jpg";
-import logo from "./Picture/Logo.png";
+import "../styles/VerifySignUp.css"; // Reuse existing styles
+import backgroundImage from "../assets/background.jpg";
+import leftImage from "../assets/leftLogin.jpg";
+import logo from "../assets/Logo.png";
 
 export default function EmailVerification() {
   const [status, setStatus] = useState('verifying'); // 'verifying', 'success', 'error', 'already_verified'

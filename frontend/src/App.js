@@ -1,13 +1,16 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import HomePage from "./HomePage";
-import LoginPage from "./LoginPage";
-import SignUpPage from "./SignUpPage"; 
-import VerifySignUp from "./VerifySignUp"
-import EmailVerification from "./EmailVerification";
-import ForgotPassword_1 from "./ForgotPassword_1";
-import ForgotPassword_2 from "./ForgotPassword_2";
-import UserProfile from "./UserProfile";
+import HomePage from "./components/HomePage";
+import LoginPage from "./components/LoginPage";
+import SignUpPage from "./components/SignUpPage";
+import VerifySignUp from "./components/VerifySignUp";
+import EmailVerification from "./components/EmailVerification";
+import ForgotPassword_1 from "./components/ForgotPassword_1";
+import ForgotPassword_2 from "./components/ForgotPassword_2";
+import UserProfile from "./components/UserProfile";
+import ClubsPage from "./components/ClubsPage";
+import ClubDetail from "./components/ClubDetail";
+import ClubSpace from "./components/ClubSpace";
 
 function App() {
   return (
@@ -21,6 +24,9 @@ function App() {
         <Route path="/forgotpassword_1" element={<ForgotPassword_1 />} />
         <Route path="/forgot-password-verify" element={<ForgotPassword_2 />} />
         <Route path="/profile" element={<UserProfile />} />
+        <Route path="/clubs" element={<ClubsPage />} />
+        <Route path="/clubs/:clubId" element={<ClubDetail />} />
+        <Route path="/clubspace/:clubId" element={<ClubSpace />} />
       </Routes>
     </Router>
   );
