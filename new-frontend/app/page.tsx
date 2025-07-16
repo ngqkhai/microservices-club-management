@@ -1,66 +1,14 @@
-"use client"
+ "use client"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Calendar, ArrowRight } from "lucide-react"
+import { Users, Calendar, ArrowRight, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { ClubPreviewCard } from "@/components/club-preview-card"
 import { ActivityFeedItem } from "@/components/activity-feed-item"
-
-// Mock data for featured clubs
-const featuredClubs = [
-  {
-    club_id: "music-club",
-    name: "CLB Âm nhạc",
-    description:
-      "Câu lạc bộ về nghệ thuật biểu diễn và âm nhạc, nơi các thành viên có thể phát triển tài năng và đam mê âm nhạc",
-    logo_url: "/placeholder.svg?height=80&width=80",
-    members: 45,
-    category: "Arts",
-  },
-  {
-    club_id: "tech-club",
-    name: "CLB Công nghệ thông tin",
-    description: "Khám phá thế giới công nghệ, lập trình và đổi mới sáng tạo cùng những người bạn cùng chí hướng",
-    logo_url: "/placeholder.svg?height=80&width=80",
-    members: 78,
-    category: "Technology",
-  },
-  {
-    club_id: "sports-club",
-    name: "CLB Thể thao",
-    description: "Duy trì sức khỏe và tinh thần thể thao thông qua các hoạt động thể dục thể thao đa dạng",
-    logo_url: "/placeholder.svg?height=80&width=80",
-    members: 92,
-    category: "Sports",
-  },
-  {
-    club_id: "debate-club",
-    name: "CLB Tranh luận",
-    description: "Phát triển kỹ năng tư duy phản biện và khả năng diễn đạt thông qua các cuộc tranh luận",
-    logo_url: "/placeholder.svg?height=80&width=80",
-    members: 34,
-    category: "Academic",
-  },
-  {
-    club_id: "volunteer-club",
-    name: "CLB Tình nguyện",
-    description: "Góp phần xây dựng cộng đồng tốt đẹp thông qua các hoạt động tình nguyện ý nghĩa",
-    logo_url: "/placeholder.svg?height=80&width=80",
-    members: 67,
-    category: "Service",
-  },
-  {
-    club_id: "art-club",
-    name: "CLB Nghệ thuật",
-    description: "Thể hiện sự sáng tạo qua hội họa, điêu khắc và các hình thức nghệ thuật thị giác",
-    logo_url: "/placeholder.svg?height=80&width=80",
-    members: 56,
-    category: "Arts",
-  },
-]
+import { useFeaturedClubsStore } from "@/stores/featured-clubs-store"
 
 // Mock data for recent and upcoming events
 const recentAndUpcomingEvents = {
@@ -116,12 +64,22 @@ const recentAndUpcomingEvents = {
 }
 
 export default function HomePage() {
-  const [isLoading, setIsLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(true)
+  
+  // Featured clubs store
+  const { cache, loadFeaturedClubs, resetRetry } = useFeaturedClubsStore()
 
   useEffect(() => {
-    // Simulate API loading
+    // Load featured clubs if not already loaded
+    if (!cache.isLoaded && !cache.isLoading) {
+      loadFeaturedClubs()
+    }
+  }, [cache.isLoaded, cache.isLoading, loadFeaturedClubs])
+
+  useEffect(() => {
+    // Simulate API loading for events
     const timer = setTimeout(() => {
-      setIsLoading(false)
+      setEventsLoading(false)
     }, 1000)
 
     return () => clearTimeout(timer)
@@ -188,7 +146,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {isLoading ? (
+          {cache.isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {[...Array(6)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
@@ -207,9 +165,38 @@ export default function HomePage() {
                 </Card>
               ))}
             </div>
+          ) : cache.error ? (
+            <div className="text-center py-12">
+              <div className="max-w-md mx-auto">
+                <p className="text-red-600 mb-4">{cache.error}</p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    onClick={() => {
+                      resetRetry()
+                      loadFeaturedClubs()
+                    }}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Thử lại ({cache.retryCount}/3)
+                  </Button>
+                  <Button asChild variant="default">
+                    <Link href="/clubs">Xem tất cả câu lạc bộ</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : cache.featuredClubs.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 mb-4">Hiện tại chưa có câu lạc bộ nào.</p>
+              <Button asChild variant="outline">
+                <Link href="/clubs">Khám phá câu lạc bộ</Link>
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {featuredClubs.map((club) => (
+              {cache.featuredClubs.map((club) => (
                 <ClubPreviewCard key={club.club_id} club={club} />
               ))}
             </div>
@@ -243,7 +230,7 @@ export default function HomePage() {
             </TabsList>
 
             <TabsContent value="upcoming" className="space-y-4">
-              {isLoading ? (
+              {eventsLoading ? (
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
                     <Card key={i} className="animate-pulse">
@@ -270,7 +257,7 @@ export default function HomePage() {
             </TabsContent>
 
             <TabsContent value="recent" className="space-y-4">
-              {isLoading ? (
+              {eventsLoading ? (
                 <div className="space-y-4">
                   {[...Array(2)].map((_, i) => (
                     <Card key={i} className="animate-pulse">
