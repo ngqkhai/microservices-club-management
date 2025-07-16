@@ -1,26 +1,116 @@
-import React from 'react';
-import UserLayout from '../layouts/UserLayout';
-import avatar from '../assets/Logo.png'; // Thay bằng avatar thật nếu có
+"use client"
+import UserLayout from "../layouts/UserLayout"
+import "../styles/UserProfile.css"
+import avatar from "../assets/Logo.png"
+import { Upload, Edit } from "lucide-react"
 
 export default function UserProfile() {
   // Dữ liệu mẫu, sau này lấy từ context hoặc API
   const user = {
-    name: 'Nguyen Van A',
-    email: 'nguyenvana@example.com',
+    name: "Nguyen Gia Kiet",
+    role: "Student",
+    class: "22CLC08",
+    id: "22127221",
+    dateOfBirth: "August 25, 2004",
+    gender: "Male",
+    email: "ngkiet22@clc.fitus.edu.vn",
+    country: "Viet Nam",
+    city: "Ho Chi Minh City",
     avatar: avatar,
-    role: 'Member',
-    joined: '2024-01-01',
-  };
+  }
+
+  const handleAvatarChange = () => {
+    // Logic để thay đổi avatar
+    console.log("Change avatar clicked")
+  }
+
+  const handlePasswordChange = (e) => {
+    e.preventDefault()
+    // Logic để thay đổi mật khẩu
+    console.log("Password change submitted")
+  }
 
   return (
     <UserLayout user={user}>
-      <div style={{ maxWidth: 500, margin: '40px auto', background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: 32, textAlign: 'center' }}>
-        <img src={user.avatar} alt="avatar" style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '3px solid #3C3A6B', marginBottom: 16 }} />
-        <h2 style={{ margin: '12px 0 4px', color: '#3C3A6B', fontWeight: 900 }}>{user.name}</h2>
-        <div style={{ color: '#555', marginBottom: 12 }}>{user.email}</div>
-        <div style={{ color: '#888', fontSize: 15, marginBottom: 8 }}>Role: <b>{user.role}</b></div>
-        <div style={{ color: '#888', fontSize: 15 }}>Thành viên từ: <b>{user.joined}</b></div>
+      <div className="profile-page">
+        <div className="profile-header">
+          <h1 className="profile-title">
+            {user.name} - <span className="profile-role">{user.role}</span>
+          </h1>
+          <p className="profile-subtitle">User detail</p>
+        </div>
+
+        <div className="profile-content">
+          {/* Avatar Section */}
+          <div className="avatar-section">
+            <div className="avatar-container">
+              <img src={user.avatar || "/placeholder.svg"} alt="User Avatar" className="user-avatar" />
+            </div>
+            <button className="change-avatar-btn" onClick={handleAvatarChange}>
+              <Upload size={16} />
+              Change avatar
+            </button>
+          </div>
+
+          {/* User Details Section */}
+          <div className="user-details-card">
+            <div className="detail-row">
+              <span className="detail-label">Class:</span>
+              <span className="detail-value">{user.class}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">ID:</span>
+              <span className="detail-value">{user.id}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Date of birth:</span>
+              <span className="detail-value">{user.dateOfBirth}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Gender:</span>
+              <span className="detail-value">{user.gender}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Email address:</span>
+              <span className="detail-value">{user.email}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Country:</span>
+              <span className="detail-value">{user.country}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">City/town:</span>
+              <span className="detail-value">{user.city}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Change Password Section */}
+        <div className="password-section">
+          <h2 className="password-title">
+            <Edit size={16} />
+            Change password
+          </h2>
+
+          <form className="password-form" onSubmit={handlePasswordChange}>
+            <div className="form-group">
+              <label className="form-label">Old password:</label>
+              <input type="password" className="form-input" placeholder="Password" required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">New password:</label>
+              <input type="password" className="form-input" placeholder="Password" required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Verify password:</label>
+              <input type="password" className="form-input" placeholder="Password" required />
+            </div>
+            <button type="submit" className="confirm-btn">
+              Confirm
+            </button>
+          </form>
+        </div>
       </div>
     </UserLayout>
-  );
-} 
+  )
+}

@@ -47,7 +47,7 @@
 .login-image {
   flex: 1;
   background-size: cover;
-  background-position: center;
+  background-position: left;
   min-height: 250px;
 }
 
@@ -98,6 +98,7 @@
 .form-group label {
   font-size: 14px;
   color: #555;
+  text-align: left;
 }
 
 /* Quên mật khẩu */

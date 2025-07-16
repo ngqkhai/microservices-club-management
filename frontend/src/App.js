@@ -8,6 +8,9 @@ import EmailVerification from "./components/EmailVerification";
 import ForgotPassword_1 from "./components/ForgotPassword_1";
 import ForgotPassword_2 from "./components/ForgotPassword_2";
 import UserProfile from "./components/UserProfile";
+import ClubsPage from "./components/ClubsPage";
+import ClubDetail from "./components/ClubDetail";
+import ClubSpace from "./components/ClubSpace";
 
 function App() {
   return (
@@ -21,6 +24,9 @@ function App() {
         <Route path="/forgotpassword_1" element={<ForgotPassword_1 />} />
         <Route path="/forgot-password-verify" element={<ForgotPassword_2 />} />
         <Route path="/profile" element={<UserProfile />} />
+        <Route path="/clubs" element={<ClubsPage />} />
+        <Route path="/clubs/:clubId" element={<ClubDetail />} />
+        <Route path="/clubspace/:clubId" element={<ClubSpace />} />
       </Routes>
     </Router>
   );

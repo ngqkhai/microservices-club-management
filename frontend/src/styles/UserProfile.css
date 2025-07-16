@@ -1,0 +1,274 @@
+.profile-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: "Quicksand", Arial, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+/* Profile Header */
+.profile-header {
+  margin-bottom: 2rem;
+}
+
+.profile-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #3c3a6b;
+  margin: 0 0 0.5rem 0;
+}
+
+.profile-role {
+  color: #415d43;
+}
+
+.profile-subtitle {
+  font-size: 1.1rem;
+  color: #3c3a6b;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Profile Content */
+.profile-content {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+/* Avatar Section */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.avatar-container {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f1bb87 0%, #e8a86d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  box-shadow: 0 8px 32px rgba(60, 58, 107, 0.15);
+}
+
+.user-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f8f9fa;
+}
+
+.change-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #3c3a6b;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-family: "Quicksand", Arial, sans-serif;
+}
+
+.change-avatar-btn:hover {
+  background: rgba(60, 58, 107, 0.1);
+  color: #415d43;
+}
+
+/* User Details Card */
+.user-details-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #333;
+  min-width: 140px;
+  font-size: 0.95rem;
+}
+
+.detail-value {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+/* Password Section */
+.password-section {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.password-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #3c3a6b;
+  margin: 0 0 2rem 0;
+}
+
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 500px;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #333;
+  min-width: 140px;
+  font-size: 0.95rem;
+}
+
+.form-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: "Quicksand", Arial, sans-serif;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3c3a6b;
+  box-shadow: 0 0 0 3px rgba(60, 58, 107, 0.1);
+}
+
+.form-input::placeholder {
+  color: #adb5bd;
+}
+
+.confirm-btn {
+  background: #f1bb87;
+  color: #3c3a6b;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  align-self: flex-end;
+  font-family: "Quicksand", Arial, sans-serif;
+  margin-top: 1rem;
+}
+
+.confirm-btn:hover {
+  background: #e8a86d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(241, 187, 135, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 1rem;
+  }
+
+  .profile-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .avatar-section {
+    order: 1;
+  }
+
+  .user-details-card {
+    order: 2;
+  }
+
+  .avatar-container {
+    width: 150px;
+    height: 150px;
+  }
+
+  .profile-title {
+    font-size: 1.5rem;
+  }
+
+  .form-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .form-label {
+    min-width: auto;
+  }
+
+  .form-input {
+    width: 100%;
+  }
+
+  .confirm-btn {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .avatar-container {
+    width: 120px;
+    height: 120px;
+  }
+
+  .profile-title {
+    font-size: 1.3rem;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .detail-label {
+    min-width: auto;
+    font-size: 0.9rem;
+  }
+
+  .detail-value {
+    font-size: 0.9rem;
+  }
+}

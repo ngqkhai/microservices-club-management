@@ -7,12 +7,12 @@ body,
   min-height: 100vh;
   height: 100%;
   box-sizing: border-box;
-  background: #3c3a6b;
+  background: #332C55;
 }
 
 .layout-container {
   min-height: 100vh;
-  background: #3c3a6b;
+  background: #332C55;
   display: flex;
   flex-direction: column;
 }
@@ -47,7 +47,7 @@ body,
     right: 0;
     top: 60px; /* Cách top của ảnh 100px */
     height: 300px; /* Chiều cao dải overlay */
-    background:#3c3a6b; /* Màu tối với độ trong suốt */
+    background:#332C55; /* Màu tối với độ trong suốt */
     opacity: 1;
     z-index: 2;
     pointer-events: none;
@@ -108,7 +108,7 @@ body,
 
 /* Main Content */
 .home-main-dark {
-  background: #3c3a6b;
+  background: #332C55;
   flex: 1 1 auto;
   min-height: 0;
   padding: 3rem 0;
@@ -138,7 +138,7 @@ body,
 
 .view-all-btn {
   background: #f1bb87;
-  color: #3c3a6b;
+  color: #332C55;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 25px;
