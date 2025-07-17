@@ -5,7 +5,7 @@
 export const config = {
   // API Configuration
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3002',
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
     timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000'),
   },
   
@@ -36,7 +36,7 @@ export const config = {
       logout: '/api/auth/logout',
       profile: '/api/auth/profile',
       changePassword: '/api/auth/change-password',
-      refreshToken: '/api/auth/refresh-token',
+      refreshToken: '/api/auth/refresh',
       verifyEmail: '/api/auth/verify-email',
       resendVerification: '/api/auth/resend-verification',
       forgotPassword: '/api/auth/forgot-password',

@@ -89,9 +89,9 @@ export function ClubCard({ club }: ClubCardProps) {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          {/* <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
             Tham gia
-          </Button>
+          </Button> */}
         </div>
       </CardContent>
     </Card>
