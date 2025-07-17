@@ -125,6 +125,16 @@ router.get('/users/:userId/club-roles',
 );
 
 /**
+ * @route GET /api/users/:userId/applications
+ * @desc Get all recruitment applications for a user
+ * @access Private - User can only view their own applications
+ */
+router.get('/users/:userId/applications', 
+  authMiddleware.validateApiGatewayHeaders, 
+  require('../controllers/recruitmentCampaignController').getUserApplications
+);
+
+/**
  * @route GET /api/clubs/:clubId/members
  * @desc Get all members of a club
  * @access Private - Club Members, Organizers, and Managers
@@ -166,6 +176,27 @@ router.delete('/clubs/:clubId/members/:userId',
 
 // Protected Campaign Routes (all routes in this file now require JWT)
 router.use('/clubs', authMiddleware.validateApiGatewayHeaders, recruitmentCampaignRoutes);
-router.use('/campaigns', authMiddleware.validateApiGatewaySecret, publicCampaignRoutes);
+
+// Public Campaign Routes - mixed authentication
+// Public routes (get campaigns) use API Gateway secret
+// Application routes use JWT authentication
+const publicRouter = express.Router();
+
+// Public campaign viewing routes
+publicRouter.get('/published', authMiddleware.validateApiGatewaySecret, require('../controllers/recruitmentCampaignController').getPublishedCampaigns);
+publicRouter.get('/:campaignId', authMiddleware.validateApiGatewaySecret, require('../controllers/recruitmentCampaignController').getCampaignById);
+publicRouter.get('/clubs/:clubId/published', authMiddleware.validateApiGatewaySecret, require('../controllers/recruitmentCampaignController').getPublishedCampaigns);
+
+// Application routes (require user authentication)
+publicRouter.post('/:campaignId/apply', authMiddleware.validateApiGatewayHeaders, require('../controllers/recruitmentCampaignController').submitApplication);
+publicRouter.get('/:campaignId/applications/:applicationId', authMiddleware.validateApiGatewayHeaders, require('../controllers/recruitmentCampaignController').getApplication);
+publicRouter.put('/:campaignId/applications/:applicationId', authMiddleware.validateApiGatewayHeaders, require('../controllers/recruitmentCampaignController').updateApplication);
+publicRouter.delete('/:campaignId/applications/:applicationId', authMiddleware.validateApiGatewayHeaders, require('../controllers/recruitmentCampaignController').withdrawApplication);
+
+router.use('/campaigns', publicRouter);
+
+// Application management routes (user level)
+const applicationRoutes = require('./applicationRoutes');
+router.use('/applications', authMiddleware.validateApiGatewayHeaders, applicationRoutes);
 
 module.exports = router;

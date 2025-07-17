@@ -312,6 +312,44 @@ const recruitmentCampaignSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
+// Instance Methods for RecruitmentCampaign
+recruitmentCampaignSchema.methods.toPublicJSON = function() {
+  return {
+    id: this._id,
+    club_id: this.club_id,
+    title: this.title,
+    description: this.description,
+    requirements: this.requirements,
+    application_questions: this.application_questions,
+    start_date: this.start_date,
+    end_date: this.end_date,
+    max_applications: this.max_applications,
+    status: this.status,
+    statistics: this.statistics,
+    created_at: this.created_at,
+    updated_at: this.updated_at
+  };
+};
+
+recruitmentCampaignSchema.methods.toManagerJSON = function() {
+  return {
+    id: this._id,
+    club_id: this.club_id,
+    title: this.title,
+    description: this.description,
+    requirements: this.requirements,
+    application_questions: this.application_questions,
+    start_date: this.start_date,
+    end_date: this.end_date,
+    max_applications: this.max_applications,
+    status: this.status,
+    statistics: this.statistics,
+    created_by: this.created_by,
+    created_at: this.created_at,
+    updated_at: this.updated_at
+  };
+};
+
 recruitmentCampaignSchema.index({ club_id: 1, status: 1 });
 recruitmentCampaignSchema.index({ start_date: 1, end_date: 1 });
 recruitmentCampaignSchema.index({ created_by: 1 });

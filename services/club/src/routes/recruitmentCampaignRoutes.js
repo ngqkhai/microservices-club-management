@@ -68,4 +68,63 @@ router.post('/:clubId/campaigns/:campaignId/resume', RecruitmentCampaignControll
  */
 router.post('/:clubId/campaigns/:campaignId/complete', RecruitmentCampaignController.completeCampaign);
 
+/**
+ * @route GET /api/clubs/:clubId/campaigns/:campaignId/applications
+ * @desc Get all applications for a campaign (Club Managers only)
+ * @access Private (Club Manager only)
+ */
+router.get('/:clubId/campaigns/:campaignId/applications', RecruitmentCampaignController.getCampaignApplications);
+
+/**
+ * @route GET /api/clubs/:clubId/campaigns/:campaignId/applications/:applicationId
+ * @desc Get specific application details (Club Managers only)
+ * @access Private (Club Manager only)
+ */
+router.get('/:clubId/campaigns/:campaignId/applications/:applicationId', RecruitmentCampaignController.getApplicationDetails);
+
+/**
+ * @route PUT /api/clubs/:clubId/campaigns/:campaignId/applications/:applicationId/status
+ * @desc Update application status (approve, reject, review)
+ * @access Private (Club Manager only)
+ */
+router.put('/:clubId/campaigns/:campaignId/applications/:applicationId/status', RecruitmentCampaignController.updateApplicationStatus);
+
+/**
+ * @route POST /api/clubs/:clubId/campaigns/:campaignId/applications/:applicationId/approve
+ * @desc Approve an application and add user to club
+ * @access Private (Club Manager only)
+ */
+router.post('/:clubId/campaigns/:campaignId/applications/:applicationId/approve', RecruitmentCampaignController.approveApplication);
+
+/**
+ * @route POST /api/clubs/:clubId/campaigns/:campaignId/applications/:applicationId/reject
+ * @desc Reject an application with optional reason
+ * @access Private (Club Manager only)
+ */
+router.post('/:clubId/campaigns/:campaignId/applications/:applicationId/reject', RecruitmentCampaignController.rejectApplication);
+
+// ========================= SIMPLIFIED APPLICATION ROUTES =========================
+// Routes that work with membership IDs directly without requiring campaignId
+
+/**
+ * @route PUT /api/clubs/:clubId/applications/:applicationId/status
+ * @desc Update application status (simplified route without campaignId)
+ * @access Private (Club Manager only)
+ */
+router.put('/:clubId/applications/:applicationId/status', RecruitmentCampaignController.updateApplicationStatusSimple);
+
+/**
+ * @route POST /api/clubs/:clubId/applications/:applicationId/approve
+ * @desc Approve an application (simplified route without campaignId)
+ * @access Private (Club Manager only)
+ */
+router.post('/:clubId/applications/:applicationId/approve', RecruitmentCampaignController.approveApplicationSimple);
+
+/**
+ * @route POST /api/clubs/:clubId/applications/:applicationId/reject
+ * @desc Reject an application (simplified route without campaignId)
+ * @access Private (Club Manager only)
+ */
+router.post('/:clubId/applications/:applicationId/reject', RecruitmentCampaignController.rejectApplicationSimple);
+
 module.exports = router;
