@@ -44,7 +44,12 @@ const getClubRecruitments = async (req, res, next) => {
 
 const getClubMember = async (req, res, next) => {
   try {
-    const result = await clubService.getClubMember(req.params.clubId, req.params.userId);
+    const userContext = {
+      userId: req.headers['x-user-id'],
+      userRole: req.headers['x-user-role']
+    };
+    
+    const result = await clubService.getClubMember(req.params.clubId, req.params.userId, userContext);
     res.status(200).json(result);
   } catch (error) {
     next(error);

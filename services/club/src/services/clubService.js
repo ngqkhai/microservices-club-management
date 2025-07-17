@@ -471,11 +471,27 @@ class ClubService {
    * @param {string} userId - The user ID
    * @returns {Promise<Object>} - Member details
    */
-  async getClubMember(clubId, userId) {
+  /**
+   * Get a specific club member's details
+   * @param {string} clubId - The club ID
+   * @param {string} userId - The user ID
+   * @param {Object} userContext - User context for permission check
+   * @returns {Promise<Object>} - Club member details
+   */
+  async getClubMember(clubId, userId, userContext) {
     if (!clubId || !userId) {
       const error = new Error('Club ID and User ID are required');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+
+    // Check if user has permission to view member details (all club members can view)
+    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager', 'organizer', 'member']);
+    if (!hasPermission) {
+      const error = new Error('You do not have permission to view club member details');
+      error.status = 403;
+      error.name = 'PERMISSION_ERROR';
       throw error;
     }
     
@@ -726,8 +742,8 @@ class ClubService {
       throw error;
     }
 
-    // Check if user has permission to view members
-    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager', 'organizer']);
+    // Check if user has permission to view members (all club members can view)
+    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager', 'organizer', 'member']);
     if (!hasPermission) {
       const error = new Error('You do not have permission to view club members');
       error.status = 403;

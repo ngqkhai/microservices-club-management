@@ -84,7 +84,7 @@ router.get(
 /**
  * @route GET /api/clubs/:clubId/members/:userId
  * @desc Get a specific club member's details
- * @access Private (Internal or Club Manager)
+ * @access Private - Club Members, Organizers, and Managers
  */
 router.get('/clubs/:clubId/members/:userId', 
   authMiddleware.validateApiGatewayHeaders, 
@@ -126,7 +126,7 @@ router.get('/users/:userId/club-roles',
 /**
  * @route GET /api/clubs/:clubId/members
  * @desc Get all members of a club
- * @access Private - Club Manager only
+ * @access Private - Club Members, Organizers, and Managers
  */
 router.get('/clubs/:clubId/members', 
   authMiddleware.validateApiGatewayHeaders, 
