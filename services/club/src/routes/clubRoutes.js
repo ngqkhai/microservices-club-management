@@ -113,6 +113,56 @@ router.put('/clubs/:id/status',
   clubController.updateClubStatus
 );
 
+/**
+ * @route GET /api/users/:userId/club-roles
+ * @desc Get all club roles for a user
+ * @access Private
+ */
+router.get('/users/:userId/club-roles', 
+  authMiddleware.validateApiGatewayHeaders, 
+  clubController.getUserClubRoles
+);
+
+/**
+ * @route GET /api/clubs/:clubId/members
+ * @desc Get all members of a club
+ * @access Private - Club Manager only
+ */
+router.get('/clubs/:clubId/members', 
+  authMiddleware.validateApiGatewayHeaders, 
+  clubController.getClubMembers
+);
+
+/**
+ * @route POST /api/clubs/:clubId/members
+ * @desc Add a member to a club
+ * @access Private - Club Manager only
+ */
+router.post('/clubs/:clubId/members', 
+  authMiddleware.validateApiGatewayHeaders, 
+  clubController.addClubMember
+);
+
+/**
+ * @route PUT /api/clubs/:clubId/members/:userId/role
+ * @desc Update a member's role in a club
+ * @access Private - Club Manager only
+ */
+router.put('/clubs/:clubId/members/:userId/role', 
+  authMiddleware.validateApiGatewayHeaders, 
+  clubController.updateMemberRole
+);
+
+/**
+ * @route DELETE /api/clubs/:clubId/members/:userId
+ * @desc Remove a member from a club
+ * @access Private - Club Manager only
+ */
+router.delete('/clubs/:clubId/members/:userId', 
+  authMiddleware.validateApiGatewayHeaders, 
+  clubController.removeMember
+);
+
 // Protected Campaign Routes (all routes in this file now require JWT)
 router.use('/clubs', authMiddleware.validateApiGatewayHeaders, recruitmentCampaignRoutes);
 router.use('/campaigns', authMiddleware.validateApiGatewaySecret, publicCampaignRoutes);

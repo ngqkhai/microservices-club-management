@@ -654,6 +654,286 @@ class ClubService {
     }
   }
   
+  /**
+   * Get all club roles for a user
+   * @param {string} userId - The user ID
+   * @returns {Promise<Object>} - User's club roles
+   */
+  async getUserClubRoles(userId) {
+    if (!userId) {
+      const error = new Error('User ID is required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+
+    try {
+      const { Membership } = require('../config/database');
+      const memberships = await Membership.find({
+        user_id: userId,
+        status: 'active'
+      });
+
+      console.log(`Found ${memberships.length} memberships for user ${userId}`);
+      
+      const roles = [];
+      
+      for (const membership of memberships) {
+        try {
+          // Get club details manually to avoid populate issues
+          const club = await Club.findById(membership.club_id);
+          
+          if (club) {
+            roles.push({
+              clubId: membership.club_id.toString(),
+              clubName: club.name,
+              role: membership.role,
+              joinedAt: membership.joined_at
+            });
+            console.log(`✅ Found club: ${club.name} for user ${userId}`);
+          } else {
+            // Club not found, log but don't fail
+            console.warn(`⚠️  Club with ID ${membership.club_id} not found for user ${userId}`);
+          }
+        } catch (clubError) {
+          console.error(`❌ Error fetching club ${membership.club_id}:`, clubError);
+          // Continue processing other memberships
+        }
+      }
+
+      return {
+        success: true,
+        message: 'User club roles retrieved successfully',
+        data: roles
+      };
+    } catch (error) {
+      console.error('Error getting user club roles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all members of a club
+   * @param {string} clubId - The club ID
+   * @param {Object} userContext - User context for permission check
+   * @returns {Promise<Object>} - Club members
+   */
+  async getClubMembers(clubId, userContext) {
+    if (!clubId) {
+      const error = new Error('Club ID is required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+
+    // Check if user has permission to view members
+    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager', 'organizer']);
+    if (!hasPermission) {
+      const error = new Error('You do not have permission to view club members');
+      error.status = 403;
+      error.name = 'PERMISSION_ERROR';
+      throw error;
+    }
+
+    try {
+      const { Membership } = require('../config/database');
+      const members = await Membership.find({
+        club_id: clubId,
+        status: 'active'
+      }).select('user_id role joined_at');
+
+      return {
+        success: true,
+        message: 'Club members retrieved successfully',
+        data: members
+      };
+    } catch (error) {
+      console.error('Error getting club members:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a member to a club
+   * @param {string} clubId - The club ID
+   * @param {Object} memberData - Member data
+   * @param {Object} userContext - User context for permission check
+   * @returns {Promise<Object>} - Created membership
+   */
+  async addClubMember(clubId, memberData, userContext) {
+    if (!clubId) {
+      const error = new Error('Club ID is required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+
+    // Check if user has permission to add members
+    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager']);
+    if (!hasPermission) {
+      const error = new Error('You do not have permission to add members to this club');
+      error.status = 403;
+      error.name = 'PERMISSION_ERROR';
+      throw error;
+    }
+
+    try {
+      const { Membership } = require('../config/database');
+      const membership = await Membership.create({
+        club_id: clubId,
+        user_id: memberData.userId,
+        role: memberData.role || 'member',
+        status: 'active',
+        approved_by: userContext.userId,
+        approved_at: new Date()
+      });
+
+      return {
+        success: true,
+        message: 'Member added successfully',
+        data: membership
+      };
+    } catch (error) {
+      if (error.code === 11000) {
+        const duplicateError = new Error('User is already a member of this club');
+        duplicateError.status = 409;
+        duplicateError.name = 'DUPLICATE_ERROR';
+        throw duplicateError;
+      }
+      console.error('Error adding club member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a member's role in a club
+   * @param {string} clubId - The club ID
+   * @param {string} userId - The user ID
+   * @param {string} newRole - The new role
+   * @param {Object} userContext - User context for permission check
+   * @returns {Promise<Object>} - Updated membership
+   */
+  async updateMemberRole(clubId, userId, newRole, userContext) {
+    if (!clubId || !userId || !newRole) {
+      const error = new Error('Club ID, User ID, and new role are required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+
+    // Check if user has permission to update member roles
+    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager']);
+    if (!hasPermission) {
+      const error = new Error('You do not have permission to update member roles in this club');
+      error.status = 403;
+      error.name = 'PERMISSION_ERROR';
+      throw error;
+    }
+
+    try {
+      const { Membership } = require('../config/database');
+      const membership = await Membership.findOneAndUpdate(
+        { club_id: clubId, user_id: userId, status: 'active' },
+        { role: newRole, updated_at: new Date() },
+        { new: true }
+      );
+
+      if (!membership) {
+        const error = new Error('Member not found in this club');
+        error.status = 404;
+        error.name = 'NOT_FOUND';
+        throw error;
+      }
+
+      return {
+        success: true,
+        message: 'Member role updated successfully',
+        data: membership
+      };
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a club
+   * @param {string} clubId - The club ID
+   * @param {string} userId - The user ID
+   * @param {Object} userContext - User context for permission check
+   * @returns {Promise<Object>} - Removal result
+   */
+  async removeMember(clubId, userId, userContext) {
+    if (!clubId || !userId) {
+      const error = new Error('Club ID and User ID are required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+
+    // Check if user has permission to remove members
+    const hasPermission = await this._checkClubPermission(clubId, userContext.userId, ['club_manager']);
+    if (!hasPermission) {
+      const error = new Error('You do not have permission to remove members from this club');
+      error.status = 403;
+      error.name = 'PERMISSION_ERROR';
+      throw error;
+    }
+
+    try {
+      const { Membership } = require('../config/database');
+      const membership = await Membership.findOneAndUpdate(
+        { club_id: clubId, user_id: userId, status: 'active' },
+        { 
+          status: 'removed',
+          removed_at: new Date(),
+          updated_at: new Date()
+        },
+        { new: true }
+      );
+
+      if (!membership) {
+        const error = new Error('Member not found in this club');
+        error.status = 404;
+        error.name = 'NOT_FOUND';
+        throw error;
+      }
+
+      return {
+        success: true,
+        message: 'Member removed successfully',
+        data: membership
+      };
+    } catch (error) {
+      console.error('Error removing member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user has permission for club operations
+   * @param {string} clubId - The club ID
+   * @param {string} userId - The user ID
+   * @param {Array} allowedRoles - Array of allowed roles
+   * @returns {Promise<boolean>} - Has permission
+   */
+  async _checkClubPermission(clubId, userId, allowedRoles = ['club_manager']) {
+    try {
+      const { Membership } = require('../config/database');
+      const membership = await Membership.findOne({
+        club_id: clubId,
+        user_id: userId,
+        status: 'active',
+        role: { $in: allowedRoles }
+      });
+
+      return !!membership;
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      return false;
+    }
+  }
+
   // Private helper methods
   
   /**

@@ -110,6 +110,48 @@ routes:
     plugins:
       - name: api-gateway-secret
         tags: [club-secret]
+        
+  # Club Member Management Routes (JWT required)
+  - name: club-member-routes
+    service: club-service
+    paths:
+      - "~/api/clubs/[a-fA-F0-9]{24}/members"
+      - "~/api/clubs/[a-fA-F0-9]{24}/members/.*"
+      - "~/api/users/[a-fA-F0-9-]+/club-roles"
+    methods: [GET, POST, PUT, DELETE]
+    strip_path: false
+    tags: [club, members, protected]
+    plugins:
+      - name: jwt
+        tags: [members-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [members-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+      - name: api-gateway-secret
+        tags: [members-secret]
+        
+  # Individual Club Routes (Some public, some protected)
+  - name: club-individual-public-routes
+    service: club-service
+    paths:
+      - "~/api/clubs/[a-fA-F0-9]{24}$"
+      - "~/api/clubs/[a-fA-F0-9]{24}/recruitments"
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [club, individual, public]
+    plugins:
+      - name: api-gateway-secret
+        tags: [club-secret]
     
   # Club Service Protected Routes (JWT required)
   - name: club-protected-routes

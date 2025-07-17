@@ -94,6 +94,80 @@ const updateClubStatus = async (req, res, next) => {
   }
 };
 
+const getUserClubRoles = async (req, res, next) => {
+  try {
+    const result = await clubService.getUserClubRoles(req.params.userId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getClubMembers = async (req, res, next) => {
+  try {
+    const userContext = {
+      userId: req.user?.id || req.headers['x-user-id'],
+      userRole: req.user?.role || req.headers['x-user-role']
+    };
+    
+    const result = await clubService.getClubMembers(req.params.clubId, userContext);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addClubMember = async (req, res, next) => {
+  try {
+    const userContext = {
+      userId: req.user?.id || req.headers['x-user-id'],
+      userRole: req.user?.role || req.headers['x-user-role']
+    };
+    
+    const result = await clubService.addClubMember(req.params.clubId, req.body, userContext);
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateMemberRole = async (req, res, next) => {
+  try {
+    const userContext = {
+      userId: req.user?.id || req.headers['x-user-id'],
+      userRole: req.user?.role || req.headers['x-user-role']
+    };
+    
+    const result = await clubService.updateMemberRole(
+      req.params.clubId, 
+      req.params.userId, 
+      req.body.role, 
+      userContext
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removeMember = async (req, res, next) => {
+  try {
+    const userContext = {
+      userId: req.user?.id || req.headers['x-user-id'],
+      userRole: req.user?.role || req.headers['x-user-role']
+    };
+    
+    const result = await clubService.removeMember(
+      req.params.clubId, 
+      req.params.userId, 
+      userContext
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getClubs,
   getClubById,
@@ -103,5 +177,10 @@ module.exports = {
   getCategories,
   getLocations,
   getStats,
-  updateClubStatus
+  updateClubStatus,
+  getUserClubRoles,
+  getClubMembers,
+  addClubMember,
+  updateMemberRole,
+  removeMember
 };

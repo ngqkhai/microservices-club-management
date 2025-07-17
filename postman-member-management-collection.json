@@ -1,0 +1,183 @@
+{
+  "info": {
+    "name": "Club Member Management API",
+    "description": "Test collection for the new club member management endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "867a2488-8ac7-44fc-ab0e-e14535dd661a",
+      "type": "string"
+    },
+    {
+      "key": "club_id",
+      "value": "68781c934509584243bd197e",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Get User Club Roles",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/users/{{user_id}}/club-roles",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users", "{{user_id}}", "club-roles"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Club Members",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/clubs/{{club_id}}/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "clubs", "{{club_id}}", "members"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Add Club Member",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"new-user-id-here\",\n  \"role\": \"member\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/clubs/{{club_id}}/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "clubs", "{{club_id}}", "members"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Update Member Role",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"organizer\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/clubs/{{club_id}}/members/{{user_id}}/role",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "clubs", "{{club_id}}", "members", "{{user_id}}", "role"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Remove Member",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/clubs/{{club_id}}/members/{{user_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "clubs", "{{club_id}}", "members", "{{user_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get Specific Club Member",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/clubs/{{club_id}}/members/{{user_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "clubs", "{{club_id}}", "members", "{{user_id}}"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
