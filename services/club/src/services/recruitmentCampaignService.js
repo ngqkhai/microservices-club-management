@@ -95,8 +95,8 @@ class RecruitmentCampaignService {
         throw new Error('Campaign not found');
       }
       
-      // If campaign is published, paused, or completed, anyone can view it
-      if (['published', 'paused', 'completed'].includes(campaign.status)) {
+      // If campaign is published, anyone can view it
+      if (['published'].includes(campaign.status)) {
         return userId ? campaign.toManagerJSON() : campaign.toPublicJSON();
       }
       

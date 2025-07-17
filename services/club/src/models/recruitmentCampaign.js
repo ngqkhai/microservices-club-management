@@ -188,7 +188,7 @@ class RecruitmentCampaignModel {
       const { club_id, page = 1, limit = 10 } = options;
       
       const query = {
-        status: { $in: ['published', 'paused', 'completed'] },
+        status: { $in: ['published'] },
         // The date filter was preventing upcoming published campaigns from being returned.
         // start_date: { $lte: new Date() },
         // end_date: { $gte: new Date() }
