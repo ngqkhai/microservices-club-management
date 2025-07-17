@@ -57,6 +57,7 @@ Authorization: None required
     {
       "id": "60d0fe4f5311236168a109cd",
       "club_id": "60d0fe4f5311236168a109ca",
+      "club_name": "Câu lạc bộ Và Truyền thông",
       "title": "Fall 2025 Recruitment - Tech Club",
       "description": "Join our tech club for exciting programming workshops and hackathons",
       "requirements": [
