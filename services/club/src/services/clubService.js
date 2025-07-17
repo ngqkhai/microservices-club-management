@@ -1,5 +1,6 @@
 const Club = require('../models/club');
 const authServiceClient = require('../utils/authServiceClient');
+const eventServiceClient = require('../utils/eventServiceClient');
 
 class ClubService {
   
@@ -84,9 +85,9 @@ class ClubService {
   }
   
   /**
-   * Get a club by ID
+   * Get a club by ID with additional data (recruitments, statistics)
    * @param {string} clubId - The club ID
-   * @returns {Promise<Object>} - Club details
+   * @returns {Promise<Object>} - Club details with additional information
    */
   async getClubById(clubId) {
     if (!clubId) {
@@ -105,11 +106,28 @@ class ClubService {
         error.name = 'NOT_FOUND';
         throw error;
       }
-      
+
+      // Get additional data for the club
+      const [currentRecruitments, recruitmentStats, upcomingEvents, publishedEvents, eventStats] = await Promise.all([
+        this._getCurrentRecruitments(clubId),
+        this._getRecruitmentStatistics(clubId),
+        this._getUpcomingEvents(clubId),
+        this._getPublishedEvents(clubId),
+        this._getEventStatistics(clubId)
+      ]);
+
       return {
         success: true,
         message: 'Club retrieved successfully',
-        data: club
+        data: {
+          ...club,
+          current_recruitments: currentRecruitments,
+          total_recruitments: recruitmentStats.total_recruitments,
+          active_recruitments: recruitmentStats.active_recruitments,
+          upcoming_events: upcomingEvents,
+          published_events: publishedEvents,
+          total_events: eventStats.total_events
+        }
       };
     } catch (error) {
       if (error.name === 'CastError') {
@@ -1017,6 +1035,180 @@ class ClubService {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#x27;');
     // Note: We don't replace / in URLs as it's essential for URL structure
+  }
+
+  /**
+   * Get current active recruitment campaigns for a club
+   * @param {string} clubId - The club ID
+   * @returns {Promise<Array>} - Array of current recruitment campaigns
+   */
+  async _getCurrentRecruitments(clubId) {
+    try {
+      const { RecruitmentCampaign } = require('../config/database');
+      const currentDate = new Date();
+      
+      const recruitments = await RecruitmentCampaign.find({
+        club_id: clubId,
+        status: 'published'
+      })
+      .select('title description requirements start_date end_date max_applications statistics')
+      .sort({ start_date: -1 })
+      .limit(5); // Limit to 5 most recent active recruitments
+
+      return recruitments.map(recruitment => ({
+        id: recruitment._id,
+        title: recruitment.title,
+        description: recruitment.description,
+        requirements: recruitment.requirements,
+        start_date: recruitment.start_date,
+        end_date: recruitment.end_date,
+        max_applications: recruitment.max_applications,
+        applications_count: recruitment.statistics?.total_applications || 0,
+        status: 'active'
+      }));
+    } catch (error) {
+      console.error('Error getting current recruitments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get recruitment statistics for a club
+   * @param {string} clubId - The club ID
+   * @returns {Promise<Object>} - Recruitment statistics
+   */
+  async _getRecruitmentStatistics(clubId) {
+    try {
+      const { RecruitmentCampaign } = require('../config/database');
+      const currentDate = new Date();
+      
+      const [totalCount, activeCount] = await Promise.all([
+        RecruitmentCampaign.countDocuments({ club_id: clubId }),
+        RecruitmentCampaign.countDocuments({
+          club_id: clubId,
+          status: 'published',
+          start_date: { $lte: currentDate },
+          end_date: { $gte: currentDate }
+        })
+      ]);
+
+      return {
+        total_recruitments: totalCount,
+        active_recruitments: activeCount
+      };
+    } catch (error) {
+      console.error('Error getting recruitment statistics:', error);
+      return {
+        total_recruitments: 0,
+        active_recruitments: 0
+      };
+    }
+  }
+
+  /**
+   * Get published events for a club from Event service
+   * @param {string} clubId - The club ID
+   * @returns {Promise<Array>} - Published events
+   */
+  async _getPublishedEvents(clubId) {
+    try {
+      const requestContext = {
+        // Add basic context for API Gateway validation
+        service: 'club-service'
+      };
+      
+      const publishedEvents = await eventServiceClient.getPublishedClubEvents(clubId, {
+        status: 'published',
+        limit: 10 // Limit to 10 most recent published events
+      });
+      
+      return publishedEvents.map(event => ({
+        id: event.id || event._id,
+        title: event.title,
+        description: event.description,
+        short_description: event.short_description,
+        category: event.category,
+        location: event.location,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        participation_fee: event.participation_fee || event.fee || 0,
+        currency: event.currency || 'USD',
+        max_participants: event.max_participants || event.max_attendees,
+        status: event.status,
+        visibility: event.visibility,
+        statistics: event.statistics || {
+          total_registrations: 0,
+          total_interested: 0,
+          total_attended: 0
+        },
+        created_at: event.created_at,
+        updated_at: event.updated_at
+      }));
+    } catch (error) {
+      console.error('Error getting published events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get upcoming events for a club from Event service
+   * @param {string} clubId - The club ID
+   * @returns {Promise<Array>} - Array of upcoming events
+   */
+  async _getUpcomingEvents(clubId) {
+    try {
+      const requestContext = {
+        // Add basic context for API Gateway validation
+        service: 'club-service'
+      };
+      
+      const upcomingEvents = await eventServiceClient.getUpcomingClubEvents(clubId, requestContext);
+      
+      return upcomingEvents.map(event => ({
+        id: event.id || event._id,
+        title: event.title || event.name,
+        description: event.description,
+        date: event.date || event.start_date,
+        time: event.time || event.start_time,
+        location: event.location || event.venue,
+        fee: event.fee || event.price || 0,
+        max_participants: event.max_participants || event.capacity,
+        current_participants: event.current_participants || event.registered_count || 0,
+        status: event.status || 'active'
+      }));
+    } catch (error) {
+      console.error('Error getting upcoming events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get event statistics for a club from Event service
+   * @param {string} clubId - The club ID
+   * @returns {Promise<Object>} - Event statistics
+   */
+  async _getEventStatistics(clubId) {
+    try {
+      const requestContext = {
+        // Add basic context for API Gateway validation
+        service: 'club-service'
+      };
+      
+      const eventStats = await eventServiceClient.getEventStatistics(clubId, requestContext);
+      
+      return {
+        total_events: eventStats.total_events || 0,
+        upcoming_events: eventStats.upcoming_events || 0,
+        past_events: eventStats.past_events || 0
+      };
+    } catch (error) {
+      console.error('Error getting event statistics:', error);
+      return {
+        total_events: 0,
+        upcoming_events: 0,
+        past_events: 0
+      };
+    }
   }
 }
 
