@@ -16,7 +16,7 @@ const clubSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['academic', 'sports', 'arts', 'technology', 'social', 'volunteer', 'cultural', 'other']
+    enum:['Học thuật', 'Nghệ thuật', 'Thể thao', 'Cộng đồng', 'Kinh doanh', 'Công nghệ', 'Truyền thông', 'Sở thích', 'Khác'],
   },
   location: {
     type: String,
