@@ -204,6 +204,7 @@ class RecruitmentCampaignModel {
 
       const total = await RecruitmentCampaign.countDocuments(query);
       const campaigns = await RecruitmentCampaign.find(query)
+        .populate('club_id', 'name')
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(pageSize)

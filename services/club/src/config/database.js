@@ -314,9 +314,13 @@ const recruitmentCampaignSchema = new mongoose.Schema({
 
 // Instance Methods for RecruitmentCampaign
 recruitmentCampaignSchema.methods.toPublicJSON = function() {
+  const clubName = this.club_id?.name || null;
+  const clubId = this.club_id?._id || this.club_id;
+  
   return {
     id: this._id,
-    club_id: this.club_id,
+    club_id: clubId,
+    club_name: clubName,
     title: this.title,
     description: this.description,
     requirements: this.requirements,

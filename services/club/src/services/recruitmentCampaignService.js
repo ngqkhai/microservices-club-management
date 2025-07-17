@@ -389,7 +389,15 @@ class RecruitmentCampaignService {
    */
   static async getPublishedCampaigns(options = {}) {
     try {
-      return await RecruitmentCampaignModel.getPublishedCampaigns(options);
+      const result = await RecruitmentCampaignModel.getPublishedCampaigns(options);
+      
+      // Transform campaigns using toPublicJSON method which includes club name
+      const transformedCampaigns = result.campaigns.map(campaign => campaign.toPublicJSON());
+      
+      return {
+        campaigns: transformedCampaigns,
+        pagination: result.pagination
+      };
     } catch (error) {
       throw new Error(`Failed to get published campaigns: ${error.message}`);
     }
