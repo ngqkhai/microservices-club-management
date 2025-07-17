@@ -140,13 +140,15 @@ class ClubService {
       website_url,
       social_links,
       settings,
+      status,
       manager_user_id,
       manager_full_name,
       manager_email,
       type // Backward compatibility
     } = clubData;
     
-    // Validate required fields
+    // Validate required fields based on MongoDB schema
+    // Required: name, category, status, manager, created_by
     if (!name || (!category && !type)) {
       const error = new Error('Name and category are required');
       error.status = 400;
@@ -154,7 +156,7 @@ class ClubService {
       throw error;
     }
     
-    // Validate manager fields
+    // Validate manager fields (manager object is required)
     if (!manager_user_id || !manager_full_name) {
       const error = new Error('Manager user ID and full name are required');
       error.status = 400;
@@ -162,16 +164,27 @@ class ClubService {
       throw error;
     }
     
-    // Validate data types
+    // Validate data types for required fields
     this._validateStringField(name, 'Name');
-    this._validateStringField(description, 'Description');
-    this._validateStringField(location, 'Location');
+    this._validateStringField(category || type, 'Category');
     this._validateStringField(manager_user_id, 'Manager user ID');
     this._validateStringField(manager_full_name, 'Manager full name');
+    
+    // Validate optional fields if provided
+    if (description) this._validateStringField(description, 'Description');
+    if (location) this._validateStringField(location, 'Location');
     
     // Validate manager email if provided
     if (manager_email && (typeof manager_email !== 'string' || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(manager_email))) {
       const error = new Error('Manager email must be a valid email address');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    // Validate status field
+    if (status && !['ACTIVE', 'INACTIVE'].includes(status)) {
+      const error = new Error('Status must be either ACTIVE or INACTIVE');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
       throw error;
@@ -211,6 +224,14 @@ class ClubService {
       finalManagerEmail = manager_email || verifiedManagerEmail;
       finalManagerFullName = manager_full_name || verifiedManagerFullName;
       
+      // Ensure manager email is provided (required by MongoDB validation)
+      if (!finalManagerEmail) {
+        const error = new Error('Manager email is required but not found in auth service');
+        error.status = 400;
+        error.name = 'VALIDATION_ERROR';
+        throw error;
+      }
+      
     } catch (authError) {
       console.error('❌ Manager validation failed:', authError.message);
       
@@ -224,29 +245,95 @@ class ClubService {
       throw error;
     }
     
-    // Sanitize inputs (URLs should not be HTML entity encoded)
+    // Build sanitized club data according to MongoDB schema
     const sanitizedClubData = {
       name: this._sanitizeInput(name),
-      description: this._sanitizeInput(description),
       category: category || type,
-      location: this._sanitizeInput(location),
-      contact_email: this._sanitizeInput(contact_email),
-      contact_phone: this._sanitizeInput(contact_phone),
-      logo_url: this._sanitizeUrl(logo_url),
-      website_url: this._sanitizeUrl(website_url),
-      social_links: this._sanitizeSocialLinks(social_links),
-      settings: settings || {},
+      status: status || 'ACTIVE', // Default to ACTIVE if not provided
+      member_count: parseInt(1), // Default member count (the creator) - must be integer
       created_by: userContext.userId,
       manager: {
         user_id: manager_user_id,
         full_name: finalManagerFullName,
         email: finalManagerEmail,
-        assigned_at: new Date()
+        assigned_at: new Date().toISOString()
       },
-      type: type || category // Backward compatibility
+      created_at: new Date(),
+      updated_at: new Date()
     };
     
+    // Add optional fields only if they have values
+    if (description) {
+      sanitizedClubData.description = this._sanitizeInput(description);
+    }
+    if (location) {
+      sanitizedClubData.location = this._sanitizeInput(location);
+    }
+    if (contact_email) {
+      sanitizedClubData.contact_email = this._sanitizeInput(contact_email);
+    }
+    if (contact_phone) {
+      sanitizedClubData.contact_phone = this._sanitizeInput(contact_phone);
+    }
+    if (logo_url) {
+      sanitizedClubData.logo_url = this._sanitizeUrl(logo_url);
+    }
+    if (website_url) {
+      sanitizedClubData.website_url = this._sanitizeUrl(website_url);
+    }
+    if (social_links && Object.keys(social_links).length > 0) {
+      sanitizedClubData.social_links = this._sanitizeSocialLinks(social_links);
+    }
+    if (settings && Object.keys(settings).length > 0) {
+      // Ensure settings object has proper types according to schema
+      const sanitizedSettings = {};
+      if (typeof settings.is_public === 'boolean') {
+        sanitizedSettings.is_public = settings.is_public;
+      }
+      if (typeof settings.requires_approval === 'boolean') {
+        sanitizedSettings.requires_approval = settings.requires_approval;
+      }
+      if (typeof settings.max_members === 'number' && settings.max_members >= 1) {
+        sanitizedSettings.max_members = parseInt(settings.max_members);
+      }
+      if (Object.keys(sanitizedSettings).length > 0) {
+        sanitizedClubData.settings = sanitizedSettings;
+      }
+    }
+    
+    // Add backward compatibility field
+    sanitizedClubData.type = type || category;
+    
     try {
+      console.log('Creating club with data:', JSON.stringify(sanitizedClubData, null, 2));
+      
+      // Log the required fields to ensure they're all present
+      console.log('MongoDB Schema Required Fields Check:', {
+        name: !!sanitizedClubData.name,
+        category: !!sanitizedClubData.category,
+        status: !!sanitizedClubData.status,
+        manager: !!sanitizedClubData.manager,
+        created_by: !!sanitizedClubData.created_by
+      });
+      
+      console.log('Optional Fields Present:', {
+        description: !!sanitizedClubData.description,
+        location: !!sanitizedClubData.location,
+        contact_email: !!sanitizedClubData.contact_email,
+        contact_phone: !!sanitizedClubData.contact_phone,
+        logo_url: !!sanitizedClubData.logo_url,
+        website_url: !!sanitizedClubData.website_url,
+        social_links: !!sanitizedClubData.social_links,
+        settings: !!sanitizedClubData.settings
+      });
+      
+      console.log('Manager Object Details:', {
+        user_id: !!sanitizedClubData.manager?.user_id,
+        full_name: !!sanitizedClubData.manager?.full_name,
+        email: !!sanitizedClubData.manager?.email,
+        assigned_at: !!sanitizedClubData.manager?.assigned_at
+      });
+      
       const newClub = await Club.create(sanitizedClubData);
       
       console.log('✅ Club created successfully:', {
@@ -257,6 +344,54 @@ class ClubService {
         member_count: newClub.member_count,
         created_by: userContext.userId
       });
+      
+      // Create membership record for the club creator/manager
+      const { Membership } = require('../config/database');
+      
+      try {
+        // Ensure we have the club ID (try different possible fields)
+        const clubId = newClub._id || newClub.id;
+        
+        if (!clubId) {
+          throw new Error('Club ID not found in created club document');
+        }
+        
+        const membershipData = {
+          club_id: clubId,
+          user_id: userContext.userId,
+          role: 'club_manager',
+          status: 'active',
+          application_message: 'Club creator - automatically approved',
+          approved_by: userContext.userId,
+          approved_at: new Date(),
+          joined_at: new Date()
+        };
+        
+        console.log('Creating membership with data:', {
+          club_id: clubId,
+          user_id: userContext.userId,
+          role: 'club_manager',
+          status: 'active'
+        });
+        
+        const membership = await Membership.create(membershipData);
+        
+        console.log('✅ Membership created for club creator:', {
+          membership_id: membership._id || membership.id,
+          club_id: clubId,
+          user_id: userContext.userId,
+          role: 'club_manager',
+          status: 'active'
+        });
+        
+      } catch (membershipError) {
+        console.error('❌ Error creating membership for club creator:', membershipError);
+        console.error('Club object fields:', Object.keys(newClub));
+        console.error('newClub._id:', newClub._id);
+        console.error('newClub.id:', newClub.id);
+        // Don't throw error here as club was created successfully
+        // This is a secondary operation that shouldn't fail the main flow
+      }
       
       return {
         success: true,
@@ -270,6 +405,26 @@ class ClubService {
         duplicateError.status = 409;
         duplicateError.name = 'DUPLICATE_ERROR';
         throw duplicateError;
+      }
+      
+      if (error.name === 'MongoServerError' && error.message.includes('Document failed validation')) {
+        console.error('❌ MongoDB validation failed:', {
+          error: error.message,
+          errInfo: error.errInfo,
+          schemaRulesNotSatisfied: error.errInfo?.details?.schemaRulesNotSatisfied,
+          data: sanitizedClubData
+        });
+        
+        // Log detailed schema validation errors
+        if (error.errInfo?.details?.schemaRulesNotSatisfied) {
+          console.error('Schema validation details:', JSON.stringify(error.errInfo.details.schemaRulesNotSatisfied, null, 2));
+        }
+        
+        const validationError = new Error('Club data validation failed. Please check required fields.');
+        validationError.status = 400;
+        validationError.name = 'VALIDATION_ERROR';
+        validationError.details = error.errInfo;
+        throw validationError;
       }
       
       console.error('❌ Error creating club:', error);
@@ -438,6 +593,63 @@ class ClubService {
       
     } catch (error) {
       console.error('❌ Error updating member count:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Update club status
+   * @param {string} clubId - The club ID
+   * @param {string} status - The new status (ACTIVE or INACTIVE)
+   * @param {Object} userContext - User context from request
+   * @returns {Promise<Object>} - Updated club
+   */
+  async updateClubStatus(clubId, status, userContext) {
+    if (!clubId) {
+      const error = new Error('Club ID is required');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
+      const error = new Error('Status must be either ACTIVE or INACTIVE');
+      error.status = 400;
+      error.name = 'VALIDATION_ERROR';
+      throw error;
+    }
+    
+    try {
+      const updatedClub = await Club.updateStatus(clubId, status);
+      
+      if (!updatedClub) {
+        const error = new Error('Club not found');
+        error.status = 404;
+        error.name = 'NOT_FOUND';
+        throw error;
+      }
+      
+      console.log('✅ Club status updated:', {
+        club_id: clubId,
+        new_status: status,
+        updated_by: userContext.userId
+      });
+      
+      return {
+        success: true,
+        message: 'Club status updated successfully',
+        data: updatedClub
+      };
+      
+    } catch (error) {
+      if (error.name === 'CastError') {
+        const castError = new Error('Invalid club ID format');
+        castError.status = 400;
+        castError.name = 'VALIDATION_ERROR';
+        throw castError;
+      }
+      
+      console.error('❌ Error updating club status:', error);
       throw error;
     }
   }

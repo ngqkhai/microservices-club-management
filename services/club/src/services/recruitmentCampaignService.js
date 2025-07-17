@@ -60,13 +60,20 @@ class RecruitmentCampaignService {
   }
 
   /**
-   * Get campaigns for a club
+   * Get campaigns for a club (draft campaigns for club managers only)
    * @param {String} clubId - Club ID
    * @param {Object} options - Query options
+   * @param {String} userId - User ID (for permission check)
    * @returns {Object} Campaigns with pagination
    */
-  static async getCampaigns(clubId, options = {}) {
+  static async getCampaigns(clubId, options = {}, userId) {
     try {
+      // Check if user has permission to view draft campaigns for this club
+      const hasPermission = await this.checkCampaignPermission(clubId, userId);
+      if (!hasPermission) {
+        throw new Error('You do not have permission to view draft campaigns for this club');
+      }
+
       const campaigns = await RecruitmentCampaignModel.findByClubId(clubId, options);
       return campaigns;
     } catch (error) {
@@ -84,11 +91,20 @@ class RecruitmentCampaignService {
     try {
       const campaign = await RecruitmentCampaignModel.findById(campaignId);
       
-      // If user is provided, check if they have permission to view this campaign
-      if (userId) {
+      // If campaign is published, paused, or completed, anyone can view it
+      if (['published', 'paused', 'completed'].includes(campaign.status)) {
+        return campaign;
+      }
+      
+      // If campaign is draft, only club managers can view it
+      if (campaign.status === 'draft') {
+        if (!userId) {
+          throw new Error('Authentication required to view draft campaigns');
+        }
+        
         const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
-        if (!hasPermission && campaign.status !== 'active') {
-          throw new Error('You do not have permission to view this campaign');
+        if (!hasPermission) {
+          throw new Error('You do not have permission to view this draft campaign');
         }
       }
 
@@ -120,8 +136,8 @@ class RecruitmentCampaignService {
       }
 
       // Check if campaign can be updated
-      if (existingCampaign.status === 'completed' || existingCampaign.status === 'cancelled') {
-        throw new Error('Cannot update completed or cancelled campaigns');
+      if (!['draft'].includes(existingCampaign.status)) {
+        throw new Error('Only draft campaigns can be updated');
       }
 
       // If there are applications, restrict certain updates
@@ -179,8 +195,8 @@ class RecruitmentCampaignService {
       }
 
       // Check if campaign can be deleted
-      if (existingCampaign.statistics.total_applications > 0) {
-        throw new Error('Cannot delete campaigns with existing applications');
+      if (existingCampaign.status !== 'draft') {
+        throw new Error('Only draft campaigns can be deleted');
       }
 
       // Delete campaign
@@ -226,9 +242,9 @@ class RecruitmentCampaignService {
         throw new Error('Cannot publish campaign with start date in the past');
       }
 
-      // Update status to active
+      // Update status to published
       const updatedCampaign = await RecruitmentCampaignModel.update(campaignId, {
-        status: 'active'
+        status: 'published'
       });
 
       // Publish event
@@ -241,15 +257,135 @@ class RecruitmentCampaignService {
   }
 
   /**
-   * Get active campaigns (public endpoint)
-   * @param {Object} options - Query options
-   * @returns {Object} Active campaigns
+   * Complete campaign (change status from published to completed)
+   * @param {String} campaignId - Campaign ID
+   * @param {String} userId - User ID
+   * @returns {Object} Updated campaign
    */
-  static async getActiveCampaigns(options = {}) {
+  static async completeCampaign(campaignId, userId) {
     try {
-      return await RecruitmentCampaignModel.getActiveCampaigns(options);
+      const campaign = await RecruitmentCampaignModel.findById(campaignId);
+      if (!campaign) {
+        throw new Error('Campaign not found');
+      }
+
+      // Check permission
+      const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
+      if (!hasPermission) {
+        throw new Error('You do not have permission to complete this campaign');
+      }
+
+      // Check if campaign can be completed
+      if (!['published', 'paused'].includes(campaign.status)) {
+        throw new Error('Only published or paused campaigns can be completed');
+      }
+
+      // Update status to completed
+      const updatedCampaign = await RecruitmentCampaignModel.update(campaignId, {
+        status: 'completed'
+      });
+
+      // Publish event
+      await CampaignEventPublisher.publishCampaignStatusChanged(updatedCampaign, 'published');
+
+      return updatedCampaign;
     } catch (error) {
-      throw new Error(`Failed to get active campaigns: ${error.message}`);
+      throw new Error(`Failed to complete campaign: ${error.message}`);
+    }
+  }
+
+  /**
+   * Pause campaign (change status from published to paused)
+   * @param {String} campaignId - Campaign ID
+   * @param {String} userId - User ID
+   * @returns {Object} Updated campaign
+   */
+  static async pauseCampaign(campaignId, userId) {
+    try {
+      const campaign = await RecruitmentCampaignModel.findById(campaignId);
+      if (!campaign) {
+        throw new Error('Campaign not found');
+      }
+
+      // Check permission
+      const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
+      if (!hasPermission) {
+        throw new Error('You do not have permission to pause this campaign');
+      }
+
+      // Check if campaign can be paused
+      if (campaign.status !== 'published') {
+        throw new Error('Only published campaigns can be paused');
+      }
+
+      // Update status to paused
+      const updatedCampaign = await RecruitmentCampaignModel.update(campaignId, {
+        status: 'paused'
+      });
+
+      // Publish event
+      await CampaignEventPublisher.publishCampaignStatusChanged(updatedCampaign, 'published');
+
+      return updatedCampaign;
+    } catch (error) {
+      throw new Error(`Failed to pause campaign: ${error.message}`);
+    }
+  }
+
+  /**
+   * Resume campaign (change status from paused to published)
+   * @param {String} campaignId - Campaign ID
+   * @param {String} userId - User ID
+   * @returns {Object} Updated campaign
+   */
+  static async resumeCampaign(campaignId, userId) {
+    try {
+      const campaign = await RecruitmentCampaignModel.findById(campaignId);
+      if (!campaign) {
+        throw new Error('Campaign not found');
+      }
+
+      // Check permission
+      const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
+      if (!hasPermission) {
+        throw new Error('You do not have permission to resume this campaign');
+      }
+
+      // Check if campaign can be resumed
+      if (campaign.status !== 'paused') {
+        throw new Error('Only paused campaigns can be resumed');
+      }
+
+      // Validate that campaign is still within date range
+      const now = new Date();
+      if (campaign.end_date < now) {
+        throw new Error('Cannot resume campaign that has already ended');
+      }
+
+      // Update status to published
+      const updatedCampaign = await RecruitmentCampaignModel.update(campaignId, {
+        status: 'published'
+      });
+
+      // Publish event
+      await CampaignEventPublisher.publishCampaignStatusChanged(updatedCampaign, 'paused');
+
+      return updatedCampaign;
+    } catch (error) {
+      throw new Error(`Failed to resume campaign: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get published campaigns (public endpoint)
+   * @param {Object} options - Query options
+   * @returns {Object} Published campaigns
+   */
+  static async getPublishedCampaigns(options = {}) {
+    try {
+      return await RecruitmentCampaignModel.getPublishedCampaigns(options);
+    } catch (error) {
+      throw new Error(`Failed to get published campaigns: ${error.message}`);
     }
   }
 
@@ -269,7 +405,7 @@ class RecruitmentCampaignService {
         club_id: clubId,
         user_id: userId,
         status: 'active',
-        role: { $in: ['admin', 'organizer'] }
+        role: { $in: ['admin', 'organizer','club_manager'] }
       });
 
       return !!membership;
@@ -282,26 +418,11 @@ class RecruitmentCampaignService {
 
   /**
    * Auto-update campaign statuses based on dates
-   * This would typically be called by a cron job
+   * Note: With only draft/published statuses, this method is simplified
    */
   static async updateCampaignStatuses() {
     try {
-      const now = new Date();
-      const { RecruitmentCampaign } = require('../config/database');
-      
-      // Update campaigns that should be completed
-      const result = await RecruitmentCampaign.updateMany(
-        {
-          status: 'active',
-          end_date: { $lt: now }
-        },
-        {
-          status: 'completed',
-          updated_at: now
-        }
-      );
-
-      console.log(`✅ ${result.modifiedCount} campaign statuses updated automatically`);
+      console.log('✅ Campaign status update completed (draft/published system)');
     } catch (error) {
       console.error('❌ Failed to update campaign statuses:', error.message);
     }

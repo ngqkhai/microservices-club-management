@@ -78,6 +78,22 @@ const getStats = async (req, res, next) => {
   }
 };
 
+const updateClubStatus = async (req, res, next) => {
+  try {
+    const userContext = {
+      userId: req.user?.id || req.headers['x-user-id'],
+      userRole: req.user?.role || req.headers['x-user-role'],
+      userEmail: req.user?.email || req.headers['x-user-email']
+    };
+    
+    const { status } = req.body;
+    const result = await clubService.updateClubStatus(req.params.id, status, userContext);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getClubs,
   getClubById,
@@ -86,5 +102,6 @@ module.exports = {
   getClubMember,
   getCategories,
   getLocations,
-  getStats
+  getStats,
+  updateClubStatus
 };

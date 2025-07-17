@@ -50,16 +50,24 @@ class CreateCampaignDTO {
       }
     }
 
-    if (this.requirements && this.requirements.length > 1000) {
-      errors.push('Requirements must be 1000 characters or less');
+    if (this.requirements && Array.isArray(this.requirements)) {
+      this.requirements.forEach((requirement, index) => {
+        if (typeof requirement !== 'string') {
+          errors.push(`Requirement ${index + 1} must be a string`);
+        } else if (requirement.length > 250) {
+          errors.push(`Requirement ${index + 1} must be 250 characters or less`);
+        }
+      });
+    } else if (this.requirements && !Array.isArray(this.requirements)) {
+      errors.push('Requirements must be an array');
     }
 
     if (this.max_applications && this.max_applications < 1) {
       errors.push('Max applications must be positive');
     }
 
-    if (this.status && !['draft', 'active'].includes(this.status)) {
-      errors.push('Status must be either "draft" or "active"');
+    if (this.status && !['draft', 'published', 'paused', 'completed'].includes(this.status)) {
+      errors.push('Status must be either "draft", "published", "paused", or "completed"');
     }
 
     // Validate application questions
@@ -129,16 +137,26 @@ class UpdateCampaignDTO {
       }
     }
 
-    if (this.requirements !== undefined && this.requirements.length > 1000) {
-      errors.push('Requirements must be 1000 characters or less');
+    if (this.requirements !== undefined) {
+      if (Array.isArray(this.requirements)) {
+        this.requirements.forEach((requirement, index) => {
+          if (typeof requirement !== 'string') {
+            errors.push(`Requirement ${index + 1} must be a string`);
+          } else if (requirement.length > 250) {
+            errors.push(`Requirement ${index + 1} must be 250 characters or less`);
+          }
+        });
+      } else {
+        errors.push('Requirements must be an array');
+      }
     }
 
     if (this.max_applications !== undefined && this.max_applications < 1) {
       errors.push('Max applications must be positive');
     }
 
-    if (this.status !== undefined && !['draft', 'active', 'paused', 'completed', 'cancelled'].includes(this.status)) {
-      errors.push('Invalid status');
+    if (this.status !== undefined && !['draft', 'published', 'paused', 'completed'].includes(this.status)) {
+      errors.push('Status must be either "draft", "published", "paused", or "completed"');
     }
 
     // Validate date changes

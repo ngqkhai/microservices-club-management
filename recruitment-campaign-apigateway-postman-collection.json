@@ -1,0 +1,659 @@
+{
+	"info": {
+		"_postman_id": "f3f4a58a-82a5-4fe8-aec0-33905e7a03c1",
+		"name": "Recruitment Campaign API Gateway Tests",
+		"description": "Test collection for recruitment campaign routes through API Gateway (localhost:8000)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45904556"
+	},
+	"item": [
+		{
+			"name": "Private Campaign Routes (Club Managers)",
+			"item": [
+				{
+					"name": "1. Create Campaign",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Spring 2025 Recruitment Campaign\",\n  \"description\": \"Join our amazing club this spring! We're looking for motivated students who want to make a difference.\",\n  \"requirements\": [\n    \"Must be a current student\",\n    \"GPA 3.0 or higher\",\n    \"Available for weekly meetings\"\n  ],\n  \"application_questions\": [\n    {\n      \"question\": \"What is your full name?\",\n      \"type\": \"text\",\n      \"required\": true,\n      \"max_length\": 100\n    },\n    {\n      \"question\": \"What is your email address?\",\n      \"type\": \"text\",\n      \"required\": true,\n      \"max_length\": 100\n    },\n    {\n      \"question\": \"What is your academic year?\",\n      \"type\": \"select\",\n      \"required\": true,\n      \"options\": [\"Freshman\", \"Sophomore\", \"Junior\", \"Senior\", \"Graduate\"]\n    },\n    {\n      \"question\": \"Why do you want to join our club?\",\n      \"type\": \"textarea\",\n      \"required\": true,\n      \"max_length\": 1000\n    }\n  ],\n  \"start_date\": \"2025-07-20T00:00:00.000Z\",\n  \"end_date\": \"2025-08-15T23:59:59.000Z\",\n  \"max_applications\": 50,\n  \"status\": \"draft\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns"
+							]
+						},
+						"description": "Create a new draft recruitment campaign"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Get Draft Campaigns (Club Managers Only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get draft campaigns for a specific club (only club managers can access)"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Get Campaign by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}"
+							]
+						},
+						"description": "Get specific campaign details"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Update Draft Campaign",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Spring 2025 Recruitment Campaign\",\n  \"description\": \"Updated description for our amazing recruitment campaign!\",\n  \"max_applications\": 75\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}"
+							]
+						},
+						"description": "Update a draft campaign (only draft campaigns can be updated)"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Delete Draft Campaign",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}"
+							]
+						},
+						"description": "Delete a draft campaign (only draft campaigns can be deleted)"
+					},
+					"response": []
+				}
+			],
+			"description": "Routes that require authentication and club manager permissions"
+		},
+		{
+			"name": "Campaign Status Management",
+			"item": [
+				{
+					"name": "1. Publish Campaign (Draft → Published)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/publish",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"publish"
+							]
+						},
+						"description": "Publish a draft campaign to make it publicly visible and accept applications"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Pause Campaign (Published → Paused)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"pause"
+							]
+						},
+						"description": "Pause a published campaign (stops accepting applications but remains visible)"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Resume Campaign (Paused → Published)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/resume",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"resume"
+							]
+						},
+						"description": "Resume a paused campaign (starts accepting applications again)"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Complete Campaign (Published/Paused → Completed)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"complete"
+							]
+						},
+						"description": "Complete a published or paused campaign (final state)"
+					},
+					"response": []
+				}
+			],
+			"description": "Campaign status transition endpoints"
+		},
+		{
+			"name": "Public Campaign Routes",
+			"item": [
+				{
+					"name": "1. Get All Published Campaigns",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/campaigns/published?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"campaigns",
+								"published"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all published, paused, and completed campaigns from all clubs (public access)"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Get Published Campaigns for Specific Club",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/campaigns/clubs/{{clubId}}/published?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"campaigns",
+								"clubs",
+								"{{clubId}}",
+								"published"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get published, paused, and completed campaigns for a specific club (public access)"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Get Published Campaign by ID (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}"
+							]
+						},
+						"description": "Get specific published/paused/completed campaign details (public access)"
+					},
+					"response": []
+				}
+			],
+			"description": "Public endpoints that don't require authentication"
+		},
+		{
+			"name": "Error Test Cases",
+			"item": [
+				{
+					"name": "1. Access Draft Campaigns Without Auth",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns"
+							]
+						},
+						"description": "Should return 401 - Authentication required"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Try to Update Published Campaign",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Cannot update published campaign\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}"
+							]
+						},
+						"description": "Should return 400 - Only draft campaigns can be updated"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Try to Delete Published Campaign",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}"
+							]
+						},
+						"description": "Should return 400 - Only draft campaigns can be deleted"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Try to Publish Already Published Campaign",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/publish",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"publish"
+							]
+						},
+						"description": "Should return 400 - Only draft campaigns can be published"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Try to Pause Draft Campaign",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"pause"
+							]
+						},
+						"description": "Should return 400 - Only published campaigns can be paused"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Try to Resume Published Campaign",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/resume",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"clubs",
+								"{{clubId}}",
+								"campaigns",
+								"{{campaignId}}",
+								"resume"
+							]
+						},
+						"description": "Should return 400 - Only paused campaigns can be resumed"
+					},
+					"response": []
+				}
+			],
+			"description": "Test cases for error scenarios and validation"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "your-access-token-here",
+			"type": "string"
+		},
+		{
+			"key": "clubId",
+			"value": "6877ff522e4339b284af9776",
+			"type": "string"
+		},
+		{
+			"key": "campaignId",
+			"value": "687806d20e2fd01d3efb87da",
+			"type": "string"
+		}
+	]
+}

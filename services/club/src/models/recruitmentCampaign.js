@@ -179,18 +179,19 @@ class RecruitmentCampaignModel {
   }
 
   /**
-   * Get active campaigns (for public display)
+   * Get published campaigns (for public display)
    * @param {Object} options - Query options
-   * @returns {Array} Active campaigns
+   * @returns {Array} Published campaigns
    */
-  static async getActiveCampaigns(options = {}) {
+  static async getPublishedCampaigns(options = {}) {
     try {
       const { club_id, page = 1, limit = 10 } = options;
       
       const query = {
-        status: 'active',
-        start_date: { $lte: new Date() },
-        end_date: { $gte: new Date() }
+        status: { $in: ['published', 'paused', 'completed'] },
+        // The date filter was preventing upcoming published campaigns from being returned.
+        // start_date: { $lte: new Date() },
+        // end_date: { $gte: new Date() }
       };
 
       if (club_id) {
@@ -218,14 +219,14 @@ class RecruitmentCampaignModel {
         }
       };
     } catch (error) {
-      throw new Error(`Failed to get active campaigns: ${error.message}`);
+      throw new Error(`Failed to get published campaigns: ${error.message}`);
     }
   }
 
   /**
-   * Check if campaign is active and accepting applications
+   * Check if campaign is published and accepting applications
    * @param {String} campaignId - Campaign ID
-   * @returns {Boolean} Whether campaign is active
+   * @returns {Boolean} Whether campaign is published and accepting applications
    */
   static async isActive(campaignId) {
     try {
@@ -235,7 +236,7 @@ class RecruitmentCampaignModel {
       }
 
       const now = new Date();
-      return campaign.status === 'active' && 
+      return campaign.status === 'published' && 
              campaign.start_date <= now && 
              campaign.end_date >= now &&
              (!campaign.max_applications || campaign.statistics.total_applications < campaign.max_applications);

@@ -67,6 +67,34 @@ routes:
             - role
           header_prefix: "x-user-"
     
+  # Club Campaigns Routes (JWT required) - MORE SPECIFIC ROUTES FIRST
+  - name: club-campaigns-routes
+    service: club-service
+    paths:
+      - "~/api/clubs/[a-fA-F0-9]{24}/campaigns"
+      - "~/api/clubs/[a-fA-F0-9]{24}/campaigns/.*"
+    methods: [POST, PUT, DELETE]
+    strip_path: false
+    tags: [club, campaigns, protected]
+    plugins:
+      - name: jwt
+        tags: [campaigns-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [campaigns-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+      - name: api-gateway-secret
+        tags: [campaigns-secret]
+    
   # Club Service Public Routes (US007 - Search & Filter)
   - name: club-public-routes
     service: club-service
@@ -110,6 +138,19 @@ routes:
       - name: api-gateway-secret
         tags: [club-secret]
     
+  # Public Campaign Routes
+  - name: public-campaign-routes
+    service: club-service
+    paths:
+      - /api/campaigns/published
+      - "~/api/campaigns/clubs/.*/published"
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [club, public, campaigns]
+    plugins:
+      - name: api-gateway-secret
+        tags: [club-secret]
+        
   # Event Service Routes (JWT required)
   - name: event-service-route
     service: event-service

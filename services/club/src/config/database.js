@@ -251,8 +251,8 @@ const recruitmentCampaignSchema = new mongoose.Schema({
     maxLength: 2000 
   },
   requirements: { 
-    type: String,
-    maxLength: 1000 
+    type: [String],
+    default: []
   },
   application_questions: {
     type: [{
@@ -278,7 +278,7 @@ const recruitmentCampaignSchema = new mongoose.Schema({
   status: { 
     type: String, 
     required: true,
-    enum: ['draft', 'active', 'paused', 'completed', 'cancelled'],
+    enum: ['draft', 'published', 'paused', 'completed'],
     default: 'draft'
   },
   statistics: {

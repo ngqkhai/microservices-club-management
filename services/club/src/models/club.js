@@ -321,11 +321,37 @@ class ClubModel {
   }
 
   /**
-   * Update club size (number of members) - DEPRECATED
-   * @param {string} clubId - The ID of the club
+   * Update club status
+   * @param {string} clubId - The club ID
+   * @param {string} status - The new status
+   * @returns {Promise<Object>} - Updated club
+   */
+  static async updateStatus(clubId, status) {
+    try {
+      const updatedClub = await Club.findByIdAndUpdate(
+        clubId,
+        { 
+          status: status,
+          updated_at: new Date()
+        },
+        { 
+          new: true,
+          runValidators: true
+        }
+      );
+      
+      return updatedClub;
+    } catch (error) {
+      console.error('Error updating club status:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Update club size (deprecated, use updateMemberCount instead)
+   * @param {string} clubId - The club ID
    * @param {number} size - The new size
    * @returns {Promise<void>}
-   * @deprecated Use updateMemberCount instead
    */
   static async updateSize(clubId, size) {
     try {

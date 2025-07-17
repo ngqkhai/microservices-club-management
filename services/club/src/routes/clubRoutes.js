@@ -1,5 +1,6 @@
 const express = require('express');
 const clubController = require('../controllers/clubController');
+const RecruitmentCampaignController = require('../controllers/recruitmentCampaignController'); // Import controller
 const authMiddleware = require('../middlewares/authMiddleware');
 const recruitmentCampaignRoutes = require('./recruitmentCampaignRoutes');
 const publicCampaignRoutes = require('./publicCampaignRoutes');
@@ -70,6 +71,17 @@ router.get('/clubs/:id', authMiddleware.validateApiGatewaySecret, clubController
 router.get('/clubs/:id/recruitments', authMiddleware.validateApiGatewaySecret, clubController.getClubRecruitments);
 
 /**
+ * @route GET /api/clubs/:clubId/campaigns/:campaignId
+ * @desc Get campaign by ID (Public for published, requires auth for draft)
+ * @access Public / Private
+ */
+router.get(
+  '/clubs/:clubId/campaigns/:campaignId',
+  authMiddleware.validateApiGatewaySecret, // Use public gateway validation
+  RecruitmentCampaignController.getCampaign
+);
+
+/**
  * @route GET /api/clubs/:clubId/members/:userId
  * @desc Get a specific club member's details
  * @access Private (Internal or Club Manager)
@@ -90,7 +102,18 @@ router.post('/clubs',
   clubController.createClub
 );
 
-// Campaign Routes
+/**
+ * @route PUT /api/clubs/:id/status
+ * @desc Update club status (ACTIVE/INACTIVE)
+ * @access Private - Requires SYSTEM_ADMIN role
+ */
+router.put('/clubs/:id/status', 
+  authMiddleware.validateApiGatewayHeaders, 
+  authMiddleware.requireRoles(['admin']), 
+  clubController.updateClubStatus
+);
+
+// Protected Campaign Routes (all routes in this file now require JWT)
 router.use('/clubs', authMiddleware.validateApiGatewayHeaders, recruitmentCampaignRoutes);
 router.use('/campaigns', authMiddleware.validateApiGatewaySecret, publicCampaignRoutes);
 

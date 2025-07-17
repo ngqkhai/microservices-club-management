@@ -14,8 +14,8 @@ router.post('/:clubId/campaigns', RecruitmentCampaignController.createCampaign);
 
 /**
  * @route GET /api/clubs/:clubId/campaigns
- * @desc Get all campaigns for a club
- * @access Private (Club Admin/Organizer)
+ * @desc Get campaigns for a club (only draft campaigns for club managers)
+ * @access Private (Club Manager only)
  */
 router.get('/:clubId/campaigns', RecruitmentCampaignController.getCampaigns);
 
@@ -24,7 +24,7 @@ router.get('/:clubId/campaigns', RecruitmentCampaignController.getCampaigns);
  * @desc Get campaign by ID
  * @access Public (for active campaigns) / Private (for draft campaigns)
  */
-router.get('/:clubId/campaigns/:campaignId', RecruitmentCampaignController.getCampaign);
+// router.get('/:clubId/campaigns/:campaignId', RecruitmentCampaignController.getCampaign);
 
 /**
  * @route PUT /api/clubs/:clubId/campaigns/:campaignId
@@ -42,29 +42,29 @@ router.delete('/:clubId/campaigns/:campaignId', RecruitmentCampaignController.de
 
 /**
  * @route POST /api/clubs/:clubId/campaigns/:campaignId/publish
- * @desc Publish campaign (change status from draft to active)
- * @access Private (Club Admin/Organizer)
+ * @desc Publish campaign (change status from draft to published)
+ * @access Private (Club Manager only)
  */
 router.post('/:clubId/campaigns/:campaignId/publish', RecruitmentCampaignController.publishCampaign);
 
 /**
  * @route POST /api/clubs/:clubId/campaigns/:campaignId/pause
- * @desc Pause campaign
- * @access Private (Club Admin/Organizer)
+ * @desc Pause campaign (change status from published to paused)
+ * @access Private (Club Manager only)
  */
 router.post('/:clubId/campaigns/:campaignId/pause', RecruitmentCampaignController.pauseCampaign);
 
 /**
  * @route POST /api/clubs/:clubId/campaigns/:campaignId/resume
- * @desc Resume campaign
- * @access Private (Club Admin/Organizer)
+ * @desc Resume campaign (change status from paused to published)
+ * @access Private (Club Manager only)
  */
 router.post('/:clubId/campaigns/:campaignId/resume', RecruitmentCampaignController.resumeCampaign);
 
 /**
  * @route POST /api/clubs/:clubId/campaigns/:campaignId/complete
- * @desc Complete campaign
- * @access Private (Club Admin/Organizer)
+ * @desc Complete campaign (change status from published to completed)
+ * @access Private (Club Manager only)
  */
 router.post('/:clubId/campaigns/:campaignId/complete', RecruitmentCampaignController.completeCampaign);
 
