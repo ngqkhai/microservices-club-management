@@ -73,7 +73,7 @@ routes:
     paths:
       - "~/api/clubs/[a-fA-F0-9]{24}/campaigns"
       - "~/api/clubs/[a-fA-F0-9]{24}/campaigns/.*"
-    methods: [POST, PUT, DELETE]
+    methods: [GET, POST, PUT, DELETE]
     strip_path: false
     tags: [club, campaigns, protected]
     plugins:
@@ -118,6 +118,7 @@ routes:
       - "~/api/clubs/[a-fA-F0-9]{24}/members"
       - "~/api/clubs/[a-fA-F0-9]{24}/members/.*"
       - "~/api/users/[a-fA-F0-9-]+/club-roles"
+      - "~/api/users/[a-fA-F0-9-]+/applications"
     methods: [GET, POST, PUT, DELETE]
     strip_path: false
     tags: [club, members, protected]
@@ -139,6 +140,35 @@ routes:
           header_prefix: "x-user-"
       - name: api-gateway-secret
         tags: [members-secret]
+        
+  # Simplified Application Management Routes (JWT required)
+  - name: club-applications-simple-routes
+    service: club-service
+    paths:
+      - "~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/status"
+      - "~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/approve"
+      - "~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/reject"
+    methods: [PUT, POST]
+    strip_path: false
+    tags: [club, applications, simplified, protected]
+    plugins:
+      - name: jwt
+        tags: [applications-simple-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [applications-simple-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+      - name: api-gateway-secret
+        tags: [applications-simple-secret]
         
   # Individual Club Routes (Some public, some protected)
   - name: club-individual-public-routes
@@ -185,6 +215,7 @@ routes:
     service: club-service
     paths:
       - /api/campaigns/published
+      - "~/api/campaigns/[a-fA-F0-9]{24}$"
       - "~/api/campaigns/clubs/.*/published"
     methods: [GET, OPTIONS]
     strip_path: false
@@ -192,6 +223,35 @@ routes:
     plugins:
       - name: api-gateway-secret
         tags: [club-secret]
+        
+  # Campaign Application Routes (JWT required)
+  - name: campaign-application-routes
+    service: club-service
+    paths:
+      - "~/api/campaigns/[a-fA-F0-9]{24}/apply"
+      - "~/api/campaigns/[a-fA-F0-9]{24}/applications/.*"
+      - "~/api/applications/[a-fA-F0-9]{24}$"
+    methods: [GET, POST, PUT, DELETE]
+    strip_path: false
+    tags: [club, applications, protected]
+    plugins:
+      - name: jwt
+        tags: [application-jwt]
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        tags: [application-claims]
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+          header_prefix: "x-user-"
+      - name: api-gateway-secret
+        tags: [application-secret]
         
   # Event Service Routes (JWT required)
   - name: event-service-route

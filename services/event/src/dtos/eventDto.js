@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 export class GetEventsDTO {
   constructor(query) {
     const allowedFilters = ['upcoming', 'all', null];
@@ -9,8 +11,8 @@ export class GetEventsDTO {
       throw new Error(`Invalid filter value: '${filter}'. Allowed values are: ${allowedFilters.join(', ')}`);
     }
 
-    if (club_id && typeof club_id !== 'string') {
-      throw new Error(`'club_id' must be a string.`);
+    if (club_id && !mongoose.Types.ObjectId.isValid(club_id)) {
+      throw new Error(`'club_id' must be a valid ObjectId.`);
     }
 
     this.filter = filter;

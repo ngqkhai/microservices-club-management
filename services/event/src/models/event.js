@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const eventSchema = new mongoose.Schema({
   club_id: {
-    type: String, // References Club Service clubs
+    type: mongoose.Schema.Types.ObjectId, // References Club Service clubs
     required: true,
     index: true
   },

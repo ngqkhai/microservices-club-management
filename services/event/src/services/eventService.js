@@ -293,7 +293,7 @@ export const createEventService = async (eventData) => {
       total_attended: 0
     },
     created_by,
-    club_id,
+    club_id: new mongoose.Types.ObjectId(club_id), // Convert to ObjectId
     // Backward compatibility fields
     start_at: startDate,
     end_at: endDate,
@@ -315,7 +315,7 @@ export const updateEventService = async (eventId, eventData) => {
   }
 
   // 4.3: Ensure club_id is not changed
-  if (eventData.club_id && eventData.club_id !== existingEvent.club_id) {
+  if (eventData.club_id && !existingEvent.club_id.equals(new mongoose.Types.ObjectId(eventData.club_id))) {
     const error = new Error('Changing the club_id of an event is not allowed.');
     error.status = 400;
     throw error;
@@ -371,47 +371,90 @@ export const deleteEventService = async (eventId) => {
 };
 
 export const getEventsOfClubService = async ({ clubId, status, start_from, start_to, page = 1, limit = 10 }) => {
-  // 1. Validate club exists (call Club Service)
-  const clubServiceUrl = process.env.CLUB_SERVICE_URL || 'http://club-service:3002';
-  try {
-    await axios.get(`${clubServiceUrl}/api/clubs/${clubId}`);
-  } catch (err) {
-    const error = new Error('Club not found');
-    error.name = 'CLUB_NOT_FOUND';
-    throw error;
+  console.log(`Getting events for club ID: ${clubId}`);
+  
+  // Build query for the club - convert clubId to ObjectId
+  const { ObjectId } = mongoose.Types;
+  let query;
+  
+  // Convert clubId to ObjectId if it's a valid ObjectId string
+  if (ObjectId.isValid(clubId)) {
+    query = { club_id: new ObjectId(clubId) };
+  } else {
+    // If not a valid ObjectId, the query will not match anything
+    throw new Error('Invalid club ID format');
   }
-
-  // 2. Build query
-  const query = { club_id: clubId };
+  
+  // Add status filter if specified
   if (status === 'upcoming') {
-    query.start_at = { $gte: new Date() };
+    const now = new Date();
+    query.start_date = { $gte: now };
   }
+  
+  // Add date range filter if specified
   if (start_from || start_to) {
-    query.start_at = query.start_at || {};
-    if (start_from) query.start_at.$gte = new Date(start_from);
-    if (start_to) query.start_at.$lte = new Date(start_to);
+    const dateQuery = {};
+    if (start_from) dateQuery.$gte = new Date(start_from);
+    if (start_to) dateQuery.$lte = new Date(start_to);
+    
+    // Only add date filter if we haven't already added status filter
+    if (!query.start_date) {
+      query.start_date = dateQuery;
+    } else {
+      // Merge with existing date filter
+      query.start_date = { ...query.start_date, ...dateQuery };
+    }
   }
 
-  // 3. Pagination
+  // 2. Pagination
   const pageNumber = parseInt(page, 10) || 1;
   const pageSize = parseInt(limit, 10) || 10;
   const skip = (pageNumber - 1) * pageSize;
 
-  // 4. Query DB
+  // 3. Query DB
+  console.log(`Query being executed:`, JSON.stringify(query, null, 2));
+  
   const total = await Event.countDocuments(query);
   const events = await Event.find(query)
-    .sort({ start_at: 1 })
+    .sort({ start_date: 1 })
     .skip(skip)
     .limit(pageSize);
 
-  // 5. Format results
+  // 4. Format results with comprehensive event data
+  console.log(`Found ${events.length} events for club ${clubId} (total: ${total})`);
+  
   return {
-    total,
-    results: events.map(e => ({
+    success: true,
+    data: events.map(e => ({
       id: e._id,
       title: e.title,
-      start_at: e.start_at,
-      status: (e.start_at > new Date()) ? 'upcoming' : e.status
-    }))
+      description: e.description,
+      short_description: e.short_description,
+      category: e.category,
+      location: e.location,
+      start_date: e.start_date,
+      end_date: e.end_date,
+      max_participants: e.max_participants || e.max_attendees,
+      participation_fee: e.participation_fee !== undefined ? e.participation_fee : e.fee,
+      fee: e.fee !== undefined ? e.fee : e.participation_fee, // For backward compatibility
+      currency: e.currency || 'USD',
+      status: e.status || ((e.start_date || e.start_at) > new Date() ? 'upcoming' : 'ongoing'),
+      visibility: e.visibility,
+      club_id: e.club_id,
+      created_by: e.created_by,
+      created_at: e.created_at,
+      updated_at: e.updated_at,
+      statistics: e.statistics || {
+        total_registrations: 0,
+        total_interested: 0,
+        total_attended: 0
+      }
+    })),
+    meta: {
+      total,
+      page: pageNumber,
+      limit: pageSize,
+      total_pages: Math.ceil(total / pageSize)
+    }
   };
 };
