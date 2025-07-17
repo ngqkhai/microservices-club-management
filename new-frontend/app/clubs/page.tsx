@@ -8,6 +8,8 @@ import { Search, Filter } from "lucide-react"
 import { ClubCard } from "@/components/club-card"
 import { Pagination } from "@/components/pagination"
 import { RecruitmentBanner } from "@/components/recruitment-banner"
+import { useClubsStore } from "@/stores/clubs-store"
+import { clubService } from "@/services/club.service"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,74 +18,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-
-// Mock clubs data with logos
-const mockClubs = [
-  {
-    club_id: "music-club",
-    name: "CLB Âm nhạc",
-    description: "Khám phá tài năng âm nhạc và kết nối với những người yêu nhạc cùng chí hướng",
-    category: "Arts",
-    members: 45,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "tech-club",
-    name: "CLB Công nghệ thông tin",
-    description: "Học lập trình, AI và các công nghệ tiên tiến cùng nhau",
-    category: "Technology",
-    members: 78,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "sports-club",
-    name: "CLB Thể thao",
-    description: "Duy trì sức khỏe và tinh thần thể thao qua các hoạt động đa dạng",
-    category: "Sports",
-    members: 92,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "debate-club",
-    name: "CLB Tranh luận",
-    description: "Phát triển tư duy phản biện và kỹ năng diễn đạt",
-    category: "Academic",
-    members: 34,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "art-club",
-    name: "CLB Nghệ thuật",
-    description: "Thể hiện sự sáng tạo qua hội họa và nghệ thuật thị giác",
-    category: "Arts",
-    members: 56,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "volunteer-club",
-    name: "CLB Tình nguyện",
-    description: "Góp phần xây dựng cộng đồng qua các hoạt động ý nghĩa",
-    category: "Service",
-    members: 67,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "photography-club",
-    name: "CLB Nhiếp ảnh",
-    description: "Ghi lại những khoảnh khắc đẹp và kể chuyện qua ảnh",
-    category: "Arts",
-    members: 38,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    club_id: "business-club",
-    name: "CLB Kinh doanh",
-    description: "Học về kinh doanh, khởi nghiệp và kết nối với các nhà lãnh đạo tương lai",
-    category: "Business",
-    members: 52,
-    logo_url: "/placeholder.svg?height=100&width=100",
-  },
-]
 
 // Mock active recruitment campaigns
 const mockActiveRecruitments = [
@@ -113,59 +47,86 @@ const mockActiveRecruitments = [
   },
 ]
 
-const categories = ["All", "Arts", "Technology", "Sports", "Academic", "Service", "Business"]
-const CLUBS_PER_PAGE = 6
-
 export default function ClubsPage() {
-  const [allClubs] = useState(mockClubs)
-  const [filteredClubs, setFilteredClubs] = useState(mockClubs)
-  const [displayedClubs, setDisplayedClubs] = useState<typeof mockClubs>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-  const [totalPages, setTotalPages] = useState(1)
+  // Use the clubs store
+  const {
+    cache,
+    filters,
+    pagination,
+    displayedClubs,
+    loadAllClubs,
+    resetRetry,
+    setFilters,
+    setPage
+  } = useClubsStore()
 
+  // Local state for form inputs and categories
+  const [searchInput, setSearchInput] = useState("")
+  const [categoryInput, setCategoryInput] = useState("All")
+  const [categories, setCategories] = useState<string[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
+
+  // Load clubs on component mount
   useEffect(() => {
-    filterClubs()
-  }, [searchTerm, selectedCategory])
+    if (!cache.isLoaded && !cache.isLoading) {
+      loadAllClubs()
+    }
+  }, [cache.isLoaded, cache.isLoading, loadAllClubs])
 
+  // Load categories on component mount
   useEffect(() => {
-    paginateClubs()
-  }, [filteredClubs, currentPage])
-
-  const filterClubs = () => {
-    setIsLoading(true)
-
-    setTimeout(() => {
-      let filtered = allClubs
-
-      if (searchTerm) {
-        filtered = filtered.filter(
-          (club) =>
-            club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            club.description.toLowerCase().includes(searchTerm.toLowerCase()),
-        )
+    const loadCategories = async () => {
+      setCategoriesLoading(true)
+      try {
+        const response = await clubService.getCategories()
+        if (response.success && response.data) {
+          setCategories(["All", ...response.data])
+        }
+      } catch (error) {
+        console.error("Failed to load categories:", error)
+        // Fallback to default categories
+        setCategories(["All", "academic", "sports", "arts", "technology", "social", "volunteer", "cultural", "other"])
+      } finally {
+        setCategoriesLoading(false)
       }
+    }
 
-      if (selectedCategory !== "All") {
-        filtered = filtered.filter((club) => club.category === selectedCategory)
-      }
+    loadCategories()
+  }, [])
 
-      setFilteredClubs(filtered)
-      setCurrentPage(1)
-      setIsLoading(false)
-    }, 300)
+  // Update filters when inputs change (with debouncing for search)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilters({
+        search: searchInput,
+        category: categoryInput === "All" ? "" : categoryInput
+      })
+    }, 300) // 300ms debounce for search
+
+    return () => clearTimeout(timeoutId)
+  }, [searchInput, categoryInput, setFilters])
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value)
   }
 
-  const paginateClubs = () => {
-    const startIndex = (currentPage - 1) * CLUBS_PER_PAGE
-    const endIndex = startIndex + CLUBS_PER_PAGE
-    const paginatedClubs = filteredClubs.slice(startIndex, endIndex)
-
-    setDisplayedClubs(paginatedClubs)
-    setTotalPages(Math.ceil(filteredClubs.length / CLUBS_PER_PAGE))
+  const handleCategoryChange = (value: string) => {
+    setCategoryInput(value)
   }
+
+  const handlePageChange = (page: number) => {
+    setPage(page)
+  }
+
+  // Transform club data for ClubCard component
+  const transformedClubs = displayedClubs.map(club => ({
+    club_id: club.id,
+    name: club.name,
+    description: club.description || '',
+    category: club.category,
+    members: club.member_count,
+    logo_url: club.logo_url || "/placeholder.svg?height=100&width=100"
+  }))
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -201,16 +162,16 @@ export default function ClubsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Tìm kiếm câu lạc bộ theo tên hoặc mô tả..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInput}
+                onChange={handleSearchChange}
                 className="pl-10"
               />
             </div>
             <div className="flex gap-2">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select value={categoryInput} onValueChange={handleCategoryChange} disabled={categoriesLoading}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Danh mục" />
+                  <SelectValue placeholder={categoriesLoading ? "Đang tải..." : "Danh mục"} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -224,18 +185,49 @@ export default function ClubsPage() {
           </div>
         </div>
 
+        {/* Error State */}
+        {cache.error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+            <div className="text-red-800">
+              <h3 className="font-medium">Có lỗi xảy ra</h3>
+              <p className="mt-2">{cache.error}</p>
+              <div className="mt-4 flex gap-2">
+                <button 
+                  onClick={() => {
+                    resetRetry();
+                    loadAllClubs();
+                  }}
+                  disabled={cache.isLoading}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cache.isLoading ? "Đang tải..." : "Thử lại"}
+                </button>
+                {cache.retryCount > 0 && (
+                  <span className="px-3 py-2 text-sm text-red-600">
+                    Lần thử: {cache.retryCount}/3
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Results */}
         <div className="mb-6 flex justify-between items-center">
           <p className="text-gray-600">
-            {isLoading ? "Đang tìm kiếm..." : `Tìm thấy ${filteredClubs.length} câu lạc bộ`}
+            {cache.isLoading ? "Đang tải..." : 
+             !cache.isLoaded ? "Chưa tải dữ liệu" :
+             `Tìm thấy ${pagination.total} câu lạc bộ`}
           </p>
-          <p className="text-sm text-gray-500">
-            Trang {currentPage} / {totalPages}
-          </p>
+          {pagination.totalPages > 0 && (
+            <p className="text-sm text-gray-500">
+              Trang {pagination.page} / {pagination.totalPages}
+            </p>
+          )}
         </div>
 
         {/* Clubs Grid */}
-        {isLoading ? (
+        {cache.isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {[...Array(6)].map((_, i) => (
               <Card key={i} className="animate-pulse">
@@ -254,18 +246,24 @@ export default function ClubsPage() {
               </Card>
             ))}
           </div>
-        ) : displayedClubs.length > 0 ? (
+        ) : transformedClubs.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {displayedClubs.map((club) => (
+              {transformedClubs.map((club) => (
                 <ClubCard key={club.club_id} club={club} />
               ))}
             </div>
 
             {/* Pagination */}
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            {pagination.totalPages > 1 && (
+              <Pagination 
+                currentPage={pagination.page} 
+                totalPages={pagination.totalPages} 
+                onPageChange={handlePageChange} 
+              />
+            )}
           </>
-        ) : (
+        ) : cache.isLoaded ? (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">
               <Search className="h-12 w-12 mx-auto" />
@@ -273,7 +271,7 @@ export default function ClubsPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy câu lạc bộ</h3>
             <p className="text-gray-600">Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc để tìm thêm câu lạc bộ.</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

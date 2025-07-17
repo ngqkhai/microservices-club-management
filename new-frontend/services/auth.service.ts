@@ -9,6 +9,7 @@ export interface User {
   email: string;
   role: string;
   full_name?: string; // Theo API documentation
+  phone?: string;
   profile_picture_url?: string;
   email_verified?: boolean; // Theo API documentation
   createdAt?: string;
@@ -121,6 +122,20 @@ class AuthService {
    */
   async getProfile(): Promise<ApiResponse<User>> {
     return api.get<User>(config.endpoints.auth.profile);
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(profileData: Partial<User>): Promise<ApiResponse<User>> {
+    return api.put<User>(config.endpoints.auth.profile, profileData);
+  }
+
+  /**
+   * Update user profile picture
+   */
+  async updateProfilePicture(data: { profile_picture_url: string }): Promise<ApiResponse<any>> {
+    return api.put('/api/auth/profile/picture', data);
   }
 
   /**

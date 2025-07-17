@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -49,6 +49,7 @@ import {
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { authService } from "@/services"
 
 // Mock applications data
 const mockApplications = [
@@ -94,7 +95,7 @@ const mockUserData = {
   name: "Nguyễn Văn An",
   email: "nguyenvanan@student.edu.vn",
   phone: "+84 123 456 789",
-  avatar_url: "/placeholder.svg?height=100&width=100",
+  avatar_url: "https://res.cloudinary.com/djupm4v0l/image/upload/v1718000000/sample_avatar.jpg", // ảnh thật trên Cloudinary
   join_date: "2023-09-01",
   stats: {
     clubs_joined: 3,
@@ -171,49 +172,98 @@ export default function ProfilePage() {
   const router = useRouter()
 
   const [isLoading, setIsLoading] = useState(true)
-  const [userData, setUserData] = useState(mockUserData)
+  const [userData, setUserData] = useState<any>(null)
   const [joinedClubs, setJoinedClubs] = useState(mockJoinedClubs)
   const [eventParticipation, setEventParticipation] = useState(mockEventParticipation)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
-    name: mockUserData.name,
-    phone: mockUserData.phone,
+    name: "",
+    phone: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   })
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) {
       router.push("/login")
       return
     }
-
-    // Simulate API loading
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [user, router])
+    // Fetch real user profile
+    const fetchProfile = async () => {
+      setIsLoading(true)
+      try {
+        const res = await authService.getProfile()
+        if (res.success) {
+          setUserData(res.data)
+          setEditForm((prev: any) => ({
+            ...prev,
+            name: res.data.full_name || "",
+            phone: res.data.phone || "",
+          }))
+        } else {
+          toast({ title: "Lỗi", description: res.message || "Không thể tải hồ sơ người dùng", variant: "destructive" })
+        }
+      } catch (err: any) {
+        toast({ title: "Lỗi", description: err.message || "Không thể tải hồ sơ người dùng", variant: "destructive" })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProfile()
+  }, [user, router, toast])
 
   const handleUpdateProfile = async () => {
     setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setUserData((prev) => ({
-        ...prev,
-        name: editForm.name,
-        phone: editForm.phone,
-      }))
-      setIsEditing(false)
+    try {
+      const updateData: any = {}
+      // Validate full_name
+      if (editForm.name && editForm.name.trim().length >= 2) {
+        updateData.full_name = editForm.name.trim()
+      }
+      // Validate phone (theo regex backend)
+      if (
+        editForm.phone &&
+        editForm.phone.trim().length > 0 &&
+        /^[\+]?[1-9][\d]{0,15}$/.test(editForm.phone.trim())
+      ) {
+        updateData.phone = editForm.phone.trim()
+      }
+      // Nếu không có trường nào hợp lệ
+      if (Object.keys(updateData).length === 0) {
+        toast({ title: "Bạn chưa nhập thông tin hợp lệ để cập nhật", variant: "destructive" })
+        setIsLoading(false)
+        return
+      }
+      // Optionally handle password change
+      if (
+        editForm.currentPassword &&
+        editForm.newPassword &&
+        editForm.newPassword === editForm.confirmPassword
+      ) {
+        await authService.changePassword({
+          currentPassword: editForm.currentPassword,
+          newPassword: editForm.newPassword,
+        })
+        toast({ title: "Đổi mật khẩu thành công" })
+      }
+      // Update profile info
+      const res = await authService.updateProfile(updateData)
+      if (res.success) {
+        setUserData(res.data)
+        setIsEditing(false)
+        toast({ title: "Cập nhật thành công", description: "Thông tin cá nhân đã được cập nhật." })
+      } else {
+        toast({ title: "Lỗi", description: res.message || "Không thể cập nhật hồ sơ", variant: "destructive" })
+      }
+    } catch (err: any) {
+      toast({ title: "Lỗi", description: err.message || "Không thể cập nhật hồ sơ", variant: "destructive" })
+    } finally {
       setIsLoading(false)
-      toast({
-        title: "Cập nhật thành công",
-        description: "Thông tin cá nhân đã được cập nhật.",
-      })
-    }, 1000)
+    }
   }
 
   const handleDeleteAccount = async () => {
@@ -243,6 +293,45 @@ export default function ProfilePage() {
       month: "long",
       day: "numeric",
     })
+  }
+
+  async function uploadToCloudinary(file: File): Promise<string> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', 'unsigned_avatar')
+    const res = await fetch('https://api.cloudinary.com/v1_1/djupm4v0l/image/upload', {
+      method: 'POST',
+      body: formData,
+    })
+    const data = await res.json()
+    if (!data.secure_url) throw new Error('Upload thất bại')
+    return data.secure_url
+  }
+
+  const handleUploadAvatar = async () => {
+    if (!avatarFile) return
+    setIsLoading(true)
+    try {
+      const url = await uploadToCloudinary(avatarFile)
+      await authService.updateProfilePicture({ profile_picture_url: url })
+      setUserData((prev: any) => ({ ...prev, avatar_url: url }))
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      toast({ title: 'Cập nhật avatar thành công!' })
+    } catch (err: any) {
+      toast({ title: 'Lỗi upload avatar', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Add this function for avatar upload
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      setAvatarPreview(URL.createObjectURL(file))
+    }
   }
 
   if (!user) {
@@ -282,16 +371,44 @@ export default function ProfilePage() {
           <div className="lg:col-span-1">
             <Card>
               <CardContent className="p-6 text-center">
-                <Avatar className="h-24 w-24 mx-auto mb-4">
-                  <AvatarImage src={userData.avatar_url || "/placeholder.svg"} alt={userData.name} />
-                  <AvatarFallback className="bg-blue-600 text-white text-xl">
-                    {getInitials(userData.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">{userData.name}</h2>
-                <p className="text-gray-600 text-sm mb-4">{userData.email}</p>
+                <div className="relative w-24 h-24 mx-auto mb-4">
+                  <Avatar className="h-24 w-24 mx-auto">
+                    <AvatarImage src={avatarPreview || userData?.profile_picture_url || "/placeholder.svg"} alt={userData?.full_name || "User"} />
+                    <AvatarFallback className="bg-blue-600 text-white text-xl">
+                      {getInitials(userData?.full_name || "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    className="absolute bottom-0 right-0 bg-white rounded-full p-1 border shadow hover:bg-gray-100"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Đổi avatar"
+                  >
+                    <Edit className="h-5 w-5 text-blue-600" />
+                  </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                  />
+                </div>
+                {avatarPreview && (
+                  <div className="mt-2 flex flex-col items-center">
+                    <img src={avatarPreview} alt="Preview" className="w-20 h-20 rounded-full object-cover border mb-2" />
+                    <Button size="sm" onClick={handleUploadAvatar} disabled={isLoading}>
+                      {isLoading ? 'Đang lưu...' : 'Lưu avatar'}
+                    </Button>
+                    <Button size="sm" variant="outline" className="ml-2" onClick={() => { setAvatarFile(null); setAvatarPreview(null); }} disabled={isLoading}>
+                      Hủy
+                    </Button>
+                  </div>
+                )}
+                <h2 className="text-xl font-semibold text-gray-900 mb-1">{userData?.full_name || "User"}</h2>
+                <p className="text-gray-600 text-sm mb-4">{userData?.email || "No email"}</p>
                 <Badge variant="secondary" className="mb-4">
-                  Thành viên từ {formatDate(userData.join_date)}
+                  Thành viên từ {formatDate(userData?.join_date || "")}
                 </Badge>
 
                 <Separator className="my-4" />
@@ -299,15 +416,15 @@ export default function ProfilePage() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Câu lạc bộ</span>
-                    <span className="font-semibold">{userData.stats.clubs_joined}</span>
+                    <span className="font-semibold">{userData?.stats?.clubs_joined || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Sự kiện tham gia</span>
-                    <span className="font-semibold">{userData.stats.events_participated}</span>
+                    <span className="font-semibold">{userData?.stats?.events_participated || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Sự kiện sắp tới</span>
-                    <span className="font-semibold">{userData.stats.upcoming_rsvps}</span>
+                    <span className="font-semibold">{userData?.stats?.upcoming_rsvps || 0}</span>
                   </div>
                 </div>
               </CardContent>
@@ -339,14 +456,14 @@ export default function ProfilePage() {
                         <Mail className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm text-gray-600">Email</p>
-                          <p className="font-medium">{userData.email}</p>
+                          <p className="font-medium">{userData?.email || "No email"}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Phone className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm text-gray-600">Số điện thoại</p>
-                          <p className="font-medium">{userData.phone}</p>
+                          <p className="font-medium">{userData?.phone || "No phone"}</p>
                         </div>
                       </div>
                     </div>
@@ -607,7 +724,7 @@ export default function ProfilePage() {
 
                       <div>
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" value={userData.email} disabled className="bg-gray-50" />
+                        <Input id="email" value={userData?.email || "No email"} disabled className="bg-gray-50" />
                         <p className="text-xs text-gray-500 mt-1">Email không thể thay đổi</p>
                       </div>
 

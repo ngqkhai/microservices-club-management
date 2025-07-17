@@ -2,22 +2,41 @@ import api, { ApiResponse } from '@/lib/api';
 import config from '@/config';
 
 /**
- * Club interface
+ * Club interface based on API documentation
  */
 export interface Club {
   id: string;
   name: string;
-  description: string;
-  category: string;
-  logo?: string;
-  banner?: string;
-  memberCount: number;
-  maxMembers?: number;
-  isPublic: boolean;
-  status: 'active' | 'inactive' | 'suspended';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  description?: string;
+  category: 'academic' | 'sports' | 'arts' | 'technology' | 'social' | 'volunteer' | 'cultural' | 'other';
+  location?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  logo_url?: string;
+  website_url?: string;
+  social_links?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+  };
+  settings?: {
+    is_public: boolean;
+    requires_approval: boolean;
+    max_members?: number;
+  };
+  status: string;
+  member_count: number;
+  created_by?: string;
+  manager?: {
+    user_id: string;
+    full_name: string;
+    email?: string;
+  };
+  created_at: Date;
+  // Backward compatibility
+  type?: string;
+  size?: number;
 }
 
 /**
@@ -65,26 +84,27 @@ export interface CreateClubRequest {
 export interface UpdateClubRequest extends Partial<CreateClubRequest> {}
 
 /**
- * Club list query parameters
+ * Club list query parameters based on API documentation
  */
 export interface ClubListQuery {
+  search?: string;
+  name?: string;
+  category?: string;
+  location?: string;
+  sort?: 'name' | 'name_desc' | 'category' | 'location' | 'newest' | 'oldest' | 'relevance';
   page?: number;
   limit?: number;
-  category?: string;
-  search?: string;
-  status?: string;
-  isPublic?: boolean;
 }
 
 /**
- * Club list response interface
+ * Club list response interface based on API documentation
  */
 export interface ClubListResponse {
-  clubs: Club[];
   total: number;
   page: number;
-  limit: number;
   totalPages: number;
+  limit: number;
+  results: Club[];
 }
 
 /**
@@ -141,8 +161,8 @@ class ClubService {
   /**
    * Get club categories
    */
-  async getCategories(): Promise<ApiResponse<ClubCategory[]>> {
-    return api.get<ClubCategory[]>(config.endpoints.clubs.categories, { skipAuth: true });
+  async getCategories(): Promise<ApiResponse<string[]>> {
+    return api.get<string[]>(config.endpoints.clubs.categories, { skipAuth: true });
   }
 
   /**
