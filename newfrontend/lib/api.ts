@@ -276,4 +276,16 @@ export const api = {
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 };
 
+/**
+ * Get user's club roles
+ */
+export async function getUserClubRoles(userId: string, token: string) {
+  const res = await fetch(`/api/users/${userId}/club-roles`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.json();
+}
+
 export default api;

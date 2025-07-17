@@ -15,6 +15,12 @@ import { Menu, X, User, LogOut, Settings } from "lucide-react"
 import { useAuthStore } from "@/stores/auth-store"
 import { NotificationBell } from "@/components/notification-bell"
 
+interface ClubRole {
+  clubId: string;
+  clubName: string;
+  role: string;
+}
+
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logout } = useAuthStore()
@@ -27,18 +33,16 @@ export function Header() {
   ]
 
   // Add this after the existing navigation items
+  let managedClubs: ClubRole[] = [];
   if (user && user.club_roles) {
-    const managedClubs = Object.entries(user.club_roles)
-      .filter(([clubId, role]) => role === "club_manager")
-      .map(([clubId, role]) => clubId)
-
-    if (managedClubs.length > 0) {
-      // For simplicity, show the first managed club. In a real app, you'd have a dropdown
+    managedClubs = user.club_roles.filter((club) => club.role === "club_manager");
+    if (managedClubs.length === 1) {
       navigation.push({
         name: "Quản lý CLB",
-        href: `/clubs/${managedClubs[0]}/manage`,
-      })
+        href: `/clubs/${managedClubs[0].clubId}/manage`,
+      });
     }
+    // Nếu nhiều hơn 1 club, không push vào navigation, sẽ render dropdown riêng bên dưới
   }
 
   const getInitials = (name: string | undefined) => {
@@ -71,6 +75,29 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
+            {/* Dropdown Quản lý CLB nếu có nhiều hơn 1 club */}
+            {managedClubs.length > 1 && (
+              <div className="relative group">
+                <Button
+                  variant="ghost"
+                  className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium flex items-center"
+                >
+                  Quản lý CLB
+                  <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </Button>
+                <div className="absolute left-0 mt-2 w-56 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-50">
+                  {managedClubs.map((club) => (
+                    <Link
+                      key={club.clubId}
+                      href={`/clubs/${club.clubId}/manage`}
+                      className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 text-sm"
+                    >
+                      {club.clubName}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </nav>
 
           {/* Desktop Auth */}
@@ -154,6 +181,22 @@ export function Header() {
                   {item.name}
                 </Link>
               ))}
+              {/* Dropdown Quản lý CLB cho mobile nếu có nhiều hơn 1 club */}
+              {managedClubs.length > 1 && (
+                <div className="border-t pt-2 mt-2">
+                  <div className="font-semibold px-3 py-2 text-gray-700">Quản lý CLB</div>
+                  {managedClubs.map((club) => (
+                    <Link
+                      key={club.clubId}
+                      href={`/clubs/${club.clubId}/manage`}
+                      className="block px-5 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 text-base"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {club.clubName}
+                    </Link>
+                  ))}
+                </div>
+              )}
               <div className="border-t pt-4 mt-4">
                 {user ? (
                   <>

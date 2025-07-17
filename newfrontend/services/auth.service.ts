@@ -14,6 +14,15 @@ export interface User {
   email_verified?: boolean; // Theo API documentation
   createdAt?: string;
   updatedAt?: string;
+  club_roles?: ClubRole[]; // Thêm dòng này
+}
+
+// Thêm interface ClubRole
+export interface ClubRole {
+  clubId: string;
+  clubName: string;
+  role: string;
+  joinedAt: string | null;
 }
 
 /**

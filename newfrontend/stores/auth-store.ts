@@ -3,6 +3,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { authService, setToken, removeToken, type User } from "@/services"
+import { getUserClubRoles } from "@/lib/api"
+import { getToken } from "@/lib/api"
 
 interface AuthState {
   user: User | null
@@ -146,26 +148,20 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadUser: async () => {
-        const token = authService.isAuthenticated()
+        const token = getToken();
         if (!token) return
 
         set({ isLoading: true, error: null })
 
         try {
-          const [profileResponse, clubRolesResponse] = await Promise.all([
-            authService.getProfile(),
-            // Add this API call to get user's club roles
-            fetch(`/api/users/${get().user?.user_id}/club-roles`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }).then((res) => res.json()),
-          ])
+          const profileResponse = await authService.getProfile();
+          const userId = profileResponse?.data?.id;
+          const clubRolesResponse = await getUserClubRoles(userId, token);
 
           if (profileResponse.success) {
             const user = {
               ...profileResponse.data,
-              club_roles: clubRolesResponse.success ? clubRolesResponse.data : {},
+              club_roles: Array.isArray(clubRolesResponse.data) ? clubRolesResponse.data : [],
             }
 
             set({
