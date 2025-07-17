@@ -115,7 +115,7 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
 
       // Fetch all clubs without pagination by setting a high limit
       const response = await clubService.getClubs({ 
-        limit: 20, // Fetch all clubs
+        limit: 99, // Fetch all clubs
         page: 1 
       });
 

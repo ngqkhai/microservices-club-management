@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
@@ -8,6 +8,7 @@ import { Search, Filter } from "lucide-react"
 import { ClubCard } from "@/components/club-card"
 import { Pagination } from "@/components/pagination"
 import { RecruitmentBanner } from "@/components/recruitment-banner"
+import { useCallback } from "react"
 import { useClubsStore } from "@/stores/clubs-store"
 import { clubService } from "@/services/club.service"
 import {
@@ -19,33 +20,26 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
-// Mock active recruitment campaigns
-const mockActiveRecruitments = [
-  {
-    campaign_id: "music-spring-2024",
-    club_id: "music-club",
-    club_name: "CLB Âm nhạc",
-    title: "Tuyển thành viên mùa xuân 2024",
-    deadline: "2024-03-30T23:59:59",
-    logo_url: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    campaign_id: "tech-leadership-2024",
-    club_id: "tech-club",
-    club_name: "CLB Công nghệ thông tin",
-    title: "Tuyển ban lãnh đạo 2024",
-    deadline: "2024-03-25T18:00:00",
-    logo_url: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    campaign_id: "volunteer-coordinator",
-    club_id: "volunteer-club",
-    club_name: "CLB Tình nguyện",
-    title: "Tuyển điều phối viên hoạt động",
-    deadline: "2024-04-01T12:00:00",
-    logo_url: "/placeholder.svg?height=60&width=60",
-  },
-]
+// Recruitment API: GET /api/campaigns/published
+const fetchActiveRecruitments = async () => {
+  try {
+    const res = await fetch("/api/campaigns/published?limit=5");
+    const data = await res.json();
+    if (data.success && Array.isArray(data.data)) {
+      return data.data.map((c: any) => ({
+        campaign_id: c.id,
+        club_id: c.club_id,
+        club_name: c.club_name,
+        title: c.title,
+        deadline: c.end_date,
+        logo_url: c.logo_url || "/placeholder.svg?height=60&width=60",
+      }));
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+};
 
 export default function ClubsPage() {
   // Use the clubs store
@@ -65,6 +59,33 @@ export default function ClubsPage() {
   const [categoryInput, setCategoryInput] = useState("All")
   const [categories, setCategories] = useState<string[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(false)
+  const [activeRecruitments, setActiveRecruitments] = useState<any[]>([]);
+  const [recruitmentsLoading, setRecruitmentsLoading] = useState(true);
+  const [recruitmentsError, setRecruitmentsError] = useState<string | null>(null);
+  const [recruitmentPage, setRecruitmentPage] = useState(1);
+  const campaignsPerPage = 3;
+  const totalRecruitmentPages = Math.ceil(activeRecruitments.length / campaignsPerPage);
+  const pagedRecruitments = useMemo(() => {
+    const start = (recruitmentPage - 1) * campaignsPerPage;
+    return activeRecruitments.slice(start, start + campaignsPerPage);
+  }, [activeRecruitments, recruitmentPage]);
+
+  const loadRecruitments = useCallback(async () => {
+    setRecruitmentsLoading(true);
+    setRecruitmentsError(null);
+    try {
+      const data = await fetchActiveRecruitments();
+      setActiveRecruitments(data);
+    } catch (e: any) {
+      setRecruitmentsError("Không thể tải chiến dịch tuyển thành viên.");
+    } finally {
+      setRecruitmentsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecruitments();
+  }, [loadRecruitments]);
 
   // Load clubs on component mount
   useEffect(() => {
@@ -153,7 +174,16 @@ export default function ClubsPage() {
         </div>
 
         {/* Active Recruitment Banner */}
-        <RecruitmentBanner campaigns={mockActiveRecruitments} />
+        <RecruitmentBanner campaigns={pagedRecruitments} />
+        {totalRecruitmentPages > 1 && (
+          <div className="flex justify-center mt-2 mb-6">
+            <Pagination
+              currentPage={recruitmentPage}
+              totalPages={totalRecruitmentPages}
+              onPageChange={setRecruitmentPage}
+            />
+          </div>
+        )}
 
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">

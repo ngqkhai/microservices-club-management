@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,7 @@ import { ApplicationForm } from "@/components/application-form"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import { clubService, ClubDetail, Event as ApiEvent, Recruitment as ApiRecruitment } from "@/services/club.service"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog"
 
 // Transform API event to component event
 const transformEventForCard = (apiEvent: ApiEvent): any => {
@@ -52,6 +53,92 @@ const transformRecruitmentForCard = (apiRecruitment: ApiRecruitment): any => {
   }
 }
 
+// API lấy các campaign tuyển thành viên đã publish của club
+const fetchClubRecruitmentCampaigns = async (clubId: string) => {
+  try {
+    const res = await fetch(`/api/campaigns/clubs/${clubId}/published`);
+    const data = await res.json();
+    if (data.success && Array.isArray(data.data)) {
+      return data.data;
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Component hiển thị chi tiết campaign trong popup
+function CampaignDetailModal({ campaignId, open, onClose }: { campaignId: string, open: boolean, onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [campaign, setCampaign] = useState<any>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setError(null);
+    setCampaign(null);
+    fetch(`/api/campaigns/${campaignId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setCampaign(data.data);
+        } else {
+          setError(data.message || "Không thể tải thông tin chiến dịch.");
+        }
+      })
+      .catch(() => setError("Không thể tải thông tin chiến dịch."))
+      .finally(() => setLoading(false));
+  }, [campaignId, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg w-full rounded-2xl shadow-2xl">
+        <DialogHeader>
+          <DialogTitle>Chi tiết đợt tuyển thành viên</DialogTitle>
+        </DialogHeader>
+        {loading ? (
+          <div className="py-8 text-center text-gray-500">Đang tải...</div>
+        ) : error ? (
+          <div className="py-8 text-center text-red-500">{error}</div>
+        ) : campaign ? (
+          <div className="space-y-4">
+            <div className="text-2xl font-bold text-blue-700">{campaign.title}</div>
+            <div className="text-gray-600">{campaign.description}</div>
+            <div className="flex flex-wrap gap-2 text-sm mt-2">
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">Trạng thái: {campaign.status}</span>
+              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">Hạn nộp: {campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : 'N/A'}</span>
+              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">Bắt đầu: {campaign.start_date ? new Date(campaign.start_date).toLocaleDateString() : 'N/A'}</span>
+              {campaign.max_applications && <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">Tối đa: {campaign.max_applications} đơn</span>}
+            </div>
+            {campaign.requirements && campaign.requirements.length > 0 && (
+              <div>
+                <div className="font-medium mb-1">Yêu cầu:</div>
+                <ul className="list-disc list-inside text-gray-700 text-sm">
+                  {campaign.requirements.map((r: string, idx: number) => (
+                    <li key={idx}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {campaign.statistics && (
+              <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-2">
+                <span>Đơn đã nộp: {campaign.statistics.total_applications}</span>
+                <span>Chờ duyệt: {campaign.statistics.pending_applications}</span>
+                <span>Đã duyệt: {campaign.statistics.approved_applications}</span>
+                <span>Đã từ chối: {campaign.statistics.rejected_applications}</span>
+              </div>
+            )}
+          </div>
+        ) : null}
+        <DialogClose asChild>
+          <Button className="mt-6 w-full" variant="default">Đóng</Button>
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ClubDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -66,10 +153,31 @@ export default function ClubDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [clubCampaigns, setClubCampaigns] = useState<any[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+  const [campaignsError, setCampaignsError] = useState<string | null>(null);
+  const [openCampaignDetail, setOpenCampaignDetail] = useState<string | null>(null);
 
   useEffect(() => {
     fetchClubData()
   }, [clubId])
+
+  const loadClubCampaigns = useCallback(async () => {
+    setCampaignsLoading(true);
+    setCampaignsError(null);
+    try {
+      const data = await fetchClubRecruitmentCampaigns(clubId);
+      setClubCampaigns(data);
+    } catch (e) {
+      setCampaignsError("Không thể tải đợt tuyển thành viên.");
+    } finally {
+      setCampaignsLoading(false);
+    }
+  }, [clubId]);
+
+  useEffect(() => {
+    loadClubCampaigns();
+  }, [loadClubCampaigns]);
 
   const fetchClubData = async () => {
     setIsLoading(true)
@@ -316,13 +424,13 @@ export default function ClubDetailPage() {
                         value="events"
                         className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
                       >
-                        Sự kiện
+                        Sự kiện sắp tới
                       </TabsTrigger>
                       <TabsTrigger
-                        value="activities"
+                        value="recruitments"
                         className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
                       >
-                        Hoạt động
+                        Đợt tuyển thành viên
                       </TabsTrigger>
                     </TabsList>
                   </div>
@@ -343,12 +451,42 @@ export default function ClubDetailPage() {
                     )}
                   </TabsContent>
 
-                  <TabsContent value="activities" className="p-6">
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>Chưa có hoạt động nào</p>
-                      <p className="text-sm">Hãy quay lại sau để xem hoạt động mới!</p>
-                    </div>
+                  <TabsContent value="recruitments" className="p-6">
+                    {campaignsLoading ? (
+                      <div className="text-center py-8 text-gray-500">Đang tải đợt tuyển thành viên...</div>
+                    ) : campaignsError ? (
+                      <div className="text-center py-8 text-red-500">{campaignsError}</div>
+                    ) : clubCampaigns.length > 0 ? (
+                      <div className="space-y-4">
+                        {clubCampaigns.map((c) => (
+                          <Card key={c.id} className="border-blue-100">
+                            <CardContent className="py-4 px-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                              <div>
+                                <div className="font-semibold text-lg text-blue-700">{c.title}</div>
+                                <div className="text-gray-500 text-sm mb-1">Hạn nộp: {c.end_date ? new Date(c.end_date).toLocaleDateString() : 'N/A'}</div>
+                                <div className="text-xs text-gray-400">Trạng thái: {c.status}</div>
+                              </div>
+                              <Button size="sm" variant="outline" className="ml-auto" onClick={() => setOpenCampaignDetail(c.id)}>
+                                Xem chi tiết
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        {openCampaignDetail && (
+                          <CampaignDetailModal
+                            campaignId={openCampaignDetail}
+                            open={!!openCampaignDetail}
+                            onClose={() => setOpenCampaignDetail(null)}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Chưa có đợt tuyển thành viên nào</p>
+                        <p className="text-sm">Hãy quay lại sau để xem các đợt tuyển mới!</p>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
