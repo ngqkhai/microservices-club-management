@@ -40,6 +40,102 @@ export interface Club {
 }
 
 /**
+ * Recruitment interface
+ */
+export interface Recruitment {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string[];
+  start_date: string;
+  end_date: string;
+  max_applications: number;
+  applications_count: number;
+  status: string;
+}
+
+/**
+ * Event interface
+ */
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  short_description?: string;
+  category?: string;
+  date?: string;
+  start_date?: string;
+  end_date?: string;
+  location?: {
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+    location_type?: string;
+    type?: string;
+    address?: string;
+    room?: string;
+  };
+  fee?: number;
+  participation_fee?: number;
+  currency?: string;
+  max_participants: number;
+  current_participants?: number;
+  status: string;
+  visibility?: string;
+  statistics?: {
+    total_registrations?: number;
+    total_interested?: number;
+    total_attended?: number;
+    _id?: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Detailed club interface from API response
+ */
+export interface ClubDetail {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  location?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  logo_url?: string;
+  website_url?: string;
+  social_links?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+  };
+  settings?: {
+    is_public: boolean;
+    requires_approval: boolean;
+    max_members?: number;
+  };
+  status: string;
+  member_count: number;
+  created_by?: string;
+  manager?: {
+    user_id: string;
+    full_name: string;
+    email?: string;
+    assigned_at?: string;
+  };
+  size?: number;
+  current_recruitments?: Recruitment[];
+  total_recruitments?: number;
+  active_recruitments?: number;
+  upcoming_events?: Event[];
+  published_events?: Event[];
+  total_events?: number;
+}
+
+/**
  * Club member interface
  */
 export interface ClubMember {
@@ -135,6 +231,13 @@ class ClubService {
    */
   async getClub(id: string): Promise<ApiResponse<Club>> {
     return api.get<Club>(config.endpoints.clubs.detail(id), { skipAuth: true });
+  }
+
+  /**
+   * Get detailed club information by ID
+   */
+  async getClubDetail(id: string): Promise<ApiResponse<ClubDetail>> {
+    return api.get<ClubDetail>(config.endpoints.clubs.detail(id), { skipAuth: true });
   }
 
   /**
