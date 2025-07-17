@@ -9,7 +9,7 @@ interface AuthState {
   token: string | null
   isLoading: boolean
   error: string | null
-  login: (email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
   logout: () => Promise<void>
   updateProfile: (data: Partial<User>) => Promise<boolean>
@@ -25,11 +25,11 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      login: async (email: string, password: string) => {
+      login: async (email: string, password: string, rememberMe: boolean = false) => {
         set({ isLoading: true, error: null })
 
         try {
-          const response = await authService.login({ email, password })
+          const response = await authService.login({ email, password, rememberMe })
           
           if (response.success) {
             const { user, accessToken } = response.data

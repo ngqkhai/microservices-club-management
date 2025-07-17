@@ -22,6 +22,7 @@ export interface User {
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 /**
@@ -98,6 +99,7 @@ class AuthService {
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
     return api.post<LoginResponse>(config.endpoints.auth.login, credentials, {
       skipAuth: true,
+      credentials: 'include', // Include cookies for refresh token
     });
   }
 
@@ -114,7 +116,9 @@ class AuthService {
    * Logout user
    */
   async logout(): Promise<ApiResponse<void>> {
-    return api.post<void>(config.endpoints.auth.logout);
+    return api.post<void>(config.endpoints.auth.logout, {}, {
+      credentials: 'include',
+    });
   }
 
   /**
@@ -149,8 +153,10 @@ class AuthService {
    * Refresh access token
    */
   async refreshToken(): Promise<ApiResponse<{ accessToken: string }>> {
-    return api.post<{ accessToken: string }>(config.endpoints.auth.refreshToken, {
+    return api.post<{ accessToken: string }>(config.endpoints.auth.refreshToken, {}, {
       skipAuth: true,
+      skipRefresh: true, // Prevent infinite refresh loops
+      credentials: 'include',
     });
   }
 

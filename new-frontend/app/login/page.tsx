@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
@@ -48,7 +49,7 @@ export default function LoginPage() {
     if (!validateForm()) return
 
     try {
-      const success = await login(email, password)
+      const success = await login(email, password, rememberMe)
       if (success) {
         toast({
           title: "Chào mừng trở lại!",
@@ -123,6 +124,18 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="remember-me" className="text-sm text-gray-700">
+                    Remember me
+                  </Label>
+                </div>
                 <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
                   Forgot your password?
                 </Link>

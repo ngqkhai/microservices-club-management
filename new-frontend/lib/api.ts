@@ -27,6 +27,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: any;
   timeout?: number;
   skipAuth?: boolean;
+  skipRefresh?: boolean; // To prevent infinite refresh loops
 }
 
 /**
@@ -68,6 +69,36 @@ export const getRefreshToken = (): string | null => {
 export const setRefreshToken = (token: string): void => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(config.jwt.refreshStorageKey, token);
+};
+
+/**
+ * Refresh access token
+ */
+const refreshAccessToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch(buildUrl(config.endpoints.auth.refreshToken), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Send refresh token cookie
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const newToken = data.data?.accessToken;
+      if (newToken) {
+        setToken(newToken);
+        return newToken;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to refresh token:', error);
+  }
+  
+  // Refresh failed, clear tokens
+  removeToken();
+  return null;
 };
 
 /**
@@ -155,6 +186,7 @@ export const apiRequest = async <T = any>(
   const {
     body,
     timeout = config.api.timeout,
+    skipRefresh = false,
     ...fetchOptions
   } = options;
 
@@ -168,7 +200,36 @@ export const apiRequest = async <T = any>(
       headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
+      credentials: 'include', // Always include cookies
     });
+
+    // Handle 401 Unauthorized - try to refresh token
+    if (response.status === 401 && !options.skipAuth && !skipRefresh) {
+      const newToken = await refreshAccessToken();
+      
+      if (newToken) {
+        // Retry the original request with new token
+        const newHeaders = {
+          ...headers,
+          'Authorization': `Bearer ${newToken}`,
+        };
+        
+        const retryResponse = await fetch(url, {
+          ...fetchOptions,
+          headers: newHeaders,
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+          credentials: 'include',
+        });
+        
+        return await handleResponse<T>(retryResponse);
+      } else {
+        // Refresh failed, redirect to login
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+    }
 
     return await handleResponse<T>(response);
   } catch (error: any) {
