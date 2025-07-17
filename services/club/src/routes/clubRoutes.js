@@ -58,8 +58,9 @@ router.get('/clubs', authMiddleware.validateApiGatewaySecret, clubController.get
 
 /**
  * @route GET /api/clubs/:id
- * @desc Get a club by ID
+ * @desc Get a club by ID with additional information including published events
  * @access Public
+ * @returns {Object} Club details with current recruitments, upcoming events, published events, and statistics
  */
 router.get('/clubs/:id', authMiddleware.validateApiGatewaySecret, clubController.getClubById);
 
