@@ -279,13 +279,8 @@ export const api = {
 /**
  * Get user's club roles
  */
-export async function getUserClubRoles(userId: string, token: string) {
-  const res = await fetch(`/api/users/${userId}/club-roles`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return res.json();
+export async function getUserClubRoles(userId: string) {
+  return api.get(`/api/users/${userId}/club-roles`);
 }
 
 export default api;

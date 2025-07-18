@@ -161,7 +161,7 @@ export const useAuthStore = create<AuthState>()(
           const userId = profileResponse?.data?.id;
           let clubRolesResponse = { success: false, data: [] };
           try {
-            clubRolesResponse = await getUserClubRoles(userId, token);
+            clubRolesResponse = await getUserClubRoles(userId);
           } catch (err) {
             // Nếu lỗi club-roles thì chỉ log, không logout
             console.warn('Failed to load club roles:', err);
