@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { authService } from "@/services"
 import { useToast } from "@/hooks/use-toast"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already-verified'>('loading')
   const [message, setMessage] = useState('')
   
@@ -170,5 +170,33 @@ export default function VerifyEmailPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <Card>
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            </div>
+            <CardTitle className="text-2xl">Loading...</CardTitle>
+            <CardDescription className="text-center">
+              Please wait while we prepare the verification page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }
