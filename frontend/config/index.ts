@@ -2,6 +2,12 @@
  * Application configuration based on environment variables
  */
 
+// Debug environment variables
+console.log('🔧 Config loading:', {
+  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  fallback: 'http://localhost:8000'
+});
+
 export const config = {
   // API Configuration
   api: {

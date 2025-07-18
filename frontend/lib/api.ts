@@ -114,7 +114,29 @@ const createTimeoutController = (timeout: number): AbortController => {
  * Build full URL
  */
 const buildUrl = (endpoint: string): string => {
-  return `${config.api.baseUrl}${endpoint}`;
+  // Ensure we always use the correct base URL
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  
+  // Validate that we're not accidentally using relative URLs
+  if (!baseUrl.startsWith('http')) {
+    console.error('❌ Invalid base URL:', baseUrl);
+    throw new Error(`Invalid API base URL: ${baseUrl}`);
+  }
+  
+  const fullUrl = `${baseUrl}${endpoint}`;
+  
+  // Debug logging for user-related endpoints
+  if (endpoint.includes('/api/users/')) {
+    console.log('🔍 buildUrl DEBUG:', { 
+      endpoint, 
+      baseUrl, 
+      fullUrl,
+      envVar: process.env.NEXT_PUBLIC_API_BASE_URL,
+      configValue: config.api.baseUrl
+    });
+  }
+  
+  return fullUrl;
 };
 
 /**
@@ -193,6 +215,8 @@ export const apiRequest = async <T = any>(
   const controller = createTimeoutController(timeout);
   const url = buildUrl(endpoint);
   const headers = prepareHeaders(options);
+
+  console.log('🚀 apiRequest:', { endpoint, url, method: fetchOptions.method || 'GET' });
 
   try {
     const response = await fetch(url, {
@@ -280,7 +304,17 @@ export const api = {
  * Get user's club roles
  */
 export async function getUserClubRoles(userId: string) {
-  return api.get(`/api/users/${userId}/club-roles`);
+  const endpoint = `/api/users/${userId}/club-roles`;
+  const expectedBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+  
+  console.log('📊 getUserClubRoles:', { 
+    userId, 
+    endpoint,
+    expectedBaseUrl,
+    fullExpectedUrl: `${expectedBaseUrl}${endpoint}`
+  });
+  
+  return api.get(endpoint);
 }
 
 export default api;
