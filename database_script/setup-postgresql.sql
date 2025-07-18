@@ -1,20 +1,31 @@
 -- =====================================================
--- Auth Service Database Setup
--- Run this on your Auth Service Supabase project
+-- CLUB MANAGEMENT SYSTEM - DATABASE SETUP
+-- Updated: July 2025
+-- Based on current service architecture (ignoring outdated migrations)
 -- =====================================================
 
--- Users table (covers US001-US006)
+-- =====================================================
+-- AUTH SERVICE DATABASE SETUP (PostgreSQL)
+-- Port: 3001 - User authentication and management
+-- =====================================================
+
+-- Create database
+-- CREATE DATABASE club_management_auth;
+-- \c club_management_auth;
+
+-- Users table (AUTH SERVICE - main user data)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    phone VARCHAR(20),
+    phone VARCHAR(20) UNIQUE,
     profile_picture_url VARCHAR(500),
     bio TEXT,
     date_of_birth DATE,
     address TEXT,
     social_links JSONB DEFAULT '{}',
+    gender VARCHAR(20) CHECK(gender IN ('Nam', 'Nữ', 'Khác', 'Không muốn nói')),
     email_verified BOOLEAN DEFAULT FALSE,
     email_verified_at TIMESTAMP,
     role VARCHAR(20) DEFAULT 'user' CHECK(role IN ('user', 'admin')),
@@ -43,11 +54,47 @@ CREATE TABLE password_reset_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Session management
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(500) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    revoked BOOLEAN DEFAULT FALSE
+);
+
+-- Password reset (covers US004)
+CREATE TABLE password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    used_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for Auth Service
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_deleted_at ON users(deleted_at);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_phone ON users(phone) WHERE phone IS NOT NULL;
+CREATE INDEX idx_users_gender ON users(gender);
+CREATE INDEX idx_users_email_verified_at ON users(email_verified_at);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
+CREATE INDEX idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+
+-- =====================================================
+-- FINANCE SERVICE DATABASE SETUP (PostgreSQL)  
+-- Port: 3004 - Financial management
+-- =====================================================
+
+-- Create database  
+-- CREATE DATABASE club_management_finance;
+-- \c club_management_finance;
 
 -- =====================================================
 -- Financial Service Database Setup  
@@ -208,10 +255,58 @@ CREATE TABLE activity_post_interactions (
     UNIQUE(post_id, user_id, interaction_type)
 );
 
+-- =====================================================
+-- NOTIFICATION SERVICE DATABASE SETUP (PostgreSQL)
+-- Port: 3005 - Notifications and activity posts
+-- =====================================================
+
+-- Create database
+-- CREATE DATABASE club_management_notify;
+-- \c club_management_notify;
+
+-- Notifications (covers US015, US034-US035, US043)
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL, -- References users from Auth Service
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    data JSONB DEFAULT '{}',
+    read_at TIMESTAMP,
+    sent_via_email BOOLEAN DEFAULT FALSE,
+    email_sent_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Activity posts (covers US042-US043)
+CREATE TABLE activity_posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    club_id VARCHAR(255) NOT NULL, -- References clubs from Club Service
+    author_id UUID NOT NULL, -- References users from Auth Service
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    attachments JSONB DEFAULT '[]',
+    visibility VARCHAR(20) DEFAULT 'members' CHECK(visibility IN ('members', 'admins')),
+    pinned BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Activity post interactions
+CREATE TABLE activity_post_interactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID NOT NULL REFERENCES activity_posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL, -- References users from Auth Service
+    interaction_type VARCHAR(20) NOT NULL CHECK(interaction_type IN ('read', 'like', 'comment')),
+    comment_text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, user_id, interaction_type)
+);
+
 -- Indexes for Notification Service
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_type ON notifications(type);
 CREATE INDEX idx_notifications_read_at ON notifications(read_at);
 CREATE INDEX idx_activity_posts_club_id ON activity_posts(club_id);
 CREATE INDEX idx_activity_posts_author_id ON activity_posts(author_id);
-CREATE INDEX idx_activity_post_interactions_post_id ON activity_post_interactions(post_id); 
+CREATE INDEX idx_activity_post_interactions_post_id ON activity_post_interactions(post_id);

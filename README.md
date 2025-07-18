@@ -1,4 +1,65 @@
-# Club Management System
+# Cl## 📖 Documentation
+
+- **[📋 Complete Developer Guide](./COMPLETE_DEVELOPER_GUIDE.md)** - **COMPLETE SETUP GUIDE** for fresh OS installation with all steps from prerequisites to production
+- **[🔄 PM2 Process Management](./PM2_GUIDE.md)** - Detailed PM2 usage and management
+- **[✅ Setup Summary](./PM2_SETUP_COMPLETE.md)** - Quick reference after setupnagement System
+
+A comprehensive microservices-based club management platform built with Node.js, Express.js, and Next.js.
+
+## � Documentation
+
+- **[�🚀 Developer Setup Guide](./DEVELOPER_SETUP_GUIDE.md)** - Complete setup guide for fresh OS installation
+- **[🔄 PM2 Process Management](./PM2_GUIDE.md)** - Detailed PM2 usage and management
+- **[✅ Setup Complete](./PM2_SETUP_COMPLETE.md)** - Quick reference after setup
+
+## 🚀 Quick Start (After Setup)
+
+### Prerequisites Installed
+- Node.js 18+ and npm
+- PostgreSQL and/or MongoDB
+- Git and PM2
+
+### One-Command Start
+```bash
+# If already set up, just start all services
+npm run dev
+
+# Check service status
+npm run dev:status
+
+# View logs
+npm run dev:logs
+
+# Monitor services
+npm run dev:monit
+```
+
+### Available Services
+- **Frontend** (Next.js) - http://localhost:3000
+- **Auth Service** - http://localhost:3001
+- **Club Service** - http://localhost:3002  
+- **Event Service** - http://localhost:3003
+- **Finance Service** - http://localhost:3004
+- **Notify Service** - http://localhost:3005
+- **User Service** - http://localhost:3006
+
+### Management Commands
+```bash
+# Development
+npm run dev              # Start all services
+npm run dev:stop         # Stop all services
+npm run dev:restart      # Restart all services
+npm run dev:logs         # View logs
+npm run dev:status       # Check status
+npm run dev:monit        # Monitoring dashboard
+
+# Production
+npm start                # Start in production mode
+npm run health:check     # Comprehensive health check
+npm run health:watch     # Continuous health monitoring
+```
+
+**🆕 New to the project?** See the **[Complete Developer Guide](./COMPLETE_DEVELOPER_GUIDE.md)** for step-by-step setup instructions from scratch.
 
 ## 🧱 1. Tổng Quan Kiến Trúc & Cấu Trúc Thư Mục
 
