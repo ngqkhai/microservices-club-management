@@ -3,7 +3,7 @@ services:
   # Frontend Service
   frontend:
     build:
-      context: ./newfrontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: club_management_frontend
     environment:

@@ -1,0 +1,16 @@
+{
+  "env": {
+    "NEXT_PUBLIC_API_BASE_URL": "https://your-api-gateway-url.com"
+  },
+  "functions": {
+    "app/**": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://your-api-gateway-url.com/api/$1"
+    }
+  ]
+}
