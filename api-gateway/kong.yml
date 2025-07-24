@@ -338,13 +338,15 @@ plugins:
         - PUT
         - DELETE
         - OPTIONS
+        - PATCH
+        - HEAD
       headers:
-        - Accept
-        - Authorization
-        - Content-Type
-        - X-Requested-With
+        - "*"
+      exposed_headers:
+        - "*"
       credentials: true
       max_age: 3600
+      preflight_continue: false
     tags: [global, cors]
     
   # Global rate limiting (DISABLED)
