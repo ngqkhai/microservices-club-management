@@ -5,23 +5,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Clock, Users, ArrowRight } from "lucide-react"
+import { Clock, Users, ArrowRight, MapPin } from "lucide-react"
 import Link from "next/link"
-
-interface RecruitmentCampaign {
-  campaign_id: string
-  club_id: string
-  club_name: string
-  title: string
-  deadline: string
-  logo_url: string
-}
+import { Campaign } from "@/services/campaign.service"
 
 interface RecruitmentBannerProps {
-  campaigns: RecruitmentCampaign[]
+  campaigns: Campaign[]
+  onApply?: (campaign: Campaign) => void
 }
 
-export function RecruitmentBanner({ campaigns }: RecruitmentBannerProps) {
+export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps) {
   const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
@@ -29,7 +22,7 @@ export function RecruitmentBanner({ campaigns }: RecruitmentBannerProps) {
       const newTimeLeft: { [key: string]: string } = {}
 
       campaigns.forEach((campaign) => {
-        const deadline = new Date(campaign.deadline)
+        const deadline = new Date(campaign.end_date)
         const now = new Date()
         const difference = deadline.getTime() - now.getTime()
 
@@ -39,12 +32,12 @@ export function RecruitmentBanner({ campaigns }: RecruitmentBannerProps) {
           const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
 
           if (days > 0) {
-            newTimeLeft[campaign.campaign_id] = `${days}d ${hours}h ${minutes}m`
+            newTimeLeft[campaign.id] = `${days} ngày ${hours} giờ`
           } else {
-            newTimeLeft[campaign.campaign_id] = `${hours}h ${minutes}m`
+            newTimeLeft[campaign.id] = `${hours} giờ ${minutes} phút`
           }
         } else {
-          newTimeLeft[campaign.campaign_id] = "Đã hết hạn"
+          newTimeLeft[campaign.id] = "Đã hết hạn"
         }
       })
 
@@ -82,12 +75,12 @@ export function RecruitmentBanner({ campaigns }: RecruitmentBannerProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {campaigns.map((campaign) => (
-          <Card key={campaign.campaign_id} className="border-l-4 border-l-blue-600 hover:shadow-lg transition-shadow">
+          <Card key={campaign.id} className="border-l-4 border-l-blue-600 hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-start space-x-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={campaign.logo_url || "/placeholder.svg"} alt={campaign.club_name} />
-                  <AvatarFallback className="bg-blue-600 text-white">{getInitials(campaign.club_name)}</AvatarFallback>
+                  <AvatarImage src="/placeholder.svg" alt={campaign.club_name || "Club"} />
+                  <AvatarFallback className="bg-blue-600 text-white">{getInitials(campaign.club_name || "Club")}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 line-clamp-1">{campaign.club_name}</h3>
@@ -97,18 +90,30 @@ export function RecruitmentBanner({ campaigns }: RecruitmentBannerProps) {
                     <div className="flex items-center text-sm">
                       <Clock className="h-4 w-4 mr-1 text-red-500" />
                       <span
-                        className={`font-medium ${timeLeft[campaign.campaign_id] === "Đã hết hạn" ? "text-red-600" : "text-red-500"}`}
+                        className={`font-medium ${timeLeft[campaign.id] === "Đã hết hạn" ? "text-red-600" : "text-red-500"}`}
                       >
-                        {timeLeft[campaign.campaign_id] || "Đang tính..."}
+                        {timeLeft[campaign.id] || "Đang tính..."}
                       </span>
                     </div>
 
-                    <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
-                      <Link href={`/clubs/${campaign.club_id}?apply=true`}>
+                    {onApply ? (
+                      <Button 
+                        onClick={() => onApply(campaign)}
+                        disabled={campaign.status !== "published"}
+                        size="sm" 
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
                         Ứng tuyển
                         <ArrowRight className="h-3 w-3 ml-1" />
-                      </Link>
-                    </Button>
+                      </Button>
+                    ) : (
+                      <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Link href={`/campaigns/${campaign.id}`}>
+                          Xem chi tiết
+                          <ArrowRight className="h-3 w-3 ml-1" />
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -75,13 +75,43 @@ export const config = {
     
     // Campaign endpoints
     campaigns: {
+      // Public endpoints
       list: '/api/campaigns',
       published: '/api/campaigns/published',
       clubPublished: (clubId: string) => `/api/campaigns/clubs/${clubId}/published`,
       detail: (id: string) => `/api/campaigns/${id}`,
+      
+      // User application endpoints
+      apply: (id: string) => `/api/campaigns/${id}/apply`,
+      applicationDetail: (campaignId: string, applicationId: string) => `/api/campaigns/${campaignId}/applications/${applicationId}`,
+      userApplications: (userId: string) => `/api/users/${userId}/applications`,
+      
+      // Club manager endpoints
+      createForClub: (clubId: string) => `/api/clubs/${clubId}/campaigns`,
+      clubCampaigns: (clubId: string) => `/api/clubs/${clubId}/campaigns`,
+      clubCampaignDetail: (clubId: string, campaignId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}`,
+      
+      // Campaign status management
+      publishCampaign: (clubId: string, campaignId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/publish`,
+      pauseCampaign: (clubId: string, campaignId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/pause`,
+      resumeCampaign: (clubId: string, campaignId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/resume`,
+      completeCampaign: (clubId: string, campaignId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/complete`,
+      
+      // Application management
+      campaignApplications: (clubId: string, campaignId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/applications`,
+      campaignApplicationDetail: (clubId: string, campaignId: string, applicationId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/applications/${applicationId}`,
+      updateApplicationStatus: (clubId: string, campaignId: string, applicationId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/applications/${applicationId}/status`,
+      approveApplication: (clubId: string, campaignId: string, applicationId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/applications/${applicationId}/approve`,
+      rejectApplication: (clubId: string, campaignId: string, applicationId: string) => `/api/clubs/${clubId}/campaigns/${campaignId}/applications/${applicationId}/reject`,
+      
+      // Simplified application management
+      simplifiedUpdateStatus: (clubId: string, applicationId: string) => `/api/clubs/${clubId}/applications/${applicationId}/status`,
+      simplifiedApprove: (clubId: string, applicationId: string) => `/api/clubs/${clubId}/applications/${applicationId}/approve`,
+      simplifiedReject: (clubId: string, applicationId: string) => `/api/clubs/${clubId}/applications/${applicationId}/reject`,
+      
+      // Legacy endpoints (for backward compatibility)
       create: '/api/campaigns',
       update: (id: string) => `/api/campaigns/${id}`,
-      apply: (id: string) => `/api/campaigns/${id}/apply`,
       applications: (id: string) => `/api/campaigns/${id}/applications`,
       myApplications: '/api/campaigns/applications/my',
     },

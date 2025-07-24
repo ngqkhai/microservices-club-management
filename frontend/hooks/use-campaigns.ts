@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { campaignService, Campaign } from '@/services/campaign.service';
+import { campaignService, Campaign, CampaignApplication, PaginatedResponse } from '@/services/campaign.service';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -7,18 +7,24 @@ import { useToast } from '@/hooks/use-toast';
  */
 export function useCampaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [pagination, setPagination] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const loadPublishedCampaigns = useCallback(async (limit?: number) => {
+  const loadPublishedCampaigns = useCallback(async (params?: {
+    page?: number;
+    limit?: number;
+    club_id?: string;
+  }) => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await campaignService.getPublishedCampaigns(limit);
-      if (response.success) {
-        setCampaigns(response.data || []);
+      const response = await campaignService.getPublishedCampaigns(params);
+      if (response.success && response.data) {
+        setCampaigns(response.data.data || []);
+        setPagination(response.data.pagination);
       } else {
         throw new Error(response.message || 'Failed to load campaigns');
       }
@@ -37,6 +43,7 @@ export function useCampaigns() {
       
       // Set empty array for graceful degradation
       setCampaigns([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
@@ -44,6 +51,7 @@ export function useCampaigns() {
 
   return {
     campaigns,
+    pagination,
     loading,
     error,
     loadPublishedCampaigns,
@@ -56,6 +64,7 @@ export function useCampaigns() {
  */
 export function useClubCampaigns(clubId: string) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [pagination, setPagination] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -68,8 +77,9 @@ export function useClubCampaigns(clubId: string) {
     
     try {
       const response = await campaignService.getClubPublishedCampaigns(clubId);
-      if (response.success) {
-        setCampaigns(response.data || []);
+      if (response.success && response.data) {
+        setCampaigns(response.data.data || []);
+        setPagination(response.data.pagination);
       } else {
         throw new Error(response.message || 'Failed to load club campaigns');
       }
@@ -88,6 +98,7 @@ export function useClubCampaigns(clubId: string) {
       
       // Set empty array for graceful degradation
       setCampaigns([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
@@ -100,8 +111,174 @@ export function useClubCampaigns(clubId: string) {
 
   return {
     campaigns,
+    pagination,
     loading,
     error,
     reload: loadClubCampaigns,
+  };
+}
+
+/**
+ * Hook for managing user applications
+ */
+export function useUserApplications(userId: string) {
+  const [applications, setApplications] = useState<CampaignApplication[]>([]);
+  const [pagination, setPagination] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const loadApplications = useCallback(async (params?: {
+    page?: number;
+    limit?: number;
+    status?: 'pending' | 'approved' | 'rejected';
+  }) => {
+    if (!userId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await campaignService.getUserApplications(userId, params);
+      if (response.success && response.data) {
+        setApplications(response.data.data || []);
+        setPagination(response.data.pagination);
+      } else {
+        throw new Error(response.message || 'Failed to load applications');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to load applications';
+      setError(errorMessage);
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      
+      setApplications([]);
+      setPagination(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, toast]);
+
+  const applyToCampaign = useCallback(async (
+    campaignId: string,
+    applicationData: {
+      application_message?: string;
+      application_answers: Record<string, string>;
+    }
+  ) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await campaignService.applyToCampaign(campaignId, applicationData);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Application submitted successfully',
+        });
+        // Reload applications to show the new one
+        await loadApplications();
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Failed to submit application');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to submit application';
+      setError(errorMessage);
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadApplications, toast]);
+
+  const updateApplication = useCallback(async (
+    campaignId: string,
+    applicationId: string,
+    applicationData: {
+      application_message?: string;
+      application_answers: Record<string, string>;
+    }
+  ) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await campaignService.updateApplication(campaignId, applicationId, applicationData);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Application updated successfully',
+        });
+        // Reload applications to show the updated one
+        await loadApplications();
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Failed to update application');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to update application';
+      setError(errorMessage);
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadApplications, toast]);
+
+  const withdrawApplication = useCallback(async (campaignId: string, applicationId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await campaignService.withdrawApplication(campaignId, applicationId);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Application withdrawn successfully',
+        });
+        // Reload applications to remove the withdrawn one
+        await loadApplications();
+      } else {
+        throw new Error(response.message || 'Failed to withdraw application');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to withdraw application';
+      setError(errorMessage);
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadApplications, toast]);
+
+  return {
+    applications,
+    pagination,
+    loading,
+    error,
+    loadApplications,
+    applyToCampaign,
+    updateApplication,
+    withdrawApplication,
   };
 }
