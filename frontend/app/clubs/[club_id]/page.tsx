@@ -46,12 +46,26 @@ const transformEventForCard = (apiEvent: ApiEvent): any => {
 // Transform API recruitment to component recruitment
 const transformRecruitmentForCard = (apiRecruitment: ApiRecruitment): any => {
   return {
-    recruitment_id: apiRecruitment.id,
+    id: apiRecruitment.id,
+    club_id: '', // Not available in Recruitment interface
+    club_name: '', // Not available in Recruitment interface  
     title: apiRecruitment.title,
     description: apiRecruitment.description,
-    criteria: apiRecruitment.requirements || [],
-    deadline: apiRecruitment.end_date,
-    status: apiRecruitment.status,
+    requirements: apiRecruitment.requirements || [],
+    application_questions: [],
+    start_date: apiRecruitment.start_date,
+    end_date: apiRecruitment.end_date,
+    max_applications: apiRecruitment.max_applications,
+    status: apiRecruitment.status === 'active' ? 'published' : 'draft',
+    statistics: {
+      total_applications: apiRecruitment.applications_count || 0,
+      approved_applications: 0,
+      rejected_applications: 0,
+      pending_applications: apiRecruitment.applications_count || 0,
+      last_updated: new Date().toISOString()
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }
 }
 
@@ -149,6 +163,7 @@ export default function ClubDetailPage() {
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openCampaignDetail, setOpenCampaignDetail] = useState<string | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null); // Track selected campaign for application
   
   // Use the campaigns hook for cleaner data management
   const { campaigns: clubCampaigns, loading: campaignsLoading, error: campaignsError } = useClubCampaigns(clubId);
@@ -227,7 +242,13 @@ export default function ClubDetailPage() {
   }
 
   const handleCloseApplication = () => {
+    setSelectedCampaign(null)
     router.replace(`/clubs/${clubId}`)
+  }
+
+  const handleApplyToCampaign = (campaign: any) => {
+    setSelectedCampaign(campaign)
+    router.push(`/clubs/${clubId}?apply=true`)
   }
 
   if (isLoading) {
@@ -485,8 +506,8 @@ export default function ClubDetailPage() {
                     {club.current_recruitments.map((recruitment) => (
                       <RecruitmentCard
                         key={recruitment.id}
-                        recruitment={transformRecruitmentForCard(recruitment)}
-                        onApply={() => router.push(`/clubs/${clubId}?apply=true`)}
+                        campaign={transformRecruitmentForCard(recruitment)}
+                        onApply={(campaign) => handleApplyToCampaign(campaign)}
                       />
                     ))}
                   </div>
@@ -556,7 +577,16 @@ export default function ClubDetailPage() {
       </div>
 
       {/* Application Form Modal */}
-      {showApplicationForm && <ApplicationForm clubId={clubId} clubName={club.name} onClose={handleCloseApplication} />}
+      {showApplicationForm && selectedCampaign && (
+        <ApplicationForm 
+          campaign={selectedCampaign} 
+          onClose={handleCloseApplication}
+          onSuccess={() => {
+            setSelectedCampaign(null)
+            router.replace(`/clubs/${clubId}`)
+          }}
+        />
+      )}
     </div>
   )
 }

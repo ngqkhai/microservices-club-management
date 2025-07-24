@@ -44,14 +44,6 @@ export default function ClubsPage() {
   // Use campaigns hook for recruitment data
   const { campaigns: activeRecruitments, loading: recruitmentsLoading, error: recruitmentsError, loadPublishedCampaigns } = useCampaigns();
 
-  // Debug logging
-  console.log('Campaigns debug:', {
-    activeRecruitments,
-    recruitmentsLoading,
-    recruitmentsError,
-    count: activeRecruitments.length
-  });
-
   const campaignsPerPage = 3;
   const totalRecruitmentPages = Math.ceil(activeRecruitments.length / campaignsPerPage);
   const pagedRecruitments = useMemo(() => {

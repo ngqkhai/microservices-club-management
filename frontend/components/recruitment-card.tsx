@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +14,23 @@ interface RecruitmentCardProps {
 }
 
 export function RecruitmentCard({ campaign, onApply, showClubName = true }: RecruitmentCardProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Add null check for campaign
+  if (!campaign) {
+    return null
+  }
+
   const formatDate = (dateString: string) => {
+    if (!isClient) {
+      // Return a simple format during SSR to avoid locale mismatches
+      const date = new Date(dateString)
+      return date.toISOString().split('T')[0] // YYYY-MM-DD format
+    }
     const date = new Date(dateString)
     return date.toLocaleDateString("vi-VN", {
       year: "numeric",
@@ -23,6 +40,7 @@ export function RecruitmentCard({ campaign, onApply, showClubName = true }: Recr
   }
 
   const isDeadlineSoon = () => {
+    if (!isClient) return false
     const deadline = new Date(campaign.end_date)
     const now = new Date()
     const diffTime = deadline.getTime() - now.getTime()
@@ -31,6 +49,7 @@ export function RecruitmentCard({ campaign, onApply, showClubName = true }: Recr
   }
 
   const isExpired = () => {
+    if (!isClient) return false
     const deadline = new Date(campaign.end_date)
     const now = new Date()
     return deadline.getTime() < now.getTime()
@@ -41,7 +60,8 @@ export function RecruitmentCard({ campaign, onApply, showClubName = true }: Recr
       return <Badge variant="secondary" className="bg-gray-500">Đã hết hạn</Badge>
     }
     
-    switch (campaign.status) {
+    const status = campaign.status || 'draft';
+    switch (status) {
       case "published":
         return <Badge variant="default" className="bg-green-600">Đang mở</Badge>
       case "paused":
@@ -55,9 +75,9 @@ export function RecruitmentCard({ campaign, onApply, showClubName = true }: Recr
     }
   }
 
-  const canApply = campaign.status === "published" && !isExpired()
+  const canApply = (campaign.status || 'draft') === "published" && !isExpired()
   const applicationProgress = campaign.max_applications 
-    ? (campaign.statistics.total_applications / campaign.max_applications) * 100 
+    ? ((campaign.statistics?.total_applications || 0) / campaign.max_applications) * 100 
     : 0
 
   return (
@@ -108,7 +128,7 @@ export function RecruitmentCard({ campaign, onApply, showClubName = true }: Recr
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Số lượng ứng tuyển:</span>
                 <span className="font-medium">
-                  {campaign.statistics.total_applications}/{campaign.max_applications}
+                  {campaign.statistics?.total_applications || 0}/{campaign.max_applications}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -149,8 +169,8 @@ export function RecruitmentCard({ campaign, onApply, showClubName = true }: Recr
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
             >
               {isExpired() ? "Đã hết hạn" : 
-               campaign.status === "paused" ? "Tạm dừng" :
-               campaign.max_applications && campaign.statistics.total_applications >= campaign.max_applications ? "Đã đầy" :
+               (campaign.status || 'draft') === "paused" ? "Tạm dừng" :
+               campaign.max_applications && (campaign.statistics?.total_applications || 0) >= campaign.max_applications ? "Đã đầy" :
                "Ứng tuyển"}
             </Button>
           </div>

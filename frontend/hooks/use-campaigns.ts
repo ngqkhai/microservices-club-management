@@ -22,6 +22,7 @@ export function useCampaigns() {
     
     try {
       const response = await campaignService.getPublishedCampaigns(params);
+      
       if (response.success && response.data) {
         // Handle the actual API response structure where campaigns are directly in response.data
         if (Array.isArray(response.data)) {

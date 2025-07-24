@@ -16,8 +16,16 @@ interface RecruitmentBannerProps {
 
 export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps) {
   const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({})
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    // Set isClient to true after component mounts (client-side only)
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isClient) return // Don't run countdown until we're on the client
+
     const updateCountdowns = () => {
       const newTimeLeft: { [key: string]: string } = {}
 
@@ -48,7 +56,7 @@ export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps
     const interval = setInterval(updateCountdowns, 60000) // Update every minute
 
     return () => clearInterval(interval)
-  }, [campaigns])
+  }, [campaigns, isClient])
 
   const getInitials = (name: string) => {
     return name
@@ -92,7 +100,7 @@ export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps
                       <span
                         className={`font-medium ${timeLeft[campaign.id] === "Đã hết hạn" ? "text-red-600" : "text-red-500"}`}
                       >
-                        {timeLeft[campaign.id] || "Đang tính..."}
+                        {isClient ? (timeLeft[campaign.id] || "Đang tính...") : "Đang tính..."}
                       </span>
                     </div>
 
