@@ -149,14 +149,6 @@ class CampaignService {
       console.log('✅ CampaignService.applyToCampaign success:', response);
       return response;
     } catch (error: any) {
-      console.error('❌ CampaignService.applyToCampaign error:', {
-        error,
-        errorMessage: error?.message,
-        errorStatus: error?.status,
-        errorResponse: error?.response,
-        campaignId,
-        applicationData
-      });
       throw error;
     }
   }

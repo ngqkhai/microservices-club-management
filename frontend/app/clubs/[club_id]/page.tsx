@@ -52,7 +52,6 @@ const transformEventForCard = (apiEvent: ApiEvent): any => {
 // Transform API recruitment to component recruitment
 const transformRecruitmentForCard = (apiRecruitment: ApiRecruitment): any => {
   console.log('🔄 transformRecruitmentForCard called with:', apiRecruitment);
-  console.log('🔄 Raw API application_questions:', apiRecruitment.application_questions);
   
   // Properly map status from API to component expected values
   const mapStatus = (apiStatus: string): 'draft' | 'published' | 'paused' | 'completed' => {

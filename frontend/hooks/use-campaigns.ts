@@ -216,13 +216,6 @@ export function useUserApplications(userId: string) {
         throw new Error(response.message || 'Không thể gửi đơn ứng tuyển');
       }
     } catch (err: any) {
-      console.error('💥 Hook applyToCampaign catch block:', {
-        err,
-        errorMessage: err?.message,
-        errorStatus: err?.status,
-        errorName: err?.name,
-        errorStack: err?.stack
-      });
       
       let errorMessage = err.message || 'Không thể gửi đơn ứng tuyển';
       

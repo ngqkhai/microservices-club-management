@@ -264,11 +264,13 @@ Content-Type: application/json
 **Request Body**:
 ```json
 {
-  "application_message": "I am passionate about technology and would love to contribute to the club's activities.",
-  "application_answers": {
-    "q1": "I am familiar with JavaScript, Python, and React. I have built several web applications and contributed to open source projects.",
-    "q2": "I want to join the tech club to learn new technologies, collaborate on projects, and connect with like-minded peers."
-  }
+  "answers": [
+    {
+      "question_id": "string",
+      "answer": "string|array"
+    }
+  ],
+  "application_message": "string (optional)"
 }
 ```
 

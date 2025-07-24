@@ -217,20 +217,6 @@ export function ApplicationForm({
       onSuccess?.()
       onClose()
     } catch (error: any) {
-      // Enhanced error logging for debugging
-      console.error('Application submission failed:', {
-        error,
-        errorMessage: error?.message,
-        errorStatus: error?.status,
-        errorStack: error?.stack,
-        campaignId: campaign.id,
-        formData: formData,
-        isEditing,
-        userId: user?.id,
-        errorType: typeof error,
-        errorKeys: Object.keys(error || {})
-      });
-      
       // Show user-friendly error message
       toast({
         title: 'Lỗi gửi đơn ứng tuyển',
