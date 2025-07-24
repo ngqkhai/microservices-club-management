@@ -154,12 +154,3 @@ export const useFeaturedClubsStore = create<FeaturedClubsState>((set, get) => ({
     }));
   }
 }));
-
-// Clear cache on window reload
-if (typeof window !== 'undefined') {
-  const handleBeforeUnload = () => {
-    useFeaturedClubsStore.getState().clearCache();
-  };
-  
-  window.addEventListener('beforeunload', handleBeforeUnload);
-}

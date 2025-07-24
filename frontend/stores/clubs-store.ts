@@ -262,12 +262,3 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
     });
   }
 }));
-
-// Clear cache on window reload
-if (typeof window !== 'undefined') {
-  const handleBeforeUnload = () => {
-    useClubsStore.getState().clearCache();
-  };
-  
-  window.addEventListener('beforeunload', handleBeforeUnload);
-}
