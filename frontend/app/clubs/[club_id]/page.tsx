@@ -187,10 +187,19 @@ export default function ClubDetailPage() {
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null); // Track selected campaign for application
+  const [relatedClubs, setRelatedClubs] = useState<any[]>([])
+  const [isLoadingRelated, setIsLoadingRelated] = useState(false)
 
   useEffect(() => {
     fetchClubData()
   }, [clubId])
+
+  // Fetch related clubs when club data is loaded
+  useEffect(() => {
+    if (club && club.category) {
+      fetchRelatedClubs()
+    }
+  }, [club])
 
   const fetchClubData = async () => {
     setIsLoading(true)
@@ -262,6 +271,29 @@ export default function ClubDetailPage() {
       setError('Failed to fetch club data. Please try again later.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchRelatedClubs = async () => {
+    if (!club?.category) return;
+    
+    setIsLoadingRelated(true);
+    try {
+      const response = await clubService.getClubs({
+        category: club.category,
+        limit: 5,
+        page: 1
+      });
+      
+      if (response.success && response.data) {
+        // Filter out the current club from related clubs
+        const filtered = response.data.results.filter(c => c.id !== club.id);
+        setRelatedClubs(filtered);
+      }
+    } catch (error) {
+      console.error('Error fetching related clubs:', error);
+    } finally {
+      setIsLoadingRelated(false);
     }
   }
 
@@ -697,26 +729,41 @@ export default function ClubDetailPage() {
                 <CardDescription>Bạn có thể quan tâm</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">CLB Nghệ thuật</p>
-                      <p className="text-xs text-gray-500">56 thành viên</p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
+                {isLoadingRelated ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg animate-pulse">
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-20"></div>
+                        </div>
+                        <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">CLB Nhiếp ảnh</p>
-                      <p className="text-xs text-gray-500">38 thành viên</p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
+                ) : relatedClubs.length > 0 ? (
+                  <div className="space-y-3">
+                    {relatedClubs.map((relatedClub) => (
+                      <div key={relatedClub.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{relatedClub.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {relatedClub.member_count || relatedClub.size || 0} thành viên
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/clubs/${relatedClub.id}`}>
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <p className="text-sm">Không có câu lạc bộ tương tự</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -116,7 +116,6 @@ export const useFeaturedClubsStore = create<FeaturedClubsState>((set, get) => ({
         throw new Error(response.message || 'Failed to fetch featured clubs');
       }
     } catch (error) {
-      console.error('Error loading featured clubs:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       set((state) => ({
