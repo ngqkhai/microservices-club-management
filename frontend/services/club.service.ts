@@ -13,6 +13,7 @@ export interface Club {
   contact_email?: string;
   contact_phone?: string;
   logo_url?: string;
+  cover_url?: string;
   website_url?: string;
   social_links?: {
     facebook?: string;
@@ -125,6 +126,7 @@ export interface ClubDetail {
   contact_email?: string;
   contact_phone?: string;
   logo_url?: string;
+  cover_url?: string;
   website_url?: string;
   social_links?: {
     facebook?: string;
@@ -189,6 +191,7 @@ export interface CreateClubRequest {
   description: string;
   category: string;
   logo?: string;
+  cover_url?: string;
   banner?: string;
   maxMembers?: number;
   isPublic?: boolean;
@@ -257,7 +260,8 @@ class ClubService {
    * Get detailed club information by ID
    */
   async getClubDetail(id: string): Promise<ApiResponse<ClubDetail>> {
-    return api.get<ClubDetail>(config.endpoints.clubs.detail(id), { skipAuth: true });
+    const response = await api.get<ClubDetail>(config.endpoints.clubs.detail(id), { skipAuth: true })
+    return response;
   }
 
   /**

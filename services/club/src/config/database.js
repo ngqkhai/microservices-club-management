@@ -45,6 +45,16 @@ const clubSchema = new mongoose.Schema({
       message: 'Logo URL must be a valid HTTP/HTTPS URL'
     }
   },
+  cover_url: {
+    type: String,
+    maxLength: 500,
+    validate: {
+      validator: function(v) {
+        return !v || /^https?:\/\/.+/.test(v);
+      },
+      message: 'Cover URL must be a valid HTTP/HTTPS URL'
+    }
+  },
   website_url: { 
     type: String,
     maxLength: 500,

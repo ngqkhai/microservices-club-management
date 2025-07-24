@@ -1,13 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-interface Club {
-  name: string
-  logo_url?: string
-  cover_url?: string
-}
+import { Club, ClubDetail  } from "@/services/club.service"
 
 interface ClubHeaderProps {
-  club: Club
+  club: Club | ClubDetail
 }
 
 export function ClubHeader({ club }: ClubHeaderProps) {
