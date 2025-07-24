@@ -24,6 +24,16 @@ import { ApplicationForm } from "@/components/application-form"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import { clubService, ClubDetail, Event as ApiEvent, Recruitment as ApiRecruitment } from "@/services/club.service"
+import { campaignService } from "@/services/campaign.service"
+
+// Data validation utilities
+const validateRecruitmentData = (recruitment: ApiRecruitment): boolean => {
+  return !!(recruitment.id && recruitment.title && recruitment.start_date && recruitment.end_date);
+};
+
+const validateEventData = (event: ApiEvent): boolean => {
+  return !!(event.id && event.title);
+};
 
 // Transform API event to component event
 const transformEventForCard = (apiEvent: ApiEvent): any => {
@@ -41,28 +51,126 @@ const transformEventForCard = (apiEvent: ApiEvent): any => {
 
 // Transform API recruitment to component recruitment
 const transformRecruitmentForCard = (apiRecruitment: ApiRecruitment): any => {
+  console.log('🔄 transformRecruitmentForCard called with:', apiRecruitment);
+  console.log('🔄 Raw API application_questions:', apiRecruitment.application_questions);
+  
+  // Properly map status from API to component expected values
+  const mapStatus = (apiStatus: string): 'draft' | 'published' | 'paused' | 'completed' => {
+    switch (apiStatus.toLowerCase()) {
+      case 'active':
+      case 'published':
+        return 'published';
+      case 'paused':
+      case 'suspended':
+        return 'paused';
+      case 'completed':
+      case 'closed':
+        return 'completed';
+      case 'draft':
+      default:
+        return 'draft';
+    }
+  };
+
+  // Transform application questions - handle both string array and object array
+  const transformApplicationQuestions = (questions?: string[] | any[]) => {
+    console.log('🔍 Original application_questions:', questions);
+    console.log('🔍 Type of application_questions:', typeof questions, Array.isArray(questions));
+    
+    if (!questions || !Array.isArray(questions)) {
+      console.log('❌ No questions or not an array');
+      return [];
+    }
+    
+    // If questions are already objects (from API), use them directly
+    if (questions.length > 0 && typeof questions[0] === 'object' && questions[0].id) {
+      console.log('✅ Questions are objects, using directly:', questions);
+      return questions.map(q => ({
+        id: q.id,
+        question: q.question,
+        type: q.type || 'textarea',
+        required: q.required !== undefined ? q.required : true,
+        max_length: q.max_length || 500,
+        options: q.options || []
+      }));
+    }
+    
+    // If questions are strings, transform them
+    if (typeof questions[0] === 'string') {
+      console.log('🔄 Questions are strings, transforming:', questions);
+      return questions.map((question, index) => ({
+        id: `q_${index}`,
+        question: question,
+        type: 'textarea' as const,
+        required: true,
+        max_length: 500,
+        options: []
+      }));
+    }
+    
+    console.log('❌ Unknown question format');
+    return [];
+  };
+
   return {
     id: apiRecruitment.id,
-    club_id: '', // Not available in Recruitment interface
-    club_name: '', // Not available in Recruitment interface  
+    club_id: apiRecruitment.club_id,
+    club_name: apiRecruitment.club_name,
     title: apiRecruitment.title,
     description: apiRecruitment.description,
     requirements: apiRecruitment.requirements || [],
-    application_questions: [],
+    application_questions: transformApplicationQuestions(apiRecruitment.application_questions),
     start_date: apiRecruitment.start_date,
     end_date: apiRecruitment.end_date,
     max_applications: apiRecruitment.max_applications,
-    status: apiRecruitment.status === 'active' ? 'published' : 'draft',
+    status: mapStatus(apiRecruitment.status),
     statistics: {
-      total_applications: apiRecruitment.applications_count || 0,
-      approved_applications: 0,
-      rejected_applications: 0,
-      pending_applications: apiRecruitment.applications_count || 0,
-      last_updated: new Date().toISOString()
+      total_applications: apiRecruitment.statistics?.total_applications || apiRecruitment.applications_count || 0,
+      approved_applications: apiRecruitment.statistics?.approved_applications || 0,
+      rejected_applications: apiRecruitment.statistics?.rejected_applications || 0,
+      pending_applications: apiRecruitment.statistics?.pending_applications || 0,
+      last_updated: apiRecruitment.statistics?.last_updated || apiRecruitment.updated_at || new Date().toISOString(),
     },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
+    created_by: apiRecruitment.created_at ? undefined : undefined, // Preserve original created_by if available
+    created_at: apiRecruitment.created_at,
+    updated_at: apiRecruitment.updated_at || apiRecruitment.created_at,
+    published_at: mapStatus(apiRecruitment.status) === 'published' ? apiRecruitment.updated_at : undefined,
+  };
+
+  // Log the final transformed data
+  const transformedData = {
+    id: apiRecruitment.id,
+    club_id: apiRecruitment.club_id,
+    club_name: apiRecruitment.club_name,
+    title: apiRecruitment.title,
+    description: apiRecruitment.description,
+    requirements: apiRecruitment.requirements || [],
+    application_questions: transformApplicationQuestions(apiRecruitment.application_questions),
+    start_date: apiRecruitment.start_date,
+    end_date: apiRecruitment.end_date,
+    max_applications: apiRecruitment.max_applications,
+    status: mapStatus(apiRecruitment.status),
+    statistics: {
+      total_applications: apiRecruitment.statistics?.total_applications || apiRecruitment.applications_count || 0,
+      approved_applications: apiRecruitment.statistics?.approved_applications || 0,
+      rejected_applications: apiRecruitment.statistics?.rejected_applications || 0,
+      pending_applications: apiRecruitment.statistics?.pending_applications || 0,
+      last_updated: apiRecruitment.statistics?.last_updated || apiRecruitment.updated_at || new Date().toISOString(),
+    },
+    created_by: apiRecruitment.created_at ? undefined : undefined, // Preserve original created_by if available
+    created_at: apiRecruitment.created_at,
+    updated_at: apiRecruitment.updated_at || apiRecruitment.created_at,
+    published_at: mapStatus(apiRecruitment.status) === 'published' ? apiRecruitment.updated_at : undefined,
+  };
+  
+  console.log('🎯 Final transformed recruitment data:', {
+    id: transformedData.id,
+    title: transformedData.title,
+    application_questions_count: transformedData.application_questions?.length || 0,
+    application_questions: transformedData.application_questions
+  });
+  
+  return transformedData;
 }
 
 export default function ClubDetailPage() {
@@ -92,13 +200,67 @@ export default function ClubDetailPage() {
     try {
       const response = await clubService.getClubDetail(clubId)
       if (response.success && response.data) {
-        setClub(response.data)
+        // Validate and sanitize the received data
+        const clubData = response.data;
+        
+        // Ensure required fields exist with fallbacks
+        const sanitizedClub: ClubDetail = {
+          ...clubData,
+          // Ensure arrays are properly initialized
+          current_recruitments: Array.isArray(clubData.current_recruitments) 
+            ? clubData.current_recruitments 
+            : [],
+          upcoming_events: Array.isArray(clubData.upcoming_events) 
+            ? clubData.upcoming_events 
+            : [],
+          published_events: Array.isArray(clubData.published_events) 
+            ? clubData.published_events 
+            : [],
+          // Ensure numeric values
+          member_count: clubData.member_count || clubData.size || 0,
+          total_events: clubData.total_events || 0,
+          total_recruitments: clubData.total_recruitments || 0,
+          active_recruitments: clubData.active_recruitments || 0,
+          // Ensure settings object exists
+          settings: clubData.settings || {
+            is_public: true,
+            requires_approval: false,
+            max_members: undefined,
+          }
+        };
+        
+        setClub(sanitizedClub);
+        
+        // Log for debugging in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Club data loaded:', {
+            id: sanitizedClub.id,
+            name: sanitizedClub.name,
+            recruitments_count: sanitizedClub.current_recruitments?.length || 0,
+            events_count: sanitizedClub.upcoming_events?.length || 0,
+            member_count: sanitizedClub.member_count
+          });
+          
+          // Log detailed recruitment data from API
+          console.log('🔍 Raw current_recruitments from API:', sanitizedClub.current_recruitments);
+          if (sanitizedClub.current_recruitments && sanitizedClub.current_recruitments.length > 0) {
+            sanitizedClub.current_recruitments.forEach((recruitment, index) => {
+              console.log(`🔍 Recruitment ${index + 1}:`, {
+                id: recruitment.id,
+                title: recruitment.title,
+                application_questions: recruitment.application_questions,
+                application_questions_type: typeof recruitment.application_questions,
+                application_questions_length: recruitment.application_questions?.length || 0
+              });
+            });
+          }
+        }
       } else {
         setError(response.message || 'Failed to fetch club data')
       }
     } catch (error) {
       console.error('Error fetching club data:', error)
-      setError('Failed to fetch club data')
+      setError('Failed to fetch club data. Please try again later.')
     } finally {
       setIsLoading(false)
     }
@@ -159,9 +321,100 @@ export default function ClubDetailPage() {
     router.replace(`/clubs/${clubId}`)
   }
 
-  const handleApplyToCampaign = (campaign: any) => {
-    setSelectedCampaign(campaign)
-    router.push(`/clubs/${clubId}?apply=true`)
+  const handleApplyToCampaign = async (campaign: any) => {
+    console.log('🚀 handleApplyToCampaign called with campaign:', campaign);
+    console.log('🔍 Campaign application_questions:', {
+      count: campaign.application_questions?.length || 0,
+      questions: campaign.application_questions
+    });
+    
+    // Check authentication first
+    if (!user) {
+      toast({
+        title: "Yêu cầu đăng nhập",
+        description: "Vui lòng đăng nhập để ứng tuyển.",
+        variant: "destructive",
+      });
+      router.push("/login");
+      return;
+    }
+    
+    // Validate campaign data before proceeding
+    if (!campaign || !campaign.id || !campaign.title) {
+      console.error('❌ Invalid campaign data:', campaign);
+      toast({
+        title: "Lỗi dữ liệu",
+        description: "Thông tin chiến dịch tuyển dụng không hợp lệ. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if campaign is still active and not expired
+    const now = new Date();
+    const endDate = new Date(campaign.end_date);
+    
+    if (endDate < now) {
+      toast({
+        title: "Chiến dịch đã kết thúc",
+        description: "Chiến dịch tuyển dụng này đã kết thúc. Vui lòng tìm cơ hội khác.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (campaign.status !== 'published') {
+      toast({
+        title: "Chiến dịch không khả dụng",
+        description: "Chiến dịch tuyển dụng này hiện không mở cho ứng tuyển.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if max applications reached
+    if (campaign.max_applications && 
+        campaign.statistics?.total_applications >= campaign.max_applications) {
+      toast({
+        title: "Đã đạt giới hạn ứng tuyển",
+        description: "Chiến dịch này đã nhận đủ số lượng ứng tuyển.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('✅ Campaign validation passed, fetching full campaign details...');
+    
+    try {
+      // Fetch full campaign details to get application_questions
+      const response = await campaignService.getCampaignDetail(campaign.id);
+      
+      if (response.success && response.data) {
+        const fullCampaign = response.data;
+        console.log('🎯 Full campaign details fetched:', fullCampaign);
+        console.log('🎯 Full campaign application_questions:', {
+          count: fullCampaign.application_questions?.length || 0,
+          questions: fullCampaign.application_questions
+        });
+        
+        setSelectedCampaign(fullCampaign);
+        router.push(`/clubs/${clubId}?apply=true`);
+      } else {
+        console.error('❌ Failed to fetch campaign details:', response.message);
+        toast({
+          title: "Lỗi tải dữ liệu",
+          description: "Không thể tải chi tiết chiến dịch. Vui lòng thử lại.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error fetching campaign details:', error);
+      toast({
+        title: "Lỗi",
+        description: "Có lỗi xảy ra khi tải thông tin chiến dịch. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
   }
 
   if (isLoading) {
@@ -334,9 +587,31 @@ export default function ClubDetailPage() {
               <CardContent>
                 {club.upcoming_events && club.upcoming_events.length > 0 ? (
                   <div className="space-y-4">
-                    {club.upcoming_events.map((event) => (
-                      <EventCard key={event.id} event={transformEventForCard(event)} />
-                    ))}
+                    {club.upcoming_events
+                      .filter(validateEventData) // Filter out invalid event data
+                      .map((event) => {
+                        try {
+                          return (
+                            <EventCard 
+                              key={event.id} 
+                              event={transformEventForCard(event)} 
+                            />
+                          );
+                        } catch (error) {
+                          console.error('Error transforming event data:', error, event);
+                          return null; // Skip invalid event data
+                        }
+                      })
+                      .filter(Boolean) // Remove any null values
+                    }
+                    {/* Show message if no valid events after filtering */}
+                    {club.upcoming_events.filter(validateEventData).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Dữ liệu sự kiện không hợp lệ</p>
+                        <p className="text-sm">Vui lòng liên hệ quản trị viên!</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
@@ -360,13 +635,33 @@ export default function ClubDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {club.current_recruitments.map((recruitment) => (
-                      <RecruitmentCard
-                        key={recruitment.id}
-                        campaign={transformRecruitmentForCard(recruitment)}
-                        onApply={(campaign) => handleApplyToCampaign(campaign)}
-                      />
-                    ))}
+                    {club.current_recruitments
+                      .filter(validateRecruitmentData) // Filter out invalid data
+                      .map((recruitment) => {
+                        try {
+                          const transformedCampaign = transformRecruitmentForCard(recruitment);
+                          return (
+                            <RecruitmentCard
+                              key={recruitment.id}
+                              campaign={transformedCampaign}
+                              onApply={(campaign) => handleApplyToCampaign(campaign)}
+                            />
+                          );
+                        } catch (error) {
+                          console.error('Error transforming recruitment data:', error, recruitment);
+                          return null; // Skip invalid recruitment data
+                        }
+                      })
+                      .filter(Boolean) // Remove any null values
+                    }
+                    {/* Show message if no valid recruitments after filtering */}
+                    {club.current_recruitments.filter(validateRecruitmentData).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Hiện tại chưa có chiến dịch tuyển dụng nào</p>
+                        <p className="text-sm">Hãy quay lại sau để xem cơ hội mới!</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -431,14 +726,27 @@ export default function ClubDetailPage() {
 
       {/* Application Form Modal */}
       {showApplicationForm && selectedCampaign && (
-        <ApplicationForm
-          campaign={selectedCampaign}
-          onClose={handleCloseApplication}
-          onSuccess={() => {
-            setSelectedCampaign(null)
-            router.replace(`/clubs/${clubId}`)
-          }}
-        />
+        <>
+          {console.log('🎯 Rendering ApplicationForm with selectedCampaign:', selectedCampaign)}
+          {console.log('🎯 selectedCampaign.application_questions:', selectedCampaign.application_questions)}
+          <ApplicationForm
+            campaign={selectedCampaign}
+            onClose={handleCloseApplication}
+            onSuccess={() => {
+              setSelectedCampaign(null)
+              router.replace(`/clubs/${clubId}`)
+            }}
+          />
+        </>
+      )}
+      
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 bg-black text-white p-2 rounded text-xs max-w-sm">
+          <div>showApplicationForm: {showApplicationForm.toString()}</div>
+          <div>selectedCampaign: {selectedCampaign ? selectedCampaign.id : 'null'}</div>
+          <div>questions count: {selectedCampaign?.application_questions?.length || 0}</div>
+        </div>
       )}
     </div>
   )

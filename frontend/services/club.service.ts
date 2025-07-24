@@ -44,14 +44,34 @@ export interface Club {
  */
 export interface Recruitment {
   id: string;
+  club_id: string;
+  club_name: string;
   title: string;
   description: string;
   requirements: string[];
+  application_questions?: Array<{
+    id: string;
+    question: string;
+    type: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
+    required: boolean;
+    max_length?: number;
+    options?: string[];
+    _id?: string;
+  }>;
   start_date: string;
   end_date: string;
   max_applications: number;
   applications_count: number;
   status: string;
+  statistics?: {
+    total_applications: number;
+    approved_applications: number;
+    rejected_applications: number;
+    pending_applications: number;
+    last_updated?: string;
+  };
+  created_at: string;
+  updated_at?: string;
 }
 
 /**

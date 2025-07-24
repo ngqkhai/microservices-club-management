@@ -1,0 +1,161 @@
+{
+    "success": true,
+    "message": "Published campaigns retrieved successfully",
+    "data": [
+        {
+            "id": "687919639e5274de4c782efb",
+            "club_id": "31d7098fb5074112aad5d607",
+            "club_name": "Câu lạc bộ Và Truyền thông",
+            "title": "Test Application Campaign",
+            "description": "Test campaign for application functionality testing",
+            "requirements": [
+                "Must be a current student",
+                "Available for meetings"
+            ],
+            "application_questions": [
+                {
+                    "id": "name",
+                    "question": "What is your full name?",
+                    "type": "text",
+                    "required": true,
+                    "max_length": 100,
+                    "options": [],
+                    "_id": "687919639e5274de4c782efc"
+                },
+                {
+                    "id": "email",
+                    "question": "What is your email address?",
+                    "type": "text",
+                    "required": true,
+                    "max_length": 100,
+                    "options": [],
+                    "_id": "687919639e5274de4c782efd"
+                },
+                {
+                    "id": "year",
+                    "question": "What is your academic year?",
+                    "type": "select",
+                    "required": true,
+                    "options": [
+                        "Freshman",
+                        "Sophomore",
+                        "Junior",
+                        "Senior",
+                        "Graduate"
+                    ],
+                    "_id": "687919639e5274de4c782efe"
+                },
+                {
+                    "id": "motivation",
+                    "question": "Why do you want to join our club?",
+                    "type": "textarea",
+                    "required": true,
+                    "max_length": 1000,
+                    "options": [],
+                    "_id": "687919639e5274de4c782eff"
+                },
+                {
+                    "id": "skills",
+                    "question": "What skills can you bring to the club?",
+                    "type": "select",
+                    "required": false,
+                    "options": [
+                        "Leadership",
+                        "Communication",
+                        "Technical",
+                        "Creative",
+                        "Organizational"
+                    ],
+                    "_id": "687919639e5274de4c782f00"
+                }
+            ],
+            "start_date": "2025-07-17T00:00:00.000Z",
+            "end_date": "2025-09-15T23:59:59.000Z",
+            "max_applications": 100,
+            "status": "published",
+            "statistics": {
+                "total_applications": 2,
+                "approved_applications": 0,
+                "rejected_applications": 0,
+                "pending_applications": 2,
+                "last_updated": "2025-07-17T17:02:08.241Z"
+            },
+            "created_at": "2025-07-17T15:40:19.072Z",
+            "updated_at": "2025-07-17T17:02:08.241Z"
+        },
+        {
+            "id": "6878763f5c11c3bb76627fe4",
+            "club_id": "78ef1de4458049ed90b7b9ca",
+            "club_name": "Câu lạc bộ Của Thể thao",
+            "title": "Spring 2025 Recruitment Campaign",
+            "description": "Join our amazing club this spring! We're looking for motivated students who want to make a difference.",
+            "requirements": [
+                "Must be a current student",
+                "GPA 3.0 or higher",
+                "Available for weekly meetings"
+            ],
+            "application_questions": [
+                {
+                    "id": "q1_1752725055229",
+                    "question": "What is your full name?",
+                    "type": "text",
+                    "required": true,
+                    "max_length": 100,
+                    "options": [],
+                    "_id": "6878763f5c11c3bb76627fe5"
+                },
+                {
+                    "id": "q2_1752725055229",
+                    "question": "What is your email address?",
+                    "type": "text",
+                    "required": true,
+                    "max_length": 100,
+                    "options": [],
+                    "_id": "6878763f5c11c3bb76627fe6"
+                },
+                {
+                    "id": "q3_1752725055229",
+                    "question": "What is your academic year?",
+                    "type": "select",
+                    "required": true,
+                    "options": [
+                        "Freshman",
+                        "Sophomore",
+                        "Junior",
+                        "Senior",
+                        "Graduate"
+                    ],
+                    "_id": "6878763f5c11c3bb76627fe7"
+                },
+                {
+                    "id": "q4_1752725055229",
+                    "question": "Why do you want to join our club?",
+                    "type": "textarea",
+                    "required": true,
+                    "max_length": 1000,
+                    "options": [],
+                    "_id": "6878763f5c11c3bb76627fe8"
+                }
+            ],
+            "start_date": "2025-07-20T00:00:00.000Z",
+            "end_date": "2025-08-15T23:59:59.000Z",
+            "max_applications": 50,
+            "status": "published",
+            "statistics": {
+                "total_applications": 0,
+                "approved_applications": 0,
+                "rejected_applications": 0,
+                "pending_applications": 0,
+                "last_updated": "2025-07-17T04:04:15.229Z"
+            },
+            "created_at": "2025-07-17T04:04:15.229Z",
+            "updated_at": "2025-07-17T04:12:16.951Z"
+        }
+    ],
+    "pagination": {
+        "current_page": 1,
+        "total_pages": 1,
+        "total_items": 2,
+        "items_per_page": 5
+    }
+}

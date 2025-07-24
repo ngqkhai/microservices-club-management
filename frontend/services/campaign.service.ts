@@ -7,7 +7,7 @@ import config from '@/config';
 export interface ApplicationQuestion {
   id: string;
   question: string;
-  type: 'text' | 'textarea' | 'select' | 'checkbox';
+  type: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
   required: boolean;
   max_length?: number;
   options?: string[];
