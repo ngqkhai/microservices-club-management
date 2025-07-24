@@ -128,6 +128,27 @@ export function ApplicationForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Check if user is authenticated
+    if (!user?.id) {
+      toast({
+        title: "Lỗi xác thực",
+        description: "Bạn cần đăng nhập để gửi đơn ứng tuyển.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if campaign is valid
+    if (!campaign?.id) {
+      toast({
+        title: "Lỗi",
+        description: "Thông tin chiến dịch không hợp lệ.",
+        variant: "destructive",
+      });
+      console.error('Invalid campaign object:', campaign);
+      return;
+    }
+
     if (!validateForm()) {
       toast({
         title: "Lỗi xác thực",
@@ -140,10 +161,23 @@ export function ApplicationForm({
     setIsSubmitting(true)
 
     try {
+      // Debug authentication
+      console.log('🔐 Auth debug:', {
+        userId: user?.id,
+        userEmail: user?.email,
+        userRole: user?.role,
+        token: localStorage.getItem('club_management_token') ? 'Token exists' : 'No token'
+      });
+
+      // Prepare submit data - temporarily not including CV file
       const submitData = {
-        ...formData,
-        cv_file: uploadedCV
+        ...formData
+        // TODO: Add cv_file: uploadedCV when backend supports file upload
       }
+
+      console.log('📋 Submitting application data:', submitData);
+      console.log('📋 CV file selected (not sent):', uploadedCV?.name);
+      console.log('📋 Campaign ID:', campaign.id);
 
       if (isEditing && existingApplication) {
         // Update existing application
@@ -156,8 +190,26 @@ export function ApplicationForm({
       onSuccess?.()
       onClose()
     } catch (error: any) {
-      // Error handling is done in the hook
-      console.error('Application submission failed:', error)
+      // Enhanced error logging for debugging
+      console.error('Application submission failed:', {
+        error,
+        errorMessage: error?.message,
+        errorStatus: error?.status,
+        errorStack: error?.stack,
+        campaignId: campaign.id,
+        formData: formData,
+        isEditing,
+        userId: user?.id,
+        errorType: typeof error,
+        errorKeys: Object.keys(error || {})
+      });
+      
+      // Show user-friendly error message
+      toast({
+        title: 'Lỗi gửi đơn ứng tuyển',
+        description: error?.message || 'Có lỗi xảy ra khi gửi đơn ứng tuyển. Vui lòng thử lại.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false)
     }
@@ -388,6 +440,10 @@ export function ApplicationForm({
               </CardTitle>
               <CardDescription>
                 Tải lên CV của bạn (PDF, DOC, DOCX - tối đa 5MB)
+                <br />
+                <span className="text-amber-600 text-sm">
+                  📋 Tính năng này đang trong quá trình phát triển. CV sẽ được lưu cục bộ và không gửi đến server.
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -442,7 +498,7 @@ export function ApplicationForm({
             </CardContent>
           </Card>
 
-          {/* General Message
+          {/* General Message */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Thông điệp ứng tuyển</CardTitle>
@@ -460,7 +516,7 @@ export function ApplicationForm({
                 {formData.application_message.length}/1000 ký tự
               </p>
             </CardContent>
-          </Card> */}
+          </Card>
 
           {/* Custom Questions */}
           {campaign.application_questions && campaign.application_questions.length > 0 && (

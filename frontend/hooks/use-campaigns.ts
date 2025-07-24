@@ -187,28 +187,60 @@ export function useUserApplications(userId: string) {
       application_answers: Record<string, string>;
     }
   ) => {
+    console.log('🎯 Hook applyToCampaign called:', { campaignId, applicationData, userId });
+    
+    // Check if userId is valid
+    if (!userId) {
+      const error = new Error('User not authenticated') as any;
+      error.status = 401;
+      throw error;
+    }
+    
     setLoading(true);
     setError(null);
     
     try {
       const response = await campaignService.applyToCampaign(campaignId, applicationData);
+      console.log('📈 Hook applyToCampaign response:', response);
+      
       if (response.success) {
         toast({
-          title: 'Success',
-          description: 'Application submitted successfully',
+          title: 'Thành công',
+          description: 'Đơn ứng tuyển đã được gửi thành công',
         });
         // Reload applications to show the new one
         await loadApplications();
         return response.data;
       } else {
-        throw new Error(response.message || 'Failed to submit application');
+        console.error('🚫 Response not successful:', response);
+        throw new Error(response.message || 'Không thể gửi đơn ứng tuyển');
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to submit application';
+      console.error('💥 Hook applyToCampaign catch block:', {
+        err,
+        errorMessage: err?.message,
+        errorStatus: err?.status,
+        errorName: err?.name,
+        errorStack: err?.stack
+      });
+      
+      let errorMessage = err.message || 'Không thể gửi đơn ứng tuyển';
+      
+      // Handle specific error cases based on API documentation
+      if (err.status === 404) {
+        errorMessage = 'Chiến dịch tuyển thành viên không tồn tại hoặc đã đóng';
+      } else if (err.status === 409) {
+        errorMessage = 'Bạn đã ứng tuyển vào chiến dịch này rồi';
+      } else if (err.status === 400) {
+        errorMessage = 'Thời gian ứng tuyển đã kết thúc';
+      } else if (err.status === 401) {
+        errorMessage = 'Bạn cần đăng nhập để ứng tuyển';
+      }
+      
       setError(errorMessage);
       
       toast({
-        title: 'Error',
+        title: 'Lỗi',
         description: errorMessage,
         variant: 'destructive',
       });
@@ -216,7 +248,7 @@ export function useUserApplications(userId: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadApplications, toast]);
+  }, [loadApplications, toast, userId]);
 
   const updateApplication = useCallback(async (
     campaignId: string,
@@ -233,21 +265,31 @@ export function useUserApplications(userId: string) {
       const response = await campaignService.updateApplication(campaignId, applicationId, applicationData);
       if (response.success) {
         toast({
-          title: 'Success',
-          description: 'Application updated successfully',
+          title: 'Thành công',
+          description: 'Đơn ứng tuyển đã được cập nhật thành công',
         });
         // Reload applications to show the updated one
         await loadApplications();
         return response.data;
       } else {
-        throw new Error(response.message || 'Failed to update application');
+        throw new Error(response.message || 'Không thể cập nhật đơn ứng tuyển');
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to update application';
+      let errorMessage = err.message || 'Không thể cập nhật đơn ứng tuyển';
+      
+      // Handle specific error cases
+      if (err.status === 400) {
+        errorMessage = 'Không thể chỉnh sửa đơn ứng tuyển đã được xem xét';
+      } else if (err.status === 404) {
+        errorMessage = 'Đơn ứng tuyển không tồn tại';
+      } else if (err.status === 403) {
+        errorMessage = 'Bạn chỉ có thể chỉnh sửa đơn ứng tuyển của mình';
+      }
+      
       setError(errorMessage);
       
       toast({
-        title: 'Error',
+        title: 'Lỗi',
         description: errorMessage,
         variant: 'destructive',
       });
