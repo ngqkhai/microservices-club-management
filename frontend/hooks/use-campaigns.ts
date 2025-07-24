@@ -23,8 +23,16 @@ export function useCampaigns() {
     try {
       const response = await campaignService.getPublishedCampaigns(params);
       if (response.success && response.data) {
-        setCampaigns(response.data.data || []);
-        setPagination(response.data.pagination);
+        // Handle the actual API response structure where campaigns are directly in response.data
+        if (Array.isArray(response.data)) {
+          setCampaigns(response.data);
+          // Check if pagination exists at the response level (not nested in data)
+          setPagination((response as any).pagination || null);
+        } else {
+          // Fallback for expected structure
+          setCampaigns(response.data.data || []);
+          setPagination(response.data.pagination);
+        }
       } else {
         throw new Error(response.message || 'Failed to load campaigns');
       }
@@ -78,8 +86,16 @@ export function useClubCampaigns(clubId: string) {
     try {
       const response = await campaignService.getClubPublishedCampaigns(clubId);
       if (response.success && response.data) {
-        setCampaigns(response.data.data || []);
-        setPagination(response.data.pagination);
+        // Handle the actual API response structure where campaigns are directly in response.data
+        if (Array.isArray(response.data)) {
+          setCampaigns(response.data);
+          // Check if pagination exists at the response level (not nested in data)
+          setPagination((response as any).pagination || null);
+        } else {
+          // Fallback for expected structure
+          setCampaigns(response.data.data || []);
+          setPagination(response.data.pagination);
+        }
       } else {
         throw new Error(response.message || 'Failed to load club campaigns');
       }

@@ -40,27 +40,28 @@ export default function ClubsPage() {
   const [categories, setCategories] = useState<string[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(false)
   const [recruitmentPage, setRecruitmentPage] = useState(1);
-  
+
   // Use campaigns hook for recruitment data
   const { campaigns: activeRecruitments, loading: recruitmentsLoading, error: recruitmentsError, loadPublishedCampaigns } = useCampaigns();
-  
+
+  // Debug logging
+  console.log('Campaigns debug:', {
+    activeRecruitments,
+    recruitmentsLoading,
+    recruitmentsError,
+    count: activeRecruitments.length
+  });
+
   const campaignsPerPage = 3;
   const totalRecruitmentPages = Math.ceil(activeRecruitments.length / campaignsPerPage);
   const pagedRecruitments = useMemo(() => {
     const start = (recruitmentPage - 1) * campaignsPerPage;
-    return activeRecruitments.slice(start, start + campaignsPerPage).map(c => ({
-      campaign_id: c.id,
-      club_id: c.club_id,
-      club_name: c.club_name || 'Unknown Club',
-      title: c.title,
-      deadline: c.end_date,
-      logo_url: "/placeholder.svg?height=60&width=60",
-    }));
+    return activeRecruitments.slice(start, start + campaignsPerPage);
   }, [activeRecruitments, recruitmentPage]);
 
   // Load campaigns on mount
   useEffect(() => {
-    loadPublishedCampaigns(5); // Load 5 campaigns for the banner
+    loadPublishedCampaigns({ limit: 5 }); // Load 5 campaigns for the banner
   }, [loadPublishedCampaigns]);
 
   // Load clubs on component mount
@@ -198,7 +199,7 @@ export default function ClubsPage() {
               <h3 className="font-medium">Có lỗi xảy ra</h3>
               <p className="mt-2">{cache.error}</p>
               <div className="mt-4 flex gap-2">
-                <button 
+                <button
                   onClick={() => {
                     resetRetry();
                     loadAllClubs();
@@ -221,9 +222,9 @@ export default function ClubsPage() {
         {/* Results */}
         <div className="mb-6 flex justify-between items-center">
           <p className="text-gray-600">
-            {cache.isLoading ? "Đang tải..." : 
-             !cache.isLoaded ? "Chưa tải dữ liệu" :
-             `Tìm thấy ${pagination.total} câu lạc bộ`}
+            {cache.isLoading ? "Đang tải..." :
+              !cache.isLoaded ? "Chưa tải dữ liệu" :
+                `Tìm thấy ${pagination.total} câu lạc bộ`}
           </p>
           {pagination.totalPages > 0 && (
             <p className="text-sm text-gray-500">
@@ -262,10 +263,10 @@ export default function ClubsPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <Pagination 
-                currentPage={pagination.page} 
-                totalPages={pagination.totalPages} 
-                onPageChange={handlePageChange} 
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
               />
             )}
           </>
