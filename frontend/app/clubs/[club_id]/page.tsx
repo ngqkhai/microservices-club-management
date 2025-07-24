@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -24,10 +23,7 @@ import { ActivitiesTab } from "@/components/activities-tab"
 import { ApplicationForm } from "@/components/application-form"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
-import { useClubCampaigns } from "@/hooks/use-campaigns"
 import { clubService, ClubDetail, Event as ApiEvent, Recruitment as ApiRecruitment } from "@/services/club.service"
-import { campaignService } from "@/services/campaign.service"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog"
 
 // Transform API event to component event
 const transformEventForCard = (apiEvent: ApiEvent): any => {
@@ -69,85 +65,6 @@ const transformRecruitmentForCard = (apiRecruitment: ApiRecruitment): any => {
   }
 }
 
-// Component hiển thị chi tiết campaign trong popup
-function CampaignDetailModal({ campaignId, open, onClose }: { campaignId: string, open: boolean, onClose: () => void }) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [campaign, setCampaign] = useState<any>(null);
-
-  useEffect(() => {
-    if (!open || !campaignId) return;
-    
-    const loadCampaign = async () => {
-      setLoading(true);
-      setError(null);
-      setCampaign(null);
-      
-      try {
-        const response = await campaignService.getCampaignDetail(campaignId);
-        if (response.success && response.data) {
-          setCampaign(response.data);
-        } else {
-          setError(response.message || "Không thể tải thông tin chiến dịch.");
-        }
-      } catch (err: any) {
-        setError(err.message || "Không thể tải thông tin chiến dịch.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadCampaign();
-  }, [campaignId, open]);
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-full rounded-2xl shadow-2xl">
-        <DialogHeader>
-          <DialogTitle>Chi tiết đợt tuyển thành viên</DialogTitle>
-        </DialogHeader>
-        {loading ? (
-          <div className="py-8 text-center text-gray-500">Đang tải...</div>
-        ) : error ? (
-          <div className="py-8 text-center text-red-500">{error}</div>
-        ) : campaign ? (
-          <div className="space-y-4">
-            <div className="text-2xl font-bold text-blue-700">{campaign.title}</div>
-            <div className="text-gray-600">{campaign.description}</div>
-            <div className="flex flex-wrap gap-2 text-sm mt-2">
-              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">Trạng thái: {campaign.status}</span>
-              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">Hạn nộp: {campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : 'N/A'}</span>
-              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">Bắt đầu: {campaign.start_date ? new Date(campaign.start_date).toLocaleDateString() : 'N/A'}</span>
-              {campaign.max_applications && <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">Tối đa: {campaign.max_applications} đơn</span>}
-            </div>
-            {campaign.requirements && campaign.requirements.length > 0 && (
-              <div>
-                <div className="font-medium mb-1">Yêu cầu:</div>
-                <ul className="list-disc list-inside text-gray-700 text-sm">
-                  {campaign.requirements.map((r: string, idx: number) => (
-                    <li key={idx}>{r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {campaign.statistics && (
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-2">
-                <span>Đơn đã nộp: {campaign.statistics.total_applications}</span>
-                <span>Chờ duyệt: {campaign.statistics.pending_applications}</span>
-                <span>Đã duyệt: {campaign.statistics.approved_applications}</span>
-                <span>Đã từ chối: {campaign.statistics.rejected_applications}</span>
-              </div>
-            )}
-          </div>
-        ) : null}
-        <DialogClose asChild>
-          <Button className="mt-6 w-full" variant="default">Đóng</Button>
-        </DialogClose>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export default function ClubDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -162,11 +79,7 @@ export default function ClubDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [openCampaignDetail, setOpenCampaignDetail] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null); // Track selected campaign for application
-  
-  // Use the campaigns hook for cleaner data management
-  const { campaigns: clubCampaigns, loading: campaignsLoading, error: campaignsError } = useClubCampaigns(clubId);
 
   useEffect(() => {
     fetchClubData()
@@ -329,12 +242,12 @@ export default function ClubDetailPage() {
                     </div>
                     <CardTitle className="text-3xl">{club.name}</CardTitle>
                   </div>
-                  <div className="flex gap-2">
+                  {/* <div className="flex gap-2">
                     <Button onClick={handleJoinClub} disabled={isJoining} className="bg-blue-600 hover:bg-blue-700">
                       <UserPlus className="h-4 w-4 mr-2" />
                       {isJoining ? "Đang tham gia..." : "Tham gia câu lạc bộ"}
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               </CardHeader>
               <CardContent>
@@ -388,7 +301,7 @@ export default function ClubDetailPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Social Links */}
                 {club.social_links && (Object.keys(club.social_links).length > 0) && (
                   <>
@@ -413,81 +326,25 @@ export default function ClubDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Tabs for Events and Activities */}
+            {/* Events Section */}
             <Card>
-              <CardContent className="p-0">
-                <Tabs defaultValue="events" className="w-full">
-                  <div className="border-b">
-                    <TabsList className="grid w-full grid-cols-2 h-12 bg-transparent rounded-none">
-                      <TabsTrigger
-                        value="events"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
-                      >
-                        Sự kiện sắp tới
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="recruitments"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
-                      >
-                        Đợt tuyển thành viên
-                      </TabsTrigger>
-                    </TabsList>
+              <CardHeader>
+                <CardTitle>Sự kiện sắp tới</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {club.upcoming_events && club.upcoming_events.length > 0 ? (
+                  <div className="space-y-4">
+                    {club.upcoming_events.map((event) => (
+                      <EventCard key={event.id} event={transformEventForCard(event)} />
+                    ))}
                   </div>
-
-                  <TabsContent value="events" className="p-6">
-                    {club.upcoming_events && club.upcoming_events.length > 0 ? (
-                      <div className="space-y-4">
-                        {club.upcoming_events.map((event) => (
-                          <EventCard key={event.id} event={transformEventForCard(event)} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                        <p>Chưa có sự kiện nào được lên lịch</p>
-                        <p className="text-sm">Hãy quay lại sau để xem sự kiện mới!</p>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="recruitments" className="p-6">
-                    {campaignsLoading ? (
-                      <div className="text-center py-8 text-gray-500">Đang tải đợt tuyển thành viên...</div>
-                    ) : campaignsError ? (
-                      <div className="text-center py-8 text-red-500">{campaignsError}</div>
-                    ) : clubCampaigns.length > 0 ? (
-                      <div className="space-y-4">
-                        {clubCampaigns.map((c) => (
-                          <Card key={c.id} className="border-blue-100">
-                            <CardContent className="py-4 px-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                              <div>
-                                <div className="font-semibold text-lg text-blue-700">{c.title}</div>
-                                <div className="text-gray-500 text-sm mb-1">Hạn nộp: {c.end_date ? new Date(c.end_date).toLocaleDateString() : 'N/A'}</div>
-                                <div className="text-xs text-gray-400">Trạng thái: {c.status}</div>
-                              </div>
-                              <Button size="sm" variant="outline" className="ml-auto" onClick={() => setOpenCampaignDetail(c.id)}>
-                                Xem chi tiết
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                        {openCampaignDetail && (
-                          <CampaignDetailModal
-                            campaignId={openCampaignDetail}
-                            open={!!openCampaignDetail}
-                            onClose={() => setOpenCampaignDetail(null)}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                        <p>Chưa có đợt tuyển thành viên nào</p>
-                        <p className="text-sm">Hãy quay lại sau để xem các đợt tuyển mới!</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>Chưa có sự kiện nào được lên lịch</p>
+                    <p className="text-sm">Hãy quay lại sau để xem sự kiện mới!</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -533,10 +390,6 @@ export default function ClubDetailPage() {
                   <span className="font-semibold">{club.upcoming_events?.length || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Đang tuyển</span>
-                  <span className="font-semibold">{club.current_recruitments?.length || 0}</span>
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Tổng sự kiện</span>
                   <span className="font-semibold">{club.total_events || 0}</span>
                 </div>
@@ -578,8 +431,8 @@ export default function ClubDetailPage() {
 
       {/* Application Form Modal */}
       {showApplicationForm && selectedCampaign && (
-        <ApplicationForm 
-          campaign={selectedCampaign} 
+        <ApplicationForm
+          campaign={selectedCampaign}
           onClose={handleCloseApplication}
           onSuccess={() => {
             setSelectedCampaign(null)
