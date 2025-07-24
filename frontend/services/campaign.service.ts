@@ -47,6 +47,14 @@ export interface Campaign {
 }
 
 /**
+ * Answer object interface
+ */
+export interface ApplicationAnswer {
+  question_id: string;
+  answer: string | string[];
+}
+
+/**
  * Campaign Application interface - Updated to match API documentation
  */
 export interface CampaignApplication {
@@ -59,7 +67,7 @@ export interface CampaignApplication {
   user_email: string;
   status: 'pending' | 'approved' | 'rejected';
   application_message?: string;
-  application_answers: Record<string, string>;
+  answers: ApplicationAnswer[];
   submitted_at: string;
   updated_at: string;
   feedback?: string;
@@ -128,7 +136,7 @@ class CampaignService {
    */
   async applyToCampaign(campaignId: string, applicationData: {
     application_message?: string;
-    application_answers: Record<string, string>;
+    answers: ApplicationAnswer[];
   }): Promise<ApiResponse<CampaignApplication>> {
     console.log('🚀 CampaignService.applyToCampaign:', {
       campaignId,
@@ -165,7 +173,7 @@ class CampaignService {
    */
   async updateApplication(campaignId: string, applicationId: string, applicationData: {
     application_message?: string;
-    application_answers: Record<string, string>;
+    answers: ApplicationAnswer[];
   }): Promise<ApiResponse<CampaignApplication>> {
     return api.put<CampaignApplication>(config.endpoints.campaigns.applicationDetail(campaignId, applicationId), applicationData);
   }

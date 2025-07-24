@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { campaignService, Campaign, CampaignApplication, PaginatedResponse } from '@/services/campaign.service';
+import { campaignService, Campaign, CampaignApplication, PaginatedResponse, ApplicationAnswer } from '@/services/campaign.service';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -184,7 +184,7 @@ export function useUserApplications(userId: string) {
     campaignId: string,
     applicationData: {
       application_message?: string;
-      application_answers: Record<string, string>;
+      answers: ApplicationAnswer[];
     }
   ) => {
     console.log('🎯 Hook applyToCampaign called:', { campaignId, applicationData, userId });
@@ -255,7 +255,7 @@ export function useUserApplications(userId: string) {
     applicationId: string,
     applicationData: {
       application_message?: string;
-      application_answers: Record<string, string>;
+      answers: ApplicationAnswer[];
     }
   ) => {
     setLoading(true);

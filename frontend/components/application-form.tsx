@@ -18,7 +18,7 @@ import { CalendarIcon, ClockIcon, UsersIcon, UploadIcon, FileIcon, XIcon } from 
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import { useUserApplications } from "@/hooks/use-campaigns"
-import { Campaign, ApplicationQuestion } from "@/services/campaign.service"
+import { Campaign, ApplicationQuestion, ApplicationAnswer } from "@/services/campaign.service"
 
 interface ApplicationFormProps {
   campaign: Campaign
@@ -47,9 +47,21 @@ export function ApplicationForm({
   const { applyToCampaign, updateApplication } = useUserApplications(user?.id || '')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Helper function to convert answers array to flat object for form state
+  const convertAnswersToFormData = (answers?: ApplicationAnswer[]): Record<string, string> => {
+    if (!answers) return {};
+    const formData: Record<string, string> = {};
+    answers.forEach(answer => {
+      formData[answer.question_id] = Array.isArray(answer.answer) 
+        ? answer.answer.join(',') 
+        : answer.answer;
+    });
+    return formData;
+  };
+
   const [formData, setFormData] = useState({
     application_message: existingApplication?.application_message || "",
-    application_answers: existingApplication?.application_answers || {} as Record<string, string>,
+    application_answers: convertAnswersToFormData(existingApplication?.answers) || {} as Record<string, string>,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -169,13 +181,28 @@ export function ApplicationForm({
         token: localStorage.getItem('club_management_token') ? 'Token exists' : 'No token'
       });
 
+      // Helper function to convert form data to answers array
+      const convertFormDataToAnswers = (formAnswers: Record<string, string>): ApplicationAnswer[] => {
+        return Object.entries(formAnswers).map(([questionId, answer]) => {
+          // Check if this is a checkbox question (contains commas)
+          const isMultipleChoice = answer.includes(',') && answer.trim() !== '';
+          return {
+            question_id: questionId,
+            answer: isMultipleChoice ? answer.split(',').map(a => a.trim()).filter(a => a !== '') : answer
+          };
+        });
+      };
+
       // Prepare submit data - temporarily not including CV file
       const submitData = {
-        ...formData
+        application_message: formData.application_message,
+        answers: convertFormDataToAnswers(formData.application_answers)
         // TODO: Add cv_file: uploadedCV when backend supports file upload
       }
 
       console.log('📋 Submitting application data:', submitData);
+      console.log('📋 Form answers (flat):', formData.application_answers);
+      console.log('📋 Converted answers (array):', submitData.answers);
       console.log('📋 CV file selected (not sent):', uploadedCV?.name);
       console.log('📋 Campaign ID:', campaign.id);
 

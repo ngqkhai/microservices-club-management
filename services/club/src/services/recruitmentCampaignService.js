@@ -479,6 +479,7 @@ class RecruitmentCampaignService {
       const { user_id, user_email, answers, ...otherData } = applicationData;
 
       // Validate required fields
+      console.log('📋 Submitting application data:', applicationData);
       if (!user_id || !user_email || !answers) {
         throw new Error('User ID, email, and answers are required');
       }
