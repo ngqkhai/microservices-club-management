@@ -14,8 +14,13 @@ router.post('/:clubId/campaigns', RecruitmentCampaignController.createCampaign);
 
 /**
  * @route GET /api/clubs/:clubId/campaigns
- * @desc Get campaigns for a club (only draft campaigns for club managers)
+ * @desc Get campaigns for a club with optional status filter
+ * @query status - Comma-separated list of statuses to filter by (draft,published,completed,paused)
+ * @query page - Page number for pagination
+ * @query limit - Number of items per page
+ * @query sort - Sort field
  * @access Private (Club Manager only)
+ * @example /api/clubs/:clubId/campaigns?status=published,draft&page=1&limit=10
  */
 router.get('/:clubId/campaigns', RecruitmentCampaignController.getCampaigns);
 

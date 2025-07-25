@@ -207,7 +207,7 @@ class CampaignService {
     start_date: string;
     end_date: string;
     max_applications?: number;
-    status?: 'draft';
+    status?: 'published' | 'draft';
   }): Promise<ApiResponse<Campaign>> {
     return api.post<Campaign>(config.endpoints.campaigns.createForClub(clubId), campaignData);
   }

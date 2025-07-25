@@ -54,8 +54,8 @@ class RecruitmentCampaignController {
   }
 
   /**
-   * Get campaigns for a club (only draft campaigns for club managers)
-   * GET /api/clubs/:clubId/campaigns
+   * Get campaigns for a club with optional status filter
+   * GET /api/clubs/:clubId/campaigns?status=draft,published,completed,paused
    */
   static async getCampaigns(req, res) {
     try {
@@ -69,9 +69,30 @@ class RecruitmentCampaignController {
         });
       }
 
-      // Only return draft campaigns for club managers
+      // Validate status parameter if provided
+      const validStatuses = ['draft', 'published', 'completed', 'paused'];
+      let status = req.query.status;
+      
+      if (status) {
+        // Handle comma-separated statuses
+        const requestedStatuses = status.split(',').map(s => s.trim());
+        const invalidStatuses = requestedStatuses.filter(s => !validStatuses.includes(s));
+        
+        if (invalidStatuses.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid status values: ${invalidStatuses.join(', ')}. Valid statuses are: ${validStatuses.join(', ')}`
+          });
+        }
+        
+        status = requestedStatuses;
+      } else {
+        // Default to draft for backward compatibility
+        status = 'draft';
+      }
+
       const options = {
-        status: 'draft',
+        status: status,
         page: req.query.page,
         limit: req.query.limit,
         sort: req.query.sort
@@ -81,7 +102,7 @@ class RecruitmentCampaignController {
 
       res.status(200).json({
         success: true,
-        message: 'Draft campaigns retrieved successfully',
+        message: 'Campaigns retrieved successfully',
         data: new CampaignListResponseDTO(result.campaigns, result.pagination)
       });
     } catch (error) {

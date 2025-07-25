@@ -23,12 +23,13 @@ interface Question {
 
 interface CampaignFormProps {
   initialData?: any
-  onSave: (data: any) => Promise<void>
+  onSaveDraft: (data: any) => Promise<void>
+  onPublish: (data: any) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
 }
 
-export function CampaignForm({ initialData, onSave, onCancel, isLoading: externalLoading }: CampaignFormProps) {
+export function CampaignForm({ initialData, onSaveDraft, onPublish, onCancel, isLoading: externalLoading }: CampaignFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   
@@ -123,9 +124,7 @@ export function CampaignForm({ initialData, onSave, onCancel, isLoading: externa
     )
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const validateForm = () => {
     // Validation
     if (!formData.title || !formData.description || !formData.start_date || !formData.end_date) {
       toast({
@@ -133,7 +132,7 @@ export function CampaignForm({ initialData, onSave, onCancel, isLoading: externa
         description: "Vui lòng điền đầy đủ thông tin bắt buộc.",
         variant: "destructive",
       })
-      return
+      return false
     }
 
     if (new Date(formData.start_date) >= new Date(formData.end_date)) {
@@ -142,7 +141,7 @@ export function CampaignForm({ initialData, onSave, onCancel, isLoading: externa
         description: "Ngày kết thúc phải sau ngày bắt đầu.",
         variant: "destructive",
       })
-      return
+      return false
     }
 
     // Validate questions
@@ -154,32 +153,58 @@ export function CampaignForm({ initialData, onSave, onCancel, isLoading: externa
           description: "Câu hỏi trắc nghiệm phải có ít nhất 2 lựa chọn.",
           variant: "destructive",
         })
-        return
+        return false
       }
     }
 
+    return true
+  }
+
+  const prepareCampaignData = () => {
+    const validQuestions = questions.filter((q) => q.question.trim() !== "")
+    return {
+      ...formData,
+      requirements: requirements.filter((req) => req.trim() !== ""),
+      application_questions: validQuestions.map(q => ({
+        ...q,
+        options: q.type === "multiple-choice" ? q.options?.filter(opt => opt.trim() !== "") : undefined
+      })),
+      max_applications: formData.max_applications ? Number.parseInt(formData.max_applications) : undefined,
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    if (!validateForm()) return
+
     setIsSubmitting(true)
-
     try {
-      const campaignData = {
-        ...formData,
-        requirements: requirements.filter((req) => req.trim() !== ""),
-        application_questions: validQuestions.map(q => ({
-          ...q,
-          options: q.type === "multiple-choice" ? q.options?.filter(opt => opt.trim() !== "") : undefined
-        })),
-        max_applications: formData.max_applications ? Number.parseInt(formData.max_applications) : undefined,
-      }
-
-      await onSave(campaignData)
-
-      // Success toast will be shown by the parent component
+      const campaignData = prepareCampaignData()
+      await onSaveDraft(campaignData)
     } catch (error) {
-      // Error toast will be shown by the parent component
-      console.error("Campaign form submission error:", error)
+      console.error("Campaign draft save error:", error)
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handlePublish = async () => {
+    if (!validateForm()) return
+
+    setIsSubmitting(true)
+    try {
+      const campaignData = prepareCampaignData()
+      await onPublish(campaignData)
+    } catch (error) {
+      console.error("Campaign publish error:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    // Default to draft when form is submitted via Enter key
+    await handleSaveDraft()
   }
 
   return (
@@ -432,8 +457,22 @@ export function CampaignForm({ initialData, onSave, onCancel, isLoading: externa
         <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
           Hủy
         </Button>
-        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-          {isLoading ? "Đang lưu..." : initialData ? "Cập nhật" : "Tạo chiến dịch"}
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleSaveDraft} 
+          disabled={isLoading}
+          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+        >
+          {isLoading ? "Đang lưu..." : "Lưu bản nháp"}
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handlePublish} 
+          disabled={isLoading} 
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {isLoading ? "Đang xuất bản..." : "Xuất bản chiến dịch"}
         </Button>
       </div>
     </form>

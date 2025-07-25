@@ -51,11 +51,11 @@ export default function NewCampaignPage() {
   const clubId = params.club_id as string
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSave = async (campaignData: CampaignFormData) => {
+  const handleSave = async (campaignData: CampaignFormData, status: 'draft' | 'published' = 'draft') => {
     setIsLoading(true)
     
     try {
-      console.log("Creating campaign for club:", clubId, "with data:", campaignData)
+      console.log("Creating campaign for club:", clubId, "with data:", campaignData, "status:", status)
       
       // Transform the form data to match API expectations
       const apiData = {
@@ -73,7 +73,7 @@ export default function NewCampaignPage() {
         start_date: new Date(campaignData.start_date).toISOString(),
         end_date: new Date(campaignData.end_date).toISOString(),
         max_applications: campaignData.max_applications || undefined,
-        status: 'draft' as const
+        status: status
       }
 
       console.log("Transformed API data:", apiData)
@@ -81,9 +81,10 @@ export default function NewCampaignPage() {
       const response = await campaignService.createCampaign(clubId, apiData)
       
       if (response.success && response.data) {
+        const statusMessage = status === 'draft' ? 'được lưu làm bản nháp' : 'được xuất bản'
         toast({
           title: "Thành công",
-          description: `Chiến dịch "${response.data.title}" đã được tạo thành công.`,
+          description: `Chiến dịch "${response.data.title}" đã ${statusMessage}.`,
         })
         router.push(`/clubs/${clubId}/manage?tab=campaigns`)
       } else {
@@ -111,6 +112,14 @@ export default function NewCampaignPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSaveDraft = async (campaignData: CampaignFormData) => {
+    await handleSave(campaignData, 'draft')
+  }
+
+  const handlePublish = async (campaignData: CampaignFormData) => {
+    await handleSave(campaignData, 'published')
   }
 
   return (
@@ -145,7 +154,8 @@ export default function NewCampaignPage() {
 
         {/* Campaign Form */}
         <CampaignForm 
-          onSave={handleSave} 
+          onSaveDraft={handleSaveDraft}
+          onPublish={handlePublish}
           onCancel={() => router.push(`/clubs/${clubId}/manage?tab=campaigns`)}
           isLoading={isLoading}
         />

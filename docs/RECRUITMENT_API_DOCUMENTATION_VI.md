@@ -673,21 +673,50 @@ Content-Type: application/json
 </details>
 
 <details>
-<summary><strong>GET /api/clubs/{clubId}/campaigns</strong> - Lấy các chiến dịch nháp của câu lạc bộ</summary>
+<summary><strong>GET /api/clubs/{clubId}/campaigns</strong> - Lấy các chiến dịch của câu lạc bộ với bộ lọc trạng thái</summary>
 
-**Mô tả**: Lấy tất cả các chiến dịch nháp của câu lạc bộ. Chỉ quản lý câu lạc bộ mới có thể truy cập.
+**Mô tả**: Lấy các chiến dịch của câu lạc bộ với khả năng lọc theo trạng thái. Chỉ quản lý câu lạc bộ mới có thể truy cập.
 
 **Yêu cầu**:
 ```http
-GET /api/clubs/60d0fe4f5311236168a109ca/campaigns?page=1&limit=10
+GET /api/clubs/60d0fe4f5311236168a109ca/campaigns?status=draft,published&page=1&limit=10
 Authorization: Bearer {jwt_token}
+```
+
+**Tham số truy vấn**:
+| Tham số | Kiểu | Bắt buộc | Mô tả |
+|-----------|------|----------|-------------|
+| status | string | Không | Danh sách trạng thái được phân tách bằng dấu phẩy để lọc (draft,published,completed,paused). Mặc định: 'draft' |
+| page | number | Không | Số trang (mặc định: 1) |
+| limit | number | Không | Số mục mỗi trang (mặc định: 10) |
+| sort | string | Không | Trường sắp xếp |
+
+**Các trạng thái hợp lệ**:
+- `draft` - Chiến dịch ở trạng thái nháp
+- `published` - Chiến dịch đã được công bố/đang hoạt động
+- `completed` - Chiến dịch đã hoàn thành
+- `paused` - Chiến dịch tạm dừng
+
+**Ví dụ sử dụng**:
+```http
+# Lấy tất cả chiến dịch nháp (hành vi mặc định)
+GET /api/clubs/123/campaigns
+
+# Chỉ lấy chiến dịch đã công bố
+GET /api/clubs/123/campaigns?status=published
+
+# Lấy nhiều trạng thái chiến dịch
+GET /api/clubs/123/campaigns?status=draft,published,completed
+
+# Lấy tất cả chiến dịch với phân trang
+GET /api/clubs/123/campaigns?status=draft,published,completed,paused&page=1&limit=10
 ```
 
 **Phản hồi** (200 OK):
 ```json
 {
   "success": true,
-  "message": "Các chiến dịch nháp được truy xuất thành công",
+  "message": "Các chiến dịch được truy xuất thành công",
   "data": {
     "campaigns": [
       {
@@ -695,21 +724,49 @@ Authorization: Bearer {jwt_token}
         "club_id": "60d0fe4f5311236168a109ca",
         "title": "Tuyển dụng mùa thu 2025 - Câu lạc bộ Công nghệ",
         "description": "Tham gia câu lạc bộ công nghệ của chúng tôi để tham gia các buổi hội thảo lập trình...",
-        "status": "draft",
+        "status": "published",
         "start_date": "2025-09-01T00:00:00Z",
         "end_date": "2025-09-15T23:59:59Z",
+        "max_applications": 50,
+        "statistics": {
+          "total_applications": 15,
+          "pending_applications": 12,
+          "approved_applications": 2,
+          "rejected_applications": 1
+        },
         "created_at": "2025-07-18T10:30:00Z",
         "updated_at": "2025-07-18T10:30:00Z"
       }
     ],
     "pagination": {
       "current_page": 1,
-      "total_pages": 1,
-      "total_items": 1,
-      "has_next": false,
+      "total_pages": 2,
+      "total_items": 15,
+      "has_next": true,
       "has_prev": false
     }
   }
+}
+```
+
+**Các phản hồi lỗi**:
+```json
+// 400 Bad Request - Trạng thái không hợp lệ
+{
+  "success": false,
+  "message": "Giá trị trạng thái không hợp lệ: invalid_status. Các trạng thái hợp lệ là: draft, published, completed, paused"
+}
+
+// 401 Unauthorized
+{
+  "success": false,
+  "message": "Yêu cầu xác thực"
+}
+
+// 403 Forbidden
+{
+  "success": false,
+  "message": "Quyền không đủ. Chỉ quản lý câu lạc bộ mới có thể truy cập"
 }
 ```
 </details>
