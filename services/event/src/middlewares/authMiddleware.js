@@ -1,5 +1,9 @@
 /**
- * Authentication middleware for Event Service
+ * Authentication middleware for Eve    // Extract user information from Kong-injected headers
+    const userId = req.headers['x-user-id'];
+    const userEmail = req.headers['x-user-email'];
+    const userRole = req.headers['x-user-role'];
+    const userFullName = req.headers['x-user-full-name'];ervice
  * Extracts user information from API Gateway headers (Kong)
  */
 
@@ -49,7 +53,8 @@ export const authMiddleware = (req, res, next) => {
         headers: {
           'x-user-id': userId ? 'present' : 'missing',
           'x-user-email': userEmail ? 'present' : 'missing',
-          'x-user-role': userRole ? 'present' : 'missing'
+          'x-user-role': userRole ? 'present' : 'missing',
+          'x-user-full-name': userFullName ? 'present' : 'missing'
         },
         path: req.path,
         method: req.method
@@ -83,7 +88,8 @@ export const authMiddleware = (req, res, next) => {
     req.user = {
       id: userId,
       email: userEmail,
-      role: userRole
+      role: userRole,
+      full_name: userFullName
     };
 
     console.log('User authenticated via API Gateway', {

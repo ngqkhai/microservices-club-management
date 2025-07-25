@@ -41,6 +41,7 @@ const authMiddleware = (req, res, next) => {
     const userId = req.headers['x-user-id'];
     const userEmail = req.headers['x-user-email'];
     const userRole = req.headers['x-user-role'];
+    const userFullName = req.headers['x-user-full-name'];
 
     // For notification service, user info is optional in some cases
     // (e.g., system-generated notifications), so we don't require all headers
@@ -66,7 +67,8 @@ const authMiddleware = (req, res, next) => {
       req.user = {
         id: userId,
         email: userEmail,
-        role: userRole
+        role: userRole,
+        full_name: userFullName
       };
 
       logger.debug('NOTIFY SERVICE: User authenticated via API Gateway', {

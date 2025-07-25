@@ -37,6 +37,7 @@ class JWTUtil {
         id: payload.id,
         email: payload.email,
         role: payload.role,
+        full_name: payload.full_name,
         type: 'access'
       };
 
@@ -196,7 +197,8 @@ class JWTUtil {
     const payload = {
       id: user.id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      full_name: user.full_name
     };
 
     return {

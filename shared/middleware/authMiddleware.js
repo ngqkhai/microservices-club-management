@@ -62,7 +62,8 @@ const authMiddleware = (req, res, next) => {
     req.user = {
       id: userId,
       email: userEmail,
-      role: userRole
+      role: userRole,
+      full_name: req.headers['x-user-full-name']
     };
 
     logger.debug('User authenticated via API Gateway', {

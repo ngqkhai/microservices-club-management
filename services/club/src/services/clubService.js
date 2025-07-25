@@ -377,6 +377,8 @@ class ClubService {
         const membershipData = {
           club_id: clubId,
           user_id: userContext.userId,
+          user_email: manager_email || userContext.email,
+          user_full_name: manager_full_name || userContext.full_name,
           role: 'club_manager',
           status: 'active',
           application_message: 'Club creator - automatically approved',
@@ -813,14 +815,25 @@ class ClubService {
 
     try {
       const { Membership } = require('../config/database');
-      const membership = await Membership.create({
+      
+      const membershipData = {
         club_id: clubId,
         user_id: memberData.userId,
         role: memberData.role || 'member',
         status: 'active',
         approved_by: userContext.userId,
         approved_at: new Date()
-      });
+      };
+      
+      // Include user email and full name if provided
+      if (memberData.userEmail) {
+        membershipData.user_email = memberData.userEmail;
+      }
+      if (memberData.userFullName) {
+        membershipData.user_full_name = memberData.userFullName;
+      }
+      
+      const membership = await Membership.create(membershipData);
 
       return {
         success: true,

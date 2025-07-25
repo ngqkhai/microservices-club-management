@@ -96,6 +96,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
   const userId = req.headers['x-user-id'];
   const userRole = req.headers['x-user-role'];
   const userEmail = req.headers['x-user-email'];
+  const userFullName = req.headers['x-user-full-name'];
 
   // Validate UUID format for user ID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -120,7 +121,8 @@ const validateApiGatewayHeaders = (req, res, next) => {
   req.user = {
     id: userId,
     role: userRole,
-    email: userEmail
+    email: userEmail,
+    full_name: userFullName
   };
 
   // Log successful authentication

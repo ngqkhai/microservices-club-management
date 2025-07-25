@@ -23,23 +23,27 @@ interface Question {
 
 interface CampaignFormProps {
   initialData?: any
-  onSave: (data: any) => void
+  onSave: (data: any) => Promise<void>
   onCancel: () => void
+  isLoading?: boolean
 }
 
-export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProps) {
+export function CampaignForm({ initialData, onSave, onCancel, isLoading: externalLoading }: CampaignFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Use external loading state if provided, otherwise use internal state
+  const isLoading = externalLoading || isSubmitting
 
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
     description: initialData?.description || "",
-    requirements: initialData?.requirements || "",
     start_date: initialData?.start_date ? new Date(initialData.start_date).toISOString().split("T")[0] : "",
     end_date: initialData?.end_date ? new Date(initialData.end_date).toISOString().split("T")[0] : "",
     max_applications: initialData?.max_applications || "",
   })
 
+  const [requirements, setRequirements] = useState<string[]>(initialData?.requirements || [])
   const [questions, setQuestions] = useState<Question[]>(initialData?.application_questions || [])
 
   const handleInputChange = (field: string, value: string) => {
@@ -47,6 +51,18 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
       ...prev,
       [field]: value,
     }))
+  }
+
+  const addRequirement = () => {
+    setRequirements((prev) => [...prev, ""])
+  }
+
+  const updateRequirement = (index: number, value: string) => {
+    setRequirements((prev) => prev.map((req, i) => (i === index ? value : req)))
+  }
+
+  const removeRequirement = (index: number) => {
+    setRequirements((prev) => prev.filter((_, i) => i !== index))
   }
 
   const addQuestion = () => {
@@ -129,27 +145,38 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
       return
     }
 
+    // Validate questions
+    const validQuestions = questions.filter((q) => q.question.trim() !== "")
+    for (const question of validQuestions) {
+      if (question.type === "multiple-choice" && (!question.options || question.options.filter(opt => opt.trim() !== "").length < 2)) {
+        toast({
+          title: "Lỗi",
+          description: "Câu hỏi trắc nghiệm phải có ít nhất 2 lựa chọn.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     setIsSubmitting(true)
 
     try {
       const campaignData = {
         ...formData,
-        application_questions: questions.filter((q) => q.question.trim() !== ""),
+        requirements: requirements.filter((req) => req.trim() !== ""),
+        application_questions: validQuestions.map(q => ({
+          ...q,
+          options: q.type === "multiple-choice" ? q.options?.filter(opt => opt.trim() !== "") : undefined
+        })),
         max_applications: formData.max_applications ? Number.parseInt(formData.max_applications) : undefined,
       }
 
       await onSave(campaignData)
 
-      toast({
-        title: "Thành công",
-        description: "Chiến dịch đã được lưu thành công.",
-      })
+      // Success toast will be shown by the parent component
     } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể lưu chiến dịch.",
-        variant: "destructive",
-      })
+      // Error toast will be shown by the parent component
+      console.error("Campaign form submission error:", error)
     } finally {
       setIsSubmitting(false)
     }
@@ -173,7 +200,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
               value={formData.title}
               onChange={(e) => handleInputChange("title", e.target.value)}
               placeholder="Ví dụ: Tuyển thành viên mùa xuân 2024"
-              disabled={isSubmitting}
+              disabled={isLoading}
             />
           </div>
 
@@ -185,20 +212,52 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
               onChange={(e) => handleInputChange("description", e.target.value)}
               placeholder="Mô tả chi tiết về chiến dịch tuyển dụng..."
               rows={4}
-              disabled={isSubmitting}
+              disabled={isLoading}
             />
           </div>
 
           <div>
-            <Label htmlFor="requirements">Yêu cầu</Label>
-            <Textarea
-              id="requirements"
-              value={formData.requirements}
-              onChange={(e) => handleInputChange("requirements", e.target.value)}
-              placeholder="Liệt kê các yêu cầu đối với ứng viên..."
-              rows={3}
-              disabled={isSubmitting}
-            />
+            <div className="flex items-center justify-between mb-2">
+              <Label>Yêu cầu</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addRequirement}
+                disabled={isLoading}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Thêm yêu cầu
+              </Button>
+            </div>
+            {requirements.length === 0 ? (
+              <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500">
+                <p className="text-sm">Chưa có yêu cầu nào</p>
+                <p className="text-xs">Thêm yêu cầu để mô tả điều kiện cần thiết cho ứng viên</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {requirements.map((requirement, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <Input
+                      value={requirement}
+                      onChange={(e) => updateRequirement(index, e.target.value)}
+                      placeholder={`Yêu cầu ${index + 1}`}
+                      disabled={isLoading}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRequirement(index)}
+                      disabled={isLoading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -209,7 +268,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                 type="date"
                 value={formData.start_date}
                 onChange={(e) => handleInputChange("start_date", e.target.value)}
-                disabled={isSubmitting}
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -219,7 +278,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                 type="date"
                 value={formData.end_date}
                 onChange={(e) => handleInputChange("end_date", e.target.value)}
-                disabled={isSubmitting}
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -233,7 +292,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
               onChange={(e) => handleInputChange("max_applications", e.target.value)}
               placeholder="Để trống nếu không giới hạn"
               min="1"
-              disabled={isSubmitting}
+              disabled={isLoading}
             />
           </div>
         </CardContent>
@@ -247,7 +306,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
               <FileText className="h-5 w-5 mr-2" />
               Câu hỏi ứng tuyển
             </CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addQuestion} disabled={isSubmitting}>
+            <Button type="button" variant="outline" size="sm" onClick={addQuestion} disabled={isLoading}>
               <Plus className="h-4 w-4 mr-2" />
               Thêm câu hỏi
             </Button>
@@ -272,7 +331,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                         variant="ghost"
                         size="sm"
                         onClick={() => removeQuestion(question.id)}
-                        disabled={isSubmitting}
+                        disabled={isLoading}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -285,7 +344,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                           value={question.question}
                           onChange={(e) => updateQuestion(question.id, "question", e.target.value)}
                           placeholder="Nhập câu hỏi..."
-                          disabled={isSubmitting}
+                          disabled={isLoading}
                         />
                       </div>
 
@@ -295,7 +354,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                           <Select
                             value={question.type}
                             onValueChange={(value) => updateQuestion(question.id, "type", value)}
-                            disabled={isSubmitting}
+                            disabled={isLoading}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -315,7 +374,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                             checked={question.is_required}
                             onChange={(e) => updateQuestion(question.id, "is_required", e.target.checked)}
                             className="mr-2"
-                            disabled={isSubmitting}
+                            disabled={isLoading}
                           />
                           <Label htmlFor={`required-${question.id}`}>Bắt buộc</Label>
                         </div>
@@ -330,7 +389,7 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                               variant="outline"
                               size="sm"
                               onClick={() => addOption(question.id)}
-                              disabled={isSubmitting}
+                              disabled={isLoading}
                             >
                               <Plus className="h-3 w-3 mr-1" />
                               Thêm lựa chọn
@@ -343,14 +402,14 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
                                   value={option}
                                   onChange={(e) => updateOption(question.id, optionIndex, e.target.value)}
                                   placeholder={`Lựa chọn ${optionIndex + 1}`}
-                                  disabled={isSubmitting}
+                                  disabled={isLoading}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => removeOption(question.id, optionIndex)}
-                                  disabled={isSubmitting}
+                                  disabled={isLoading}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -370,11 +429,11 @@ export function CampaignForm({ initialData, onSave, onCancel }: CampaignFormProp
 
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
           Hủy
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-          {isSubmitting ? "Đang lưu..." : initialData ? "Cập nhật" : "Tạo chiến dịch"}
+        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+          {isLoading ? "Đang lưu..." : initialData ? "Cập nhật" : "Tạo chiến dịch"}
         </Button>
       </div>
     </form>

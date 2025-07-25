@@ -67,6 +67,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
     
   # Club Campaigns Routes (JWT required) - MORE SPECIFIC ROUTES FIRST
@@ -93,6 +94,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
       - name: api-gateway-secret
         tags: [campaigns-secret]
@@ -139,6 +141,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
       - name: api-gateway-secret
         tags: [members-secret]
@@ -168,6 +171,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
       - name: api-gateway-secret
         tags: [applications-simple-secret]
@@ -208,6 +212,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
       - name: api-gateway-secret
         tags: [club-secret]
@@ -251,6 +256,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
       - name: api-gateway-secret
         tags: [application-secret]
@@ -278,6 +284,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
     
   # Notification Service Routes (JWT required)
@@ -303,6 +310,7 @@ routes:
             - id
             - email
             - role
+            - full_name
           header_prefix: "x-user-"
     
 consumers:
@@ -355,6 +363,7 @@ plugins:
         - X-User-Id
         - X-User-Email
         - X-User-Role
+        - X-User-Full-Name
         - Cache-Control
         - Origin
         - Referer

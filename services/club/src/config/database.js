@@ -191,6 +191,24 @@ const membershipSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
+  user_email: {
+    type: String,
+    required: false,
+    lowercase: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return !v || /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
+      },
+      message: 'Invalid email format'
+    }
+  },
+  user_full_name: {
+    type: String,
+    required: false,
+    trim: true,
+    maxLength: 255
+  },
   campaign_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'RecruitmentCampaign',

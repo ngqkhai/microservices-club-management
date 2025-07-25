@@ -476,12 +476,12 @@ class RecruitmentCampaignService {
    */
   static async submitApplication(campaignId, applicationData) {
     try {
-      const { user_id, user_email, answers, ...otherData } = applicationData;
+      const { user_id, user_email, user_full_name, answers, ...otherData } = applicationData;
 
       // Validate required fields
       console.log('📋 Submitting application data:', applicationData);
-      if (!user_id || !user_email || !answers) {
-        throw new Error('User ID, email, and answers are required');
+      if (!user_id || !user_email || !user_full_name || !answers) {
+        throw new Error('User ID, email, full name, and answers are required');
       }
 
       // Find the campaign
@@ -539,13 +539,14 @@ class RecruitmentCampaignService {
       const membership = await Membership.create({
         club_id: campaign.club_id,
         user_id: user_id,
+        user_email: user_email,
+        user_full_name: user_full_name,
         campaign_id: campaignId,
         role: 'member',
         status: 'pending',
         application_message: `Application submitted through recruitment campaign: ${campaign.title}`,
         application_answers: {
           answers: answers,
-          user_email: user_email,
           submitted_at: new Date(),
           ...otherData
         },

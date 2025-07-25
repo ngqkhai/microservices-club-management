@@ -195,6 +195,7 @@ class AuthService {
       const isValidPassword = await user.comparePassword(password);
       if (!isValidPassword) {
         await user.incrementFailedAttempts();
+        logger.warn('Invalid login attempt', { email });
         throw new InvalidCredentialsError();
       }
 
