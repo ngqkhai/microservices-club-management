@@ -115,62 +115,121 @@ export interface Event {
 }
 
 /**
- * Detailed club interface from API response
+ * Detailed club interface from API response (following CLUB_MEMBERS_APPLICATIONS_API.md)
  */
 export interface ClubDetail {
-  id: string;
+  _id: string;
   name: string;
-  description?: string;
+  description: string;
   category: string;
-  location?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  logo_url?: string;
-  cover_url?: string;
+  location: string;
+  contact_email: string;
+  contact_phone: string;
+  logo_url: string;
   website_url?: string;
   social_links?: {
     facebook?: string;
     instagram?: string;
-    twitter?: string;
     linkedin?: string;
-  };
-  settings?: {
-    is_public: boolean;
-    requires_approval: boolean;
-    max_members?: number;
   };
   status: string;
   member_count: number;
-  created_by?: string;
-  manager?: {
+  created_at: string;
+  updated_at: string;
+  manager: {
     user_id: string;
     full_name: string;
-    email?: string;
-    assigned_at?: string;
+    email: string;
   };
-  size?: number;
-  current_recruitments?: Recruitment[];
-  total_recruitments?: number;
-  active_recruitments?: number;
-  upcoming_events?: Event[];
-  published_events?: Event[];
-  total_events?: number;
+  current_recruitments: Array<{
+    id: string;
+    title: string;
+    description: string;
+    requirements: string[];
+    start_date: string;
+    end_date: string;
+    max_applications: number;
+    applications_count: number;
+    status: string;
+  }>;
+  total_recruitments: number;
+  active_recruitments: number;
+  upcoming_events: Array<{
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    time: string;
+    location: string;
+    fee: number;
+    max_participants: number;
+    current_participants: number;
+    status: string;
+  }>;
+  published_events: Array<{
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    location: string;
+    participants_count: number;
+    status: string;
+  }>;
+  total_events: number;
 }
 
 /**
- * Club member interface
+ * Club member interface based on API documentation
  */
 export interface ClubMember {
+  _id: string;
+  user_id: string;
+  role: 'club_manager' | 'organizer' | 'member';
+  joined_at: string;
+}
+
+/**
+ * User application interface
+ */
+export interface UserApplication {
   id: string;
-  userId: string;
-  clubId: string;
-  role: 'admin' | 'moderator' | 'member';
-  joinedAt: string;
-  user?: {
+  status: 'pending' | 'approved' | 'rejected';
+  role: string;
+  application_message: string;
+  application_answers: Array<{
+    question: string;
+    answer: string;
+  }>;
+  submitted_at: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  campaign: {
+    id: string;
+    title: string;
+    description: string;
+    start_date: string;
+    end_date: string;
+    status: string;
+  };
+  club: {
     id: string;
     name: string;
-    email: string;
-    avatar?: string;
+    description: string;
+    logo: string;
+  };
+}
+
+/**
+ * User applications response
+ */
+export interface UserApplicationsResponse {
+  applications: UserApplication[];
+  pagination: {
+    current_page: number;
+    total_pages: number;
+    total_items: number;
+    items_per_page: number;
   };
 }
 
@@ -309,8 +368,49 @@ class ClubService {
   /**
    * Get club members
    */
-  async getClubMembers(id: string): Promise<ApiResponse<ClubMember[]>> {
-    return api.get<ClubMember[]>(config.endpoints.clubs.members(id));
+  async getClubMembers(clubId: string): Promise<ApiResponse<ClubMember[]>> {
+    return api.get<ClubMember[]>(`/api/clubs/${clubId}/members`);
+  }
+
+  /**
+   * Add club member
+   */
+  async addClubMember(clubId: string, userId: string, role: string = 'member'): Promise<ApiResponse<ClubMember>> {
+    return api.post<ClubMember>(`/api/clubs/${clubId}/members`, { userId, role });
+  }
+
+  /**
+   * Update member role
+   */
+  async updateMemberRole(clubId: string, userId: string, role: string): Promise<ApiResponse<ClubMember>> {
+    return api.put<ClubMember>(`/api/clubs/${clubId}/members/${userId}/role`, { role });
+  }
+
+  /**
+   * Remove club member
+   */
+  async removeClubMember(clubId: string, userId: string): Promise<ApiResponse<ClubMember>> {
+    return api.delete<ClubMember>(`/api/clubs/${clubId}/members/${userId}`);
+  }
+
+  /**
+   * Get user applications
+   */
+  async getUserApplications(
+    userId: string, 
+    params?: { page?: number; limit?: number; status?: string }
+  ): Promise<ApiResponse<UserApplicationsResponse>> {
+    const searchParams = new URLSearchParams();
+    
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.status) searchParams.append('status', params.status);
+
+    const endpoint = searchParams.toString() 
+      ? `/api/users/${userId}/applications?${searchParams.toString()}`
+      : `/api/users/${userId}/applications`;
+
+    return api.get<UserApplicationsResponse>(endpoint);
   }
 }
 

@@ -4,25 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, Target, Calendar, TrendingUp } from "lucide-react"
+import { ClubDetail, ClubMember } from "@/services/club.service"
 
 interface ClubStatsProps {
-  club: any
-  members: any[]
-  campaigns: any[]
+  club: ClubDetail
+  members: ClubMember[]
+  campaigns: ClubDetail['current_recruitments']
 }
 
 export function ClubStats({ club, members, campaigns }: ClubStatsProps) {
-  const totalMembers = members.length
-  const activeCampaigns = campaigns.filter((c) => c.status === "published").length
-  const completedCampaigns = campaigns.filter((c) => c.status === "completed").length
-  const totalApplications = campaigns.reduce((sum, c) => sum + c.total_applications, 0)
+  const totalMembers = members?.length || 0
+  const activeCampaigns = campaigns?.filter((c) => c.status === "published").length || 0
+  const completedCampaigns = campaigns?.filter((c) => c.status === "completed").length || 0
+  const totalApplications = campaigns?.reduce((sum, c) => sum + (c.applications_count || 0), 0) || 0
 
-  const membersByRole = members.reduce((acc, member) => {
+  const membersByRole = (members || []).reduce((acc: Record<string, number>, member) => {
     acc[member.role] = (acc[member.role] || 0) + 1
     return acc
   }, {})
 
-  const campaignsByStatus = campaigns.reduce((acc, campaign) => {
+  const campaignsByStatus = (campaigns || []).reduce((acc: Record<string, number>, campaign) => {
     acc[campaign.status] = (acc[campaign.status] || 0) + 1
     return acc
   }, {})
@@ -130,7 +131,7 @@ export function ClubStats({ club, members, campaigns }: ClubStatsProps) {
                     <Badge variant="outline">{getRoleLabel(role)}</Badge>
                     <span className="text-sm text-gray-600">{count as number} thành viên</span>
                   </div>
-                  <Progress value={((count as number) / totalMembers) * 100} className="w-24" />
+                  <Progress value={totalMembers > 0 ? ((count as number) / totalMembers) * 100 : 0} className="w-24" />
                 </div>
               ))}
             </div>
@@ -150,7 +151,7 @@ export function ClubStats({ club, members, campaigns }: ClubStatsProps) {
                     <Badge variant="outline">{getStatusLabel(status)}</Badge>
                     <span className="text-sm text-gray-600">{count as number} chiến dịch</span>
                   </div>
-                  <Progress value={((count as number) / campaigns.length) * 100} className="w-24" />
+                  <Progress value={campaigns && campaigns.length > 0 ? ((count as number) / campaigns.length) * 100 : 0} className="w-24" />
                 </div>
               ))}
             </div>
@@ -167,24 +168,24 @@ export function ClubStats({ club, members, campaigns }: ClubStatsProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Tên câu lạc bộ</p>
-              <p className="text-lg">{club.name}</p>
+              <p className="text-lg">{club?.name || 'Không có tên'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Thể loại</p>
-              <Badge variant="secondary">{club.category}</Badge>
+              <Badge variant="secondary">{club?.category || 'Không xác định'}</Badge>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Địa điểm</p>
-              <p className="text-sm">{club.location}</p>
+              <p className="text-sm">{club?.location || 'Không có địa điểm'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600 mb-1">Số thành viên</p>
-              <p className="text-lg font-semibold">{club.member_count}</p>
+              <p className="text-lg font-semibold">{club?.member_count || 0}</p>
             </div>
           </div>
           <div className="mt-4">
             <p className="text-sm font-medium text-gray-600 mb-2">Mô tả</p>
-            <p className="text-sm text-gray-700">{club.description}</p>
+            <p className="text-sm text-gray-700">{club?.description || 'Không có mô tả'}</p>
           </div>
         </CardContent>
       </Card>

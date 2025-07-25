@@ -22,62 +22,7 @@ import { MemberList } from "@/components/club-manager/member-list"
 import { CampaignList } from "@/components/club-manager/campaign-list"
 import { ClubStats } from "@/components/club-manager/club-stats"
 import { AddMemberForm } from "@/components/club-manager/add-member-form"
-
-// Mock data for development
-const mockClubData = {
-  club_id: "music-club",
-  name: "CLB Âm nhạc",
-  description: "Câu lạc bộ âm nhạc của trường đại học",
-  category: "Arts",
-  location: "Phòng nhạc, Trung tâm sinh viên",
-  member_count: 45,
-  logo_url: "/placeholder.svg?height=150&width=150",
-}
-
-const mockMembers = [
-  {
-    user_id: "user1",
-    name: "Nguyễn Văn A",
-    email: "nguyenvana@email.com",
-    role: "club_manager",
-    joined_at: "2024-01-15T10:00:00Z",
-  },
-  {
-    user_id: "user2",
-    name: "Trần Thị B",
-    email: "tranthib@email.com",
-    role: "organizer",
-    joined_at: "2024-01-20T14:30:00Z",
-  },
-  {
-    user_id: "user3",
-    name: "Lê Văn C",
-    email: "levanc@email.com",
-    role: "member",
-    joined_at: "2024-02-01T09:15:00Z",
-  },
-]
-
-const mockCampaigns = [
-  {
-    _id: "campaign1",
-    title: "Tuyển thành viên mùa xuân 2024",
-    status: "published",
-    start_date: "2024-03-01T00:00:00Z",
-    end_date: "2024-03-31T23:59:59Z",
-    total_applications: 12,
-    max_applications: 20,
-  },
-  {
-    _id: "campaign2",
-    title: "Tuyển ban tổ chức sự kiện",
-    status: "draft",
-    start_date: "2024-04-01T00:00:00Z",
-    end_date: "2024-04-15T23:59:59Z",
-    total_applications: 0,
-    max_applications: 5,
-  },
-]
+import { clubService, type ClubDetail, type ClubMember } from "@/services/club.service"
 
 export default function ClubManagerDashboard() {
   const params = useParams()
@@ -87,9 +32,9 @@ export default function ClubManagerDashboard() {
 
   const clubId = params.club_id as string
 
-  const [club, setClub] = useState(mockClubData)
-  const [members, setMembers] = useState(mockMembers)
-  const [campaigns, setCampaigns] = useState(mockCampaigns)
+  const [club, setClub] = useState<ClubDetail | null>(null)
+  const [members, setMembers] = useState<ClubMember[]>([])
+  const [campaigns, setCampaigns] = useState<ClubDetail['current_recruitments']>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
@@ -110,20 +55,25 @@ export default function ClubManagerDashboard() {
     setIsLoading(true)
 
     try {
-      // Simulate API calls
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Fetch club details
+      const clubResponse = await clubService.getClubDetail(clubId)
+      if (clubResponse.success && clubResponse.data) {
+        setClub(clubResponse.data)
+        setCampaigns(clubResponse.data.current_recruitments)
+      }
 
-      // In a real app, you would fetch:
-      // - Club details: GET /api/clubs/${clubId}
-      // - Members: GET /api/clubs/${clubId}/members
-      // - Campaigns: GET /api/clubs/${clubId}/campaigns
+      // Fetch club members
+      const membersResponse = await clubService.getClubMembers(clubId)
+      if (membersResponse.success && membersResponse.data) {
+        setMembers(membersResponse.data)
+      }
 
       setIsLoading(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching club data:", error)
       toast({
         title: "Lỗi",
-        description: "Không thể tải dữ liệu câu lạc bộ.",
+        description: error.message || "Không thể tải dữ liệu câu lạc bộ.",
         variant: "destructive",
       })
       setIsLoading(false)
@@ -132,28 +82,23 @@ export default function ClubManagerDashboard() {
 
   const handleAddMember = async (email: string, role: string) => {
     try {
-      // Simulate API call: POST /api/clubs/${clubId}/members
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      // Note: The API expects userId, but we only have email
+      // In a real implementation, you might need to resolve email to userId first
+      const response = await clubService.addClubMember(clubId, email, role as 'club_manager' | 'organizer' | 'member')
+      
+      if (response.success && response.data) {
+        setMembers((prev) => [...prev, response.data])
+        setShowAddMemberForm(false)
 
-      const newMember = {
-        user_id: `user${Date.now()}`,
-        name: "Thành viên mới",
-        email,
-        role,
-        joined_at: new Date().toISOString(),
+        toast({
+          title: "Thành công",
+          description: "Đã thêm thành viên mới vào câu lạc bộ.",
+        })
       }
-
-      setMembers((prev) => [...prev, newMember])
-      setShowAddMemberForm(false)
-
-      toast({
-        title: "Thành công",
-        description: "Đã thêm thành viên mới vào câu lạc bộ.",
-      })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: "Không thể thêm thành viên.",
+        description: error.message || "Không thể thêm thành viên.",
         variant: "destructive",
       })
     }
@@ -161,19 +106,20 @@ export default function ClubManagerDashboard() {
 
   const handleRemoveMember = async (userId: string) => {
     try {
-      // Simulate API call: DELETE /api/clubs/${clubId}/members/${userId}
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      const response = await clubService.removeClubMember(clubId, userId)
+      
+      if (response.success) {
+        setMembers((prev) => prev.filter((member) => member.user_id !== userId))
 
-      setMembers((prev) => prev.filter((member) => member.user_id !== userId))
-
-      toast({
-        title: "Thành công",
-        description: "Đã xóa thành viên khỏi câu lạc bộ.",
-      })
-    } catch (error) {
+        toast({
+          title: "Thành công",
+          description: "Đã xóa thành viên khỏi câu lạc bộ.",
+        })
+      }
+    } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: "Không thể xóa thành viên.",
+        description: error.message || "Không thể xóa thành viên.",
         variant: "destructive",
       })
     }
@@ -181,19 +127,22 @@ export default function ClubManagerDashboard() {
 
   const handleUpdateMemberRole = async (userId: string, newRole: string) => {
     try {
-      // Simulate API call: PUT /api/clubs/${clubId}/members/${userId}/role
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      const response = await clubService.updateMemberRole(clubId, userId, newRole)
+      
+      if (response.success && response.data) {
+        setMembers((prev) => prev.map((member) => 
+          member.user_id === userId ? response.data : member
+        ))
 
-      setMembers((prev) => prev.map((member) => (member.user_id === userId ? { ...member, role: newRole } : member)))
-
-      toast({
-        title: "Thành công",
-        description: "Đã cập nhật vai trò thành viên.",
-      })
-    } catch (error) {
+        toast({
+          title: "Thành công",
+          description: "Đã cập nhật vai trò thành viên.",
+        })
+      }
+    } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: "Không thể cập nhật vai trò thành viên.",
+        description: error.message || "Không thể cập nhật vai trò thành viên.",
         variant: "destructive",
       })
     }
@@ -210,6 +159,22 @@ export default function ClubManagerDashboard() {
               <div className="lg:col-span-3 h-96 bg-gray-200 rounded"></div>
               <div className="h-96 bg-gray-200 rounded"></div>
             </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!club) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">Không thể tải thông tin câu lạc bộ</h1>
+            <p className="mt-2 text-gray-600">Vui lòng thử lại sau.</p>
+            <Button onClick={() => router.push('/clubs')} className="mt-4">
+              Quay lại danh sách câu lạc bộ
+            </Button>
           </div>
         </div>
       </div>
@@ -308,7 +273,13 @@ export default function ClubManagerDashboard() {
                       </Button>
                     </div>
                     <MemberList
-                      members={members}
+                      members={members.map(member => ({
+                        user_id: member.user_id,
+                        name: `User ${member.user_id}`, // Temporary: API doesn't return name
+                        email: `${member.user_id}@example.com`, // Temporary: API doesn't return email
+                        role: member.role,
+                        joined_at: member.joined_at,
+                      }))}
                       onRemoveMember={handleRemoveMember}
                       onUpdateMemberRole={handleUpdateMemberRole}
                     />
@@ -325,7 +296,32 @@ export default function ClubManagerDashboard() {
                         Tạo chiến dịch
                       </Button>
                     </div>
-                    <CampaignList campaigns={campaigns} clubId={clubId} onCampaignUpdate={setCampaigns} />
+                    <CampaignList 
+                      campaigns={campaigns.map(campaign => ({
+                        _id: campaign.id,
+                        title: campaign.title,
+                        status: campaign.status,
+                        start_date: campaign.start_date,
+                        end_date: campaign.end_date,
+                        total_applications: campaign.applications_count,
+                        max_applications: campaign.max_applications,
+                      }))} 
+                      clubId={clubId} 
+                      onCampaignUpdate={(updatedCampaigns) => {
+                        // Transform back to the format expected by the state
+                        setCampaigns(updatedCampaigns.map(campaign => ({
+                          id: campaign._id,
+                          title: campaign.title,
+                          description: campaign.title, // Using title as description temporarily
+                          requirements: [], // API doesn't provide requirements in campaign list
+                          start_date: campaign.start_date,
+                          end_date: campaign.end_date,
+                          max_applications: campaign.max_applications || 0,
+                          applications_count: campaign.total_applications,
+                          status: campaign.status,
+                        })))
+                      }} 
+                    />
                   </TabsContent>
                 </Tabs>
               </CardContent>
