@@ -248,9 +248,13 @@ export const apiRequest = async <T = any>(
         
         return await handleResponse<T>(retryResponse);
       } else {
-        // Refresh failed, redirect to login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+        // Refresh failed, only redirect to login if we're not already on the login page
+        // and if the current page seems to require authentication
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          // Add a small delay to prevent race conditions with component mounting
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
         }
       }
     }

@@ -27,7 +27,7 @@ import { clubService, type ClubDetail, type ClubMember } from "@/services/club.s
 export default function ClubManagerDashboard() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuthStore()
+  const { user, isInitialized } = useAuthStore()
   const { toast } = useToast()
 
   const clubId = params.club_id as string
@@ -40,7 +40,12 @@ export default function ClubManagerDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
 
   useEffect(() => {
-    // Check if user has club_manager role for this club
+    // Wait for auth state to be initialized before checking user
+    if (!isInitialized) {
+      return; // Still loading auth state, don't redirect yet
+    }
+
+    // Now we can safely check if user exists
     if (!user) {
       router.push("/login")
       return
@@ -49,7 +54,7 @@ export default function ClubManagerDashboard() {
     // In a real app, you would check user's club roles
     // For now, we'll simulate the check
     fetchClubData()
-  }, [clubId, user])
+  }, [clubId, user, isInitialized])
 
   const fetchClubData = async () => {
     setIsLoading(true)
@@ -146,6 +151,19 @@ export default function ClubManagerDashboard() {
         variant: "destructive",
       })
     }
+  }
+
+  // Show loading spinner while auth state is being initialized
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (isLoading) {

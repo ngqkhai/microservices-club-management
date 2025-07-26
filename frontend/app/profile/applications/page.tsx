@@ -32,7 +32,7 @@ import {
 
 export default function UserApplicationsPage() {
   const router = useRouter()
-  const { user } = useAuthStore()
+  const { user, isInitialized } = useAuthStore()
   const { toast } = useToast()
 
   const [applications, setApplications] = useState<UserApplication[]>([])
@@ -47,12 +47,17 @@ export default function UserApplicationsPage() {
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
+    // Wait for auth state to be initialized before checking user
+    if (!isInitialized) {
+      return; // Still loading auth state, don't redirect yet
+    }
+
     if (!user) {
       router.push("/login")
       return
     }
     fetchApplications()
-  }, [user, statusFilter, currentPage])
+  }, [user, isInitialized, statusFilter, currentPage])
 
   const fetchApplications = async () => {
     if (!user) return
@@ -141,6 +146,19 @@ export default function UserApplicationsPage() {
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-32 bg-gray-200 rounded"></div>
             ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading spinner while auth state is being initialized
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         </div>
       </div>

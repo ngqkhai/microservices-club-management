@@ -10,6 +10,7 @@ interface AuthState {
   user: User | null
   token: string | null
   isLoading: boolean
+  isInitialized: boolean // New field to track if auth state has been loaded
   error: string | null
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
@@ -25,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isLoading: false,
+      isInitialized: false,
       error: null,
 
       login: async (email: string, password: string, rememberMe = false) => {
@@ -43,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
               user,
               token: accessToken,
               isLoading: false,
+              isInitialized: true,
               error: null,
             })
 
@@ -53,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
           } else {
             set({
               isLoading: false,
+              isInitialized: true,
               error: response.message || "Login failed",
             })
             return false
@@ -60,6 +64,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           set({
             isLoading: false,
+            isInitialized: true,
             error: error.message || "Login failed",
           })
           return false
@@ -115,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             token: null,
             isLoading: false,
+            isInitialized: true,
             error: null,
           })
         }
@@ -152,7 +158,16 @@ export const useAuthStore = create<AuthState>()(
 
       loadUser: async () => {
         const token = getToken();
-        if (!token) return
+        if (!token) {
+          set({ 
+            user: null,
+            token: null,
+            isLoading: false,
+            isInitialized: true,
+            error: null 
+          });
+          return;
+        }
 
         set({ isLoading: true, error: null })
 
@@ -177,6 +192,7 @@ export const useAuthStore = create<AuthState>()(
               user,
               token: token ? "existing" : null,
               isLoading: false,
+              isInitialized: true,
               error: null,
             })
           } else {
@@ -186,6 +202,7 @@ export const useAuthStore = create<AuthState>()(
               user: null,
               token: null,
               isLoading: false,
+              isInitialized: true,
               error: null,
             })
           }
@@ -196,6 +213,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             token: null,
             isLoading: false,
+            isInitialized: true,
             error: null,
           })
         }
