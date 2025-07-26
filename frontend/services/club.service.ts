@@ -236,6 +236,63 @@ export interface UserApplicationsResponse {
 }
 
 /**
+ * Campaign interface based on API documentation
+ */
+export interface Campaign {
+  id: string;
+  club_id: string;
+  title: string;
+  description: string;
+  requirements: string[];
+  application_questions?: Array<{
+    id: string;
+    question: string;
+    type: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
+    required: boolean;
+    max_length?: number;
+    options?: string[];
+  }>;
+  start_date: string;
+  end_date: string;
+  max_applications?: number;
+  status: 'draft' | 'published' | 'paused' | 'completed';
+  statistics?: {
+    total_applications: number;
+    approved_applications: number;
+    rejected_applications: number;
+    pending_applications: number;
+    last_updated: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Campaign list query parameters
+ */
+export interface CampaignListQuery {
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Campaign list response interface
+ */
+export interface CampaignListResponse {
+  success: boolean;
+  data: {
+    campaigns: Campaign[];
+    pagination: {
+      current_page: number;
+      total_pages: number;
+      total_items: number;
+      items_per_page: number;
+    };
+  };
+}
+
+/**
  * Club category interface
  */
 export interface ClubCategory {
@@ -413,6 +470,100 @@ class ClubService {
       : `/api/users/${userId}/applications`;
 
     return api.get<UserApplicationsResponse>(endpoint);
+  }
+
+  /**
+   * Get club campaigns
+   */
+  async getClubCampaigns(
+    clubId: string,
+    params?: CampaignListQuery
+  ): Promise<ApiResponse<CampaignListResponse['data']>> {
+    const searchParams = new URLSearchParams();
+    
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+
+    const endpoint = searchParams.toString() 
+      ? `/api/clubs/${clubId}/campaigns?${searchParams.toString()}`
+      : `/api/clubs/${clubId}/campaigns`;
+
+    return api.get<CampaignListResponse['data']>(endpoint);
+  }
+
+  /**
+   * Get specific campaign details
+   */
+  async getCampaignDetail(clubId: string, campaignId: string): Promise<ApiResponse<Campaign>> {
+    return api.get<Campaign>(`/api/clubs/${clubId}/campaigns/${campaignId}`);
+  }
+
+  /**
+   * Delete campaign
+   */
+  async deleteCampaign(clubId: string, campaignId: string): Promise<ApiResponse<void>> {
+    return api.delete<void>(`/api/clubs/${clubId}/campaigns/${campaignId}`);
+  }
+
+  /**
+   * Update campaign - PUT /api/clubs/{clubId}/campaigns/{campaignId}
+   */
+  async updateCampaign(clubId: string, campaignId: string, data: Partial<Campaign>): Promise<ApiResponse<Campaign>> {
+    return api.put<Campaign>(`/api/clubs/${clubId}/campaigns/${campaignId}`, data);
+  }
+
+  /**
+   * Get campaign applications - GET /api/clubs/{clubId}/campaigns/{campaignId}/applications
+   */
+  async getCampaignApplications(
+    clubId: string, 
+    campaignId: string, 
+    query?: { page?: number; limit?: number; status?: string }
+  ): Promise<ApiResponse<{ applications: any[]; pagination: any }>> {
+    const params = new URLSearchParams();
+    if (query?.page) params.append('page', query.page.toString());
+    if (query?.limit) params.append('limit', query.limit.toString());
+    if (query?.status) params.append('status', query.status);
+    
+    const queryString = params.toString();
+    const url = `/api/clubs/${clubId}/campaigns/${campaignId}/applications${queryString ? `?${queryString}` : ''}`;
+    
+    return api.get<{ applications: any[]; pagination: any }>(url);
+  }
+
+  /**
+   * Update campaign status - PUT /api/clubs/{clubId}/campaigns/{campaignId}/status
+   */
+  async updateCampaignStatus(clubId: string, campaignId: string, status: string): Promise<ApiResponse<Campaign>> {
+    return api.put<Campaign>(`/api/clubs/${clubId}/campaigns/${campaignId}/status`, { status });
+  }
+
+  /**
+   * Get application details - GET /api/clubs/{clubId}/campaigns/{campaignId}/applications/{applicationId}
+   */
+  async getApplicationDetail(clubId: string, campaignId: string, applicationId: string): Promise<ApiResponse<any>> {
+    return api.get<any>(`/api/clubs/${clubId}/campaigns/${campaignId}/applications/${applicationId}`);
+  }
+
+  /**
+   * Approve application (Simplified) - POST /api/clubs/{clubId}/applications/{applicationId}/approve
+   */
+  async approveApplication(clubId: string, applicationId: string, data?: {
+    role?: string;
+    notes?: string;
+  }): Promise<ApiResponse<any>> {
+    return api.post<any>(`/api/clubs/${clubId}/applications/${applicationId}/approve`, data);
+  }
+
+  /**
+   * Reject application (Simplified) - POST /api/clubs/{clubId}/applications/{applicationId}/reject
+   */
+  async rejectApplication(clubId: string, applicationId: string, data?: {
+    reason?: string;
+    notes?: string;
+  }): Promise<ApiResponse<any>> {
+    return api.post<any>(`/api/clubs/${clubId}/applications/${applicationId}/reject`, data);
   }
 }
 

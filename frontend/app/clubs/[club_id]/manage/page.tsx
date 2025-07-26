@@ -38,6 +38,7 @@ export default function ClubManagerDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     // Wait for auth state to be initialized before checking user
@@ -51,37 +52,95 @@ export default function ClubManagerDashboard() {
       return
     }
 
-    // In a real app, you would check user's club roles
-    // For now, we'll simulate the check
-    fetchClubData()
+    // Load basic club info first, then load tab data on demand
+    fetchBasicClubData()
   }, [clubId, user, isInitialized])
 
-  const fetchClubData = async () => {
-    setIsLoading(true)
+  // Load data for specific tab only when accessed
+  useEffect(() => {
+    if (!isLoading && !loadedTabs.has(activeTab)) {
+      loadTabData(activeTab)
+    }
+  }, [activeTab, isLoading, loadedTabs])
 
+  const fetchBasicClubData = async () => {
+    setIsLoading(true)
     try {
-      // Fetch club details
+      // Only fetch basic club info initially
       const clubResponse = await clubService.getClubDetail(clubId)
       if (clubResponse.success && clubResponse.data) {
         setClub(clubResponse.data)
-        setCampaigns(clubResponse.data.current_recruitments)
+        // Don't set campaigns and members here - load them on demand
       }
-
-      // Fetch club members
-      const membersResponse = await clubService.getClubMembers(clubId)
-      if (membersResponse.success && membersResponse.data) {
-        setMembers(membersResponse.data)
-      }
-
       setIsLoading(false)
     } catch (error: any) {
-      console.error("Error fetching club data:", error)
+      console.error("Error fetching basic club data:", error)
       toast({
         title: "Lỗi",
         description: error.message || "Không thể tải dữ liệu câu lạc bộ.",
         variant: "destructive",
       })
       setIsLoading(false)
+    }
+  }
+
+  const loadTabData = async (tabName: string) => {
+    if (loadedTabs.has(tabName)) return
+
+    try {
+      switch (tabName) {
+        case "overview":
+          // Overview data is already loaded with basic club data
+          if (club?.current_recruitments) {
+            setCampaigns(club.current_recruitments)
+          }
+          break
+
+        case "members":
+          if (members.length === 0) {
+            const membersResponse = await clubService.getClubMembers(clubId)
+            if (membersResponse.success && membersResponse.data) {
+              setMembers(membersResponse.data)
+            }
+          }
+          break
+
+        case "campaigns":
+          // Load campaigns from API
+          const campaignResponse = await clubService.getClubCampaigns(clubId, {
+            page: 1,
+            limit: 50
+          });
+          
+          if (campaignResponse.success && campaignResponse.data) {
+            // Transform API response to the format expected by the state
+            const transformedCampaigns = campaignResponse.data.campaigns.map(campaign => ({
+              id: campaign.id,
+              title: campaign.title,
+              description: campaign.description,
+              requirements: campaign.requirements,
+              start_date: campaign.start_date,
+              end_date: campaign.end_date,
+              max_applications: campaign.max_applications || 0,
+              applications_count: campaign.statistics?.total_applications || 0,
+              status: campaign.status,
+            }));
+            setCampaigns(transformedCampaigns);
+          } else if (club?.current_recruitments) {
+            // Fallback to basic club data if API fails
+            setCampaigns(club.current_recruitments);
+          }
+          break
+      }
+      
+      setLoadedTabs(prev => new Set([...prev, tabName]))
+    } catch (error: any) {
+      console.error(`Error loading ${tabName} data:`, error)
+      toast({
+        title: "Lỗi",
+        description: `Không thể tải dữ liệu ${tabName}.`,
+        variant: "destructive",
+      })
     }
   }
 
@@ -148,6 +207,23 @@ export default function ClubManagerDashboard() {
       toast({
         title: "Lỗi",
         description: error.message || "Không thể cập nhật vai trò thành viên.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCampaignDetailView = async (campaignId: string) => {
+    try {
+      const response = await clubService.getCampaignDetail(clubId, campaignId)
+      
+      if (response.success && response.data) {
+        // Navigate to campaign detail page or show modal
+        router.push(`/clubs/${clubId}/manage/campaigns/${campaignId}`)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể tải chi tiết chiến dịch.",
         variant: "destructive",
       })
     }
@@ -279,7 +355,13 @@ export default function ClubManagerDashboard() {
                   </div>
 
                   <TabsContent value="overview" className="p-6">
-                    <ClubStats club={club} members={members} campaigns={campaigns} />
+                    {loadedTabs.has("overview") ? (
+                      <ClubStats club={club} members={members} campaigns={campaigns} />
+                    ) : (
+                      <div className="flex items-center justify-center min-h-[300px]">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="members" className="p-6">
@@ -290,17 +372,23 @@ export default function ClubManagerDashboard() {
                         Thêm thành viên
                       </Button>
                     </div>
-                    <MemberList
-                      members={members.map(member => ({
-                        user_id: member.user_id,
-                        name: member.user_full_name || `User ${member.user_id}`, // Temporary: API doesn't return name
-                        email: member.user_email || `${member.user_id}@example.com`, // Temporary: API doesn't return email
-                        role: member.role,
-                        joined_at: member.joined_at,
-                      }))}
-                      onRemoveMember={handleRemoveMember}
-                      onUpdateMemberRole={handleUpdateMemberRole}
-                    />
+                    {loadedTabs.has("members") ? (
+                      <MemberList
+                        members={members.map(member => ({
+                          user_id: member.user_id,
+                          name: member.user_full_name || `User ${member.user_id}`, 
+                          email: member.user_email || `${member.user_id}@example.com`, 
+                          role: member.role,
+                          joined_at: member.joined_at,
+                        }))}
+                        onRemoveMember={handleRemoveMember}
+                        onUpdateMemberRole={handleUpdateMemberRole}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center min-h-[300px]">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="campaigns" className="p-6">
@@ -314,32 +402,38 @@ export default function ClubManagerDashboard() {
                         Tạo chiến dịch
                       </Button>
                     </div>
-                    <CampaignList 
-                      campaigns={campaigns.map(campaign => ({
-                        _id: campaign.id,
-                        title: campaign.title,
-                        status: campaign.status,
-                        start_date: campaign.start_date,
-                        end_date: campaign.end_date,
-                        total_applications: campaign.applications_count,
-                        max_applications: campaign.max_applications,
-                      }))} 
-                      clubId={clubId} 
-                      onCampaignUpdate={(updatedCampaigns) => {
-                        // Transform back to the format expected by the state
-                        setCampaigns(updatedCampaigns.map(campaign => ({
-                          id: campaign._id,
+                    {loadedTabs.has("campaigns") ? (
+                      <CampaignList 
+                        campaigns={campaigns.map(campaign => ({
+                          _id: campaign.id,
                           title: campaign.title,
-                          description: campaign.title, // Using title as description temporarily
-                          requirements: [], // API doesn't provide requirements in campaign list
+                          status: campaign.status,
                           start_date: campaign.start_date,
                           end_date: campaign.end_date,
-                          max_applications: campaign.max_applications || 0,
-                          applications_count: campaign.total_applications,
-                          status: campaign.status,
-                        })))
-                      }} 
-                    />
+                          total_applications: campaign.applications_count,
+                          max_applications: campaign.max_applications,
+                        }))} 
+                        clubId={clubId} 
+                        onCampaignUpdate={(updatedCampaigns) => {
+                          // Transform back to the format expected by the state
+                          setCampaigns(updatedCampaigns.map(campaign => ({
+                            id: campaign._id,
+                            title: campaign.title,
+                            description: campaign.title, // Using title as description temporarily
+                            requirements: [], // API doesn't provide requirements in campaign list
+                            start_date: campaign.start_date,
+                            end_date: campaign.end_date,
+                            max_applications: campaign.max_applications || 0,
+                            applications_count: campaign.total_applications,
+                            status: campaign.status,
+                          })))
+                        }} 
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center min-h-[300px]">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>

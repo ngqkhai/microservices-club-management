@@ -53,54 +53,56 @@ Authorization: None required
 {
   "success": true,
   "message": "Published campaigns retrieved successfully",
-  "data": [
-    {
-      "id": "60d0fe4f5311236168a109cd",
-      "club_id": "60d0fe4f5311236168a109ca",
-      "club_name": "Câu lạc bộ Và Truyền thông",
-      "title": "Fall 2025 Recruitment - Tech Club",
-      "description": "Join our tech club for exciting programming workshops and hackathons",
-      "requirements": [
-        "Basic programming knowledge",
-        "Passion for technology"
-      ],
-      "application_questions": [
-        {
-          "id": "q1",
-          "question": "What programming languages are you familiar with?",
-          "type": "textarea",
-          "required": true,
-          "max_length": 500
+  "data": {
+    "campaigns": [
+      {
+        "id": "60d0fe4f5311236168a109cd",
+        "club_id": "60d0fe4f5311236168a109ca",
+        "club_name": "Câu lạc bộ Và Truyền thông",
+        "title": "Fall 2025 Recruitment - Tech Club",
+        "description": "Join our tech club for exciting programming workshops and hackathons",
+        "requirements": [
+          "Basic programming knowledge",
+          "Passion for technology"
+        ],
+        "application_questions": [
+          {
+            "id": "q1",
+            "question": "What programming languages are you familiar with?",
+            "type": "textarea",
+            "required": true,
+            "max_length": 500
+          },
+          {
+            "id": "q2", 
+            "question": "Why do you want to join our club?",
+            "type": "textarea",
+            "required": true,
+            "max_length": 300
+          }
+        ],
+        "start_date": "2025-09-01T00:00:00Z",
+        "end_date": "2025-09-15T23:59:59Z",
+        "max_applications": 50,
+        "status": "published",
+        "statistics": {
+          "total_applications": 15,
+          "approved_applications": 0,
+          "rejected_applications": 0,
+          "pending_applications": 15,
+          "last_updated": "2025-07-18T10:30:00Z"
         },
-        {
-          "id": "q2", 
-          "question": "Why do you want to join our club?",
-          "type": "textarea",
-          "required": true,
-          "max_length": 300
-        }
-      ],
-      "start_date": "2025-09-01T00:00:00Z",
-      "end_date": "2025-09-15T23:59:59Z",
-      "max_applications": 50,
-      "status": "published",
-      "statistics": {
-        "total_applications": 15,
-        "approved_applications": 0,
-        "rejected_applications": 0,
-        "pending_applications": 15,
-        "last_updated": "2025-07-18T10:30:00Z"
-      },
-      "created_at": "2025-07-15T08:00:00Z",
-      "updated_at": "2025-07-18T10:30:00Z"
+        "created_at": "2025-07-15T08:00:00Z",
+        "updated_at": "2025-07-18T10:30:00Z"
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "total_pages": 3,
+      "total_items": 25,
+      "has_next": true,
+      "has_prev": false
     }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "total_pages": 3,
-    "total_items": 25,
-    "has_next": true,
-    "has_prev": false
   }
 }
 ```
@@ -264,13 +266,11 @@ Content-Type: application/json
 **Request Body**:
 ```json
 {
-  "answers": [
-    {
-      "question_id": "string",
-      "answer": "string|array"
-    }
-  ],
-  "application_message": "string (optional)"
+  "application_message": "I am passionate about technology and would love to contribute to the club's activities through my programming skills and enthusiasm for learning new technologies.",
+  "application_answers": {
+    "q1": "I am familiar with JavaScript, Python, React, and Node.js. I have built several web applications and contributed to open source projects.",
+    "q2": "I want to join the tech club to learn new technologies, collaborate on innovative projects, and connect with like-minded individuals."
+  }
 }
 ```
 
@@ -507,6 +507,11 @@ Authorization: Bearer {jwt_token}
         "club_name": "Tech Club",
         "club_id": "60d0fe4f5311236168a109ca",
         "status": "pending",
+        "application_message": "I am passionate about technology...",
+        "application_answers": {
+          "q1": "I am familiar with JavaScript, Python, and React...",
+          "q2": "I want to join the tech club to learn new technologies..."
+        },
         "submitted_at": "2025-07-18T14:30:00Z",
         "updated_at": "2025-07-18T16:45:00Z"
       },
@@ -517,6 +522,11 @@ Authorization: Bearer {jwt_token}
         "club_name": "Art Club",
         "club_id": "60d0fe4f5311236168a109cb",
         "status": "approved",
+        "application_message": "I love creating digital art...",
+        "application_answers": {
+          "q1": "I have experience with Photoshop, Illustrator...",
+          "q2": "I want to develop my artistic skills..."
+        },
         "submitted_at": "2025-03-10T10:15:00Z",
         "updated_at": "2025-03-15T14:20:00Z",
         "feedback": "Great portfolio! Welcome to the Art Club."
@@ -539,6 +549,115 @@ Authorization: Bearer {jwt_token}
 {
   "success": false,
   "message": "You can only view your own applications"
+}
+```
+</details>
+
+---
+
+#### Direct Application Management Routes
+
+<details>
+<summary><strong>GET /api/applications/{applicationId}</strong> - Get application details directly</summary>
+
+**Description**: Get details of a specific application using the application ID directly. Users can only view their own applications.
+
+**Request**:
+```http
+GET /api/applications/60d0fe4f5311236168a109cf
+Authorization: Bearer {jwt_token}
+```
+
+**Path Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| applicationId | string | Yes | MongoDB ObjectID of the application |
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Application retrieved successfully",
+  "data": {
+    "id": "60d0fe4f5311236168a109cf",
+    "campaign_id": "60d0fe4f5311236168a109cd",
+    "campaign_title": "Fall 2025 Recruitment - Tech Club",
+    "club_name": "Tech Club",
+    "club_id": "60d0fe4f5311236168a109ca",
+    "status": "pending",
+    "application_message": "I am passionate about technology...",
+    "application_answers": {
+      "q1": "I am familiar with JavaScript, Python, and React...",
+      "q2": "I want to join the tech club to learn new technologies..."
+    },
+    "submitted_at": "2025-07-18T14:30:00Z",
+    "updated_at": "2025-07-18T14:30:00Z",
+    "feedback": null
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>PUT /api/applications/{applicationId}</strong> - Update application directly</summary>
+
+**Description**: Update a pending application using the application ID directly. Only allowed if application is still pending.
+
+**Request**:
+```http
+PUT /api/applications/60d0fe4f5311236168a109cf
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "application_message": "Updated: I am passionate about technology and have recent experience with AI...",
+  "application_answers": {
+    "q1": "Updated: I am familiar with JavaScript, Python, React, and recently learned machine learning with TensorFlow...",
+    "q2": "I want to join the tech club to learn new technologies, collaborate on AI projects, and contribute to the community."
+  }
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Application updated successfully",
+  "data": {
+    "id": "60d0fe4f5311236168a109cf",
+    "campaign_id": "60d0fe4f5311236168a109cd",
+    "status": "pending",
+    "application_message": "Updated: I am passionate about technology and have recent experience with AI...",
+    "application_answers": {
+      "q1": "Updated: I am familiar with JavaScript, Python, React, and recently learned machine learning...",
+      "q2": "I want to join the tech club to learn new technologies, collaborate on AI projects..."
+    },
+    "submitted_at": "2025-07-18T14:30:00Z",
+    "updated_at": "2025-07-18T16:45:00Z"
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>DELETE /api/applications/{applicationId}</strong> - Withdraw application directly</summary>
+
+**Description**: Withdraw/cancel an application using the application ID directly. Only pending applications can be withdrawn.
+
+**Request**:
+```http
+DELETE /api/applications/60d0fe4f5311236168a109cf
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Application withdrawn successfully"
 }
 ```
 </details>
@@ -617,7 +736,7 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Campaign created successfully",
+  "message": "Campaign created as draft successfully",
   "data": {
     "id": "60d0fe4f5311236168a109cd",
     "club_id": "60d0fe4f5311236168a109ca",
@@ -676,13 +795,22 @@ Content-Type: application/json
 </details>
 
 <details>
-<summary><strong>GET /api/clubs/{clubId}/campaigns</strong> - Get club's draft campaigns</summary>
+<summary><strong>GET /api/clubs/{clubId}/campaigns</strong> - Get club's campaigns</summary>
 
-**Description**: Get all draft campaigns for the club. Only accessible by club managers.
+**Description**: /**
+ * @route GET /api/clubs/:clubId/campaigns
+ * @desc Get campaigns for a club with optional status filter
+ * @query status - Comma-separated list of statuses to filter by (draft,published,completed,paused)
+ * @query page - Page number for pagination
+ * @query limit - Number of items per page
+ * @query sort - Sort field
+ * @access Private (Club Manager only)
+ * @example /api/clubs/:clubId/campaigns?status=published,draft&page=1&limit=10
+ */
 
 **Request**:
 ```http
-GET /api/clubs/60d0fe4f5311236168a109ca/campaigns?page=1&limit=10
+GET /api/clubs/60d0fe4f5311236168a109ca/campaigns?status=published,draft&page=1&limit=10
 Authorization: Bearer {jwt_token}
 ```
 
@@ -690,7 +818,7 @@ Authorization: Bearer {jwt_token}
 ```json
 {
   "success": true,
-  "message": "Draft campaigns retrieved successfully",
+  "message": "Campaigns retrieved successfully",
   "data": {
     "campaigns": [
       {
@@ -698,9 +826,31 @@ Authorization: Bearer {jwt_token}
         "club_id": "60d0fe4f5311236168a109ca",
         "title": "Fall 2025 Recruitment - Tech Club",
         "description": "Join our tech club for exciting programming workshops...",
-        "status": "draft",
+        "requirements": [
+          "Basic programming knowledge in any language",
+          "Passion for technology and innovation"
+        ],
+        "application_questions": [
+          {
+            "id": "q1",
+            "question": "What programming languages are you familiar with?",
+            "type": "textarea",
+            "required": true,
+            "max_length": 500
+          }
+        ],
         "start_date": "2025-09-01T00:00:00Z",
         "end_date": "2025-09-15T23:59:59Z",
+        "max_applications": 50,
+        "status": "draft",
+        "statistics": {
+          "total_applications": 0,
+          "approved_applications": 0,
+          "rejected_applications": 0,
+          "pending_applications": 0,
+          "last_updated": "2025-07-18T10:30:00Z"
+        },
+        "created_by": "auth-user-123",
         "created_at": "2025-07-18T10:30:00Z",
         "updated_at": "2025-07-18T10:30:00Z"
       }
@@ -1315,3 +1465,487 @@ deleted (only for draft)
 5. Maximum application limits enforced at campaign level
 
 This API documentation provides the frontend team with all necessary information to implement the recruitment functionality, including detailed request/response formats, error handling, and business logic constraints.
+
+---
+
+## 🏢 Additional Club Management APIs
+
+### Public Club Information Endpoints
+
+<details>
+<summary><strong>GET /api/clubs/categories</strong> - Get available club categories</summary>
+
+**Description**: Get all available club categories for filtering purposes.
+
+**Request**:
+```http
+GET /api/clubs/categories
+Authorization: None required
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Categories retrieved successfully",
+  "data": [
+    "Technology",
+    "Sports",
+    "Arts & Culture",
+    "Academic",
+    "Volunteer & Service",
+    "Business & Entrepreneurship",
+    "Other"
+  ]
+}
+```
+</details>
+
+<details>
+<summary><strong>GET /api/clubs/locations</strong> - Get available club locations</summary>
+
+**Description**: Get all available club locations for filtering purposes.
+
+**Request**:
+```http
+GET /api/clubs/locations
+Authorization: None required
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Locations retrieved successfully",
+  "data": [
+    "Main Campus",
+    "North Campus",
+    "Online",
+    "City Center",
+    "Library Building"
+  ]
+}
+```
+</details>
+
+<details>
+<summary><strong>GET /api/clubs/stats</strong> - Get club statistics</summary>
+
+**Description**: Get overall club statistics for search context and insights.
+
+**Request**:
+```http
+GET /api/clubs/stats
+Authorization: None required
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Club statistics retrieved successfully",
+  "data": {
+    "total_clubs": 45,
+    "active_clubs": 42,
+    "total_members": 1250,
+    "categories_count": {
+      "Technology": 8,
+      "Sports": 12,
+      "Arts & Culture": 10,
+      "Academic": 15,
+      "Other": 0
+    },
+    "locations_count": {
+      "Main Campus": 25,
+      "North Campus": 12,
+      "Online": 8,
+      "City Center": 2
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>GET /api/clubs</strong> - Get all clubs with filtering</summary>
+
+**Description**: Get all clubs with advanced filtering, search, and pagination options.
+
+**Request**:
+```http
+GET /api/clubs?search=tech&category=Technology&location=Main Campus&sort=name&page=1&limit=10
+Authorization: None required
+```
+
+**Query Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| search | string | No | Search across name, description, category, location |
+| name | string | No | Filter by club name (partial match) |
+| category | string | No | Filter by category (exact match) |
+| location | string | No | Filter by location (partial match) |
+| status | string | No | Filter by status (ACTIVE, INACTIVE) |
+| sort | string | No | Sort by: name, name_desc, category, location, newest, oldest, relevance |
+| page | number | No | Page number (default: 1) |
+| limit | number | No | Items per page (default: 10, max: 100) |
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Clubs retrieved successfully",
+  "data": {
+    "clubs": [
+      {
+        "id": "60d0fe4f5311236168a109ca",
+        "name": "Tech Innovation Club",
+        "description": "A club focused on emerging technologies and innovation",
+        "category": "Technology",
+        "location": "Main Campus",
+        "status": "ACTIVE",
+        "member_count": 45,
+        "logo_url": "https://example.com/logo.png",
+        "contact_email": "tech@university.edu",
+        "created_at": "2024-01-15T10:00:00Z"
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "total_pages": 3,
+      "total_items": 25,
+      "items_per_page": 10,
+      "has_next": true,
+      "has_previous": false
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>GET /api/clubs/{id}</strong> - Get club details</summary>
+
+**Description**: Get detailed information about a specific club including recruitment and event information.
+
+**Request**:
+```http
+GET /api/clubs/60d0fe4f5311236168a109ca
+Authorization: None required
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Club retrieved successfully",
+  "data": {
+    "id": "60d0fe4f5311236168a109ca",
+    "name": "Tech Innovation Club",
+    "description": "A club focused on emerging technologies and innovation...",
+    "category": "Technology",
+    "location": "Main Campus",
+    "status": "ACTIVE",
+    "member_count": 45,
+    "logo_url": "https://example.com/logo.png",
+    "website_url": "https://techclub.university.edu",
+    "contact_email": "tech@university.edu",
+    "contact_phone": "+1-555-0123",
+    "social_links": {
+      "facebook": "https://facebook.com/techclub",
+      "instagram": "@techclub_uni"
+    },
+    "manager": {
+      "user_id": "manager-123",
+      "full_name": "John Doe",
+      "email": "john.doe@university.edu"
+    },
+    "current_recruitments": [
+      {
+        "id": "60d0fe4f5311236168a109cd",
+        "title": "Fall 2025 Recruitment",
+        "status": "published",
+        "end_date": "2025-09-15T23:59:59Z"
+      }
+    ],
+    "total_recruitments": 5,
+    "active_recruitments": 1,
+    "upcoming_events": [
+      {
+        "id": "event-123",
+        "title": "Tech Workshop: AI Fundamentals",
+        "start_date": "2025-08-01T14:00:00Z"
+      }
+    ],
+    "published_events": [
+      {
+        "id": "event-124",
+        "title": "Hackathon 2025",
+        "start_date": "2025-09-10T09:00:00Z"
+      }
+    ],
+    "total_events": 12,
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2025-07-20T08:30:00Z"
+  }
+}
+```
+</details>
+
+### Club Membership Management
+
+<details>
+<summary><strong>GET /api/users/{userId}/club-roles</strong> - Get user's club roles</summary>
+
+**Description**: Get all club roles and memberships for a specific user.
+
+**Request**:
+```http
+GET /api/users/auth-user-123/club-roles
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "User club roles retrieved successfully",
+  "data": [
+    {
+      "clubId": "60d0fe4f5311236168a109ca",
+      "clubName": "Tech Innovation Club",
+      "role": "club_manager",
+      "joinedAt": "2024-01-15T10:00:00Z"
+    },
+    {
+      "clubId": "60d0fe4f5311236168a109cb",
+      "clubName": "Art Society",
+      "role": "member",
+      "joinedAt": "2024-03-10T14:30:00Z"
+    }
+  ]
+}
+```
+</details>
+
+<details>
+<summary><strong>GET /api/clubs/{clubId}/members</strong> - Get club members</summary>
+
+**Description**: Get all members of a specific club. Requires club membership to access.
+
+**Request**:
+```http
+GET /api/clubs/60d0fe4f5311236168a109ca/members
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Club members retrieved successfully",
+  "data": [
+    {
+      "user_id": "manager-123",
+      "user_email": "john.doe@university.edu",
+      "user_full_name": "John Doe",
+      "role": "club_manager",
+      "joined_at": "2024-01-15T10:00:00Z",
+      "status": "active"
+    },
+    {
+      "user_id": "member-456",
+      "user_email": "jane.smith@university.edu",
+      "user_full_name": "Jane Smith",
+      "role": "member",
+      "joined_at": "2024-02-20T09:15:00Z",
+      "status": "active"
+    }
+  ]
+}
+```
+</details>
+
+<details>
+<summary><strong>POST /api/clubs/{clubId}/members</strong> - Add club member</summary>
+
+**Description**: Add a new member to the club. Requires club_manager role.
+
+**Request**:
+```http
+POST /api/clubs/60d0fe4f5311236168a109ca/members
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "userId": "new-member-789",
+  "userEmail": "new.member@university.edu",
+  "userFullName": "New Member",
+  "role": "member"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "message": "Member added successfully",
+  "data": {
+    "club_id": "60d0fe4f5311236168a109ca",
+    "user_id": "new-member-789",
+    "user_email": "new.member@university.edu",
+    "user_full_name": "New Member",
+    "role": "member",
+    "status": "active",
+    "approved_by": "manager-123",
+    "approved_at": "2025-07-26T10:30:00Z"
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>PUT /api/clubs/{clubId}/members/{userId}/role</strong> - Update member role</summary>
+
+**Description**: Update a member's role in the club. Requires club_manager role.
+
+**Request**:
+```http
+PUT /api/clubs/60d0fe4f5311236168a109ca/members/member-456/role
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "role": "organizer"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Member role updated successfully",
+  "data": {
+    "user_id": "member-456",
+    "old_role": "member",
+    "new_role": "organizer",
+    "updated_at": "2025-07-26T10:35:00Z"
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>DELETE /api/clubs/{clubId}/members/{userId}</strong> - Remove club member</summary>
+
+**Description**: Remove a member from the club. Requires club_manager role.
+
+**Request**:
+```http
+DELETE /api/clubs/60d0fe4f5311236168a109ca/members/member-456
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Member removed successfully"
+}
+```
+</details>
+
+### System Admin Endpoints
+
+<details>
+<summary><strong>POST /api/clubs</strong> - Create new club</summary>
+
+**Description**: Create a new club. Requires ADMIN role.
+
+**Request**:
+```http
+POST /api/clubs
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "name": "New Innovation Club",
+  "description": "A club focused on innovation and creativity",
+  "category": "Technology",
+  "location": "Main Campus",
+  "contact_email": "innovation@university.edu",
+  "contact_phone": "+1-555-0199",
+  "logo_url": "https://example.com/logo.png",
+  "website_url": "https://innovation.university.edu",
+  "manager_user_id": "manager-789",
+  "manager_full_name": "Manager Name",
+  "manager_email": "manager@university.edu",
+  "status": "ACTIVE"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "message": "Club created successfully",
+  "data": {
+    "id": "60d0fe4f5311236168a109cc",
+    "name": "New Innovation Club",
+    "category": "Technology",
+    "status": "ACTIVE",
+    "member_count": 1,
+    "manager": {
+      "user_id": "manager-789",
+      "full_name": "Manager Name",
+      "email": "manager@university.edu",
+      "assigned_at": "2025-07-26T10:40:00Z"
+    },
+    "created_at": "2025-07-26T10:40:00Z",
+    "updated_at": "2025-07-26T10:40:00Z"
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>PUT /api/clubs/{id}/status</strong> - Update club status</summary>
+
+**Description**: Update club status (ACTIVE/INACTIVE). Requires ADMIN role.
+
+**Request**:
+```http
+PUT /api/clubs/60d0fe4f5311236168a109ca/status
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "status": "INACTIVE"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Club status updated successfully",
+  "data": {
+    "id": "60d0fe4f5311236168a109ca",
+    "old_status": "ACTIVE",
+    "new_status": "INACTIVE",
+    "updated_at": "2025-07-26T10:45:00Z"
+  }
+}
+```
+</details>

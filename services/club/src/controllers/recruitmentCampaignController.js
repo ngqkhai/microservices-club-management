@@ -479,7 +479,7 @@ class RecruitmentCampaignController {
       const { campaignId } = req.params;
       const userId = req.user?.id || req.headers['x-user-id'];
       const userEmail = req.user?.email || req.headers['x-user-email'];
-      const userFullName = req.user?.full_name || req.headers['x-user-full-name'];
+      const userFullName = req.user?.full_name || req.headers['x-user-full_name'];
 
       if (!userId) {
         return res.status(401).json({
