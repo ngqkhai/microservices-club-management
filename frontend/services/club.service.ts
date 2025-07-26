@@ -184,6 +184,8 @@ export interface ClubDetail {
 export interface ClubMember {
   _id: string;
   user_id: string;
+  user_full_name: string;
+  user_email?: string;
   role: 'club_manager' | 'organizer' | 'member';
   joined_at: string;
 }

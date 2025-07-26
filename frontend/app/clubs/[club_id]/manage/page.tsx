@@ -293,8 +293,8 @@ export default function ClubManagerDashboard() {
                     <MemberList
                       members={members.map(member => ({
                         user_id: member.user_id,
-                        name: `User ${member.user_id}`, // Temporary: API doesn't return name
-                        email: `${member.user_id}@example.com`, // Temporary: API doesn't return email
+                        name: member.user_full_name || `User ${member.user_id}`, // Temporary: API doesn't return name
+                        email: member.user_email || `${member.user_id}@example.com`, // Temporary: API doesn't return email
                         role: member.role,
                         joined_at: member.joined_at,
                       }))}

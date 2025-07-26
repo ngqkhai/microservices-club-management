@@ -776,7 +776,7 @@ class ClubService {
       const members = await Membership.find({
         club_id: clubId,
         status: 'active'
-      }).select('user_id role joined_at');
+      }).select('user_id role joined_at user_email user_full_name');
 
       return {
         success: true,
