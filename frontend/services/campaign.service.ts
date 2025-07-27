@@ -65,6 +65,7 @@ export interface CampaignApplication {
   club_id?: string;
   user_id: string;
   user_email: string;
+  user_full_name: string;
   status: 'pending' | 'approved' | 'rejected';
   application_message?: string;
   answers: ApplicationAnswer[];

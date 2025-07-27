@@ -806,6 +806,8 @@ class RecruitmentCampaignService {
         applications: memberships.map(membership => ({
           id: membership._id,
           user_id: membership.user_id,
+          user_email: membership.user_email,
+          user_full_name: membership.user_full_name,
           club_id: membership.club_id,
           campaign_id: membership.campaign_id,
           status: membership.status,
@@ -858,6 +860,8 @@ class RecruitmentCampaignService {
       return {
         id: membership._id,
         user_id: membership.user_id,
+        user_email: membership.user_email,
+        user_full_name: membership.user_full_name,
         club_id: membership.club_id,
         campaign_id: membership.campaign_id,
         status: membership.status,
