@@ -105,7 +105,8 @@ class EventServiceClient {
       console.log(`Fetching published events for club: ${clubId}`);
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
         status: 'published',
-        limit: 10
+        limit: 10,
+        ...options
       });
       return response?.data || [];
     } catch (error) {
@@ -121,10 +122,18 @@ class EventServiceClient {
     try {
       console.log(`Fetching upcoming events for club: ${clubId}`);
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
-        status: 'upcoming',
-        limit: 5
+        status: 'published',
+        limit: 10
       });
-      return response?.data || [];
+      
+      // Filter events with future start_date on client side
+      const currentDate = new Date();
+      const allEvents = response?.data || [];
+      
+      return allEvents.filter(event => {
+        const eventDate = new Date(event.start_date || event.date);
+        return eventDate > currentDate;
+      });
     } catch (error) {
       console.error('Error fetching upcoming club events:', error.message);
       return [];
@@ -137,24 +146,77 @@ class EventServiceClient {
   async getEventStatistics(clubId, requestContext = {}) {
     try {
       console.log(`Fetching event statistics for club: ${clubId}`);
-      const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
-        page: 1,
-        limit: 1
-      });
+      
+      // Get published and completed events separately since cron job maintains correct statuses
+      const [publishedResponse, completedResponse] = await Promise.all([
+        this._makeRequest(`/api/clubs/${clubId}/events`, {
+          status: 'published',
+          page: 1,
+          limit: 100
+        }).catch(() => ({ data: [], meta: { total: 0 } })),
+        
+        this._makeRequest(`/api/clubs/${clubId}/events`, {
+          status: 'completed',
+          page: 1,
+          limit: 100
+        }).catch(() => ({ data: [], meta: { total: 0 } }))
+      ]);
 
-      const total_events = response?.meta?.total || 0;
+      const publishedEvents = publishedResponse?.data || [];
+      const completedEvents = completedResponse?.data || [];
+      
+      // Since cron job maintains accurate statuses, no need for client-side date filtering
+      const published_events = publishedEvents.length;
+      const completed_events = completedEvents.length;
+      const total_events = published_events + completed_events;
+      
+      // For upcoming events, filter published events by future start_date (client-side)
+      const currentDate = new Date();
+      const upcoming_events = publishedEvents.filter(event => {
+        const eventStartDate = new Date(event.start_date || event.date);
+        return eventStartDate > currentDate;
+      }).length;
+
       return {
         total_events,
-        upcoming_events: 0,
-        past_events: total_events
+        published_events,
+        completed_events,
+        upcoming_events, // Subset of published events with future start_date
+        past_events: completed_events // Maintain backward compatibility
       };
     } catch (error) {
       console.error('Error fetching event statistics:', error.message);
       return {
         total_events: 0,
+        published_events: 0,
+        completed_events: 0,
         upcoming_events: 0,
         past_events: 0
       };
+    }
+  }
+
+  /**
+   * Get completed events for a club
+   * @param {string} clubId - Club ID
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} - Array of completed events
+   */
+  async getCompletedClubEvents(clubId, options = {}) {
+    try {
+      console.log(`Fetching completed events for club: ${clubId}`);
+      
+      // Get completed events by status - cron job maintains accurate statuses
+      const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
+        status: 'completed',
+        limit: 20,
+        ...options
+      });
+      
+      return response?.data || [];
+    } catch (error) {
+      console.error('Error fetching completed club events:', error.message);
+      return [];
     }
   }
 }

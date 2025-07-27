@@ -65,10 +65,39 @@ class ClubService {
     try {
       const result = await Club.findAll(sanitizedParams);
       
+      // Fetch event statistics for each club
+      const clubsWithEventStats = await Promise.all(
+        result.results.map(async (club) => {
+          try {
+            const eventStats = await this._getEventStatistics(club.id);
+            return {
+              ...club,
+              total_events: eventStats.total_events, // published + completed only
+              published_events: eventStats.published_events,
+              completed_events: eventStats.completed_events,
+              upcoming_events: eventStats.upcoming_events // subset of published
+            };
+          } catch (error) {
+            console.error(`Error fetching event stats for club ${club.id}:`, error);
+            // Return club data with zero event counts if stats fail
+            return {
+              ...club,
+              total_events: 0,
+              published_events: 0,
+              completed_events: 0,
+              upcoming_events: 0
+            };
+          }
+        })
+      );
+      
       return {
         success: true,
         message: 'Clubs retrieved successfully',
-        data: result,
+        data: {
+          ...result,
+          results: clubsWithEventStats
+        },
         pagination: {
           current_page: result.page,
           total_pages: result.totalPages,
@@ -108,11 +137,11 @@ class ClubService {
       }
 
       // Get additional data for the club
-      const [currentRecruitments, recruitmentStats, upcomingEvents, publishedEvents, eventStats] = await Promise.all([
+      const [currentRecruitments, recruitmentStats, publishedEvents, completedEvents, eventStats] = await Promise.all([
         this._getCurrentRecruitments(clubId),
         this._getRecruitmentStatistics(clubId),
-        this._getUpcomingEvents(clubId),
         this._getPublishedEvents(clubId),
+        this._getCompletedEvents(clubId),
         this._getEventStatistics(clubId)
       ]);
 
@@ -124,9 +153,11 @@ class ClubService {
           current_recruitments: currentRecruitments,
           total_recruitments: recruitmentStats.total_recruitments,
           active_recruitments: recruitmentStats.active_recruitments,
-          upcoming_events: upcomingEvents,
           published_events: publishedEvents,
-          total_events: eventStats.total_events
+          completed_events: completedEvents,
+          total_events: publishedEvents.length + completedEvents.length,
+          published_events_count: publishedEvents.length,
+          completed_events_count: completedEvents.length
         }
       };
     } catch (error) {
@@ -1164,20 +1195,20 @@ class ClubService {
   }
 
   /**
-   * Get upcoming events for a club from Event service
+   * Get completed events for a club from Event service
    * @param {string} clubId - The club ID
-   * @returns {Promise<Array>} - Array of upcoming events
+   * @returns {Promise<Array>} - Array of completed events
    */
-  async _getUpcomingEvents(clubId) {
+  async _getCompletedEvents(clubId) {
     try {
       const requestContext = {
         // Add basic context for API Gateway validation
         service: 'club-service'
       };
       
-      const upcomingEvents = await eventServiceClient.getUpcomingClubEvents(clubId, requestContext);
+      const completedEvents = await eventServiceClient.getCompletedClubEvents(clubId, requestContext);
       
-      return upcomingEvents.map(event => ({
+      return completedEvents.map(event => ({
         id: event.id || event._id,
         title: event.title || event.name,
         description: event.description,
@@ -1187,10 +1218,10 @@ class ClubService {
         fee: event.fee || event.price || 0,
         max_participants: event.max_participants || event.capacity,
         current_participants: event.current_participants || event.registered_count || 0,
-        status: event.status || 'active'
+        status: event.status || 'completed'
       }));
     } catch (error) {
-      console.error('Error getting upcoming events:', error);
+      console.error('Error getting completed events:', error);
       return [];
     }
   }
@@ -1210,14 +1241,18 @@ class ClubService {
       const eventStats = await eventServiceClient.getEventStatistics(clubId, requestContext);
       
       return {
-        total_events: eventStats.total_events || 0,
-        upcoming_events: eventStats.upcoming_events || 0,
-        past_events: eventStats.past_events || 0
+        total_events: eventStats.total_events || 0, // published + completed only
+        published_events: eventStats.published_events || 0,
+        completed_events: eventStats.completed_events || 0,
+        upcoming_events: eventStats.upcoming_events || 0, // subset of published
+        past_events: eventStats.past_events || 0 // Backward compatibility
       };
     } catch (error) {
       console.error('Error getting event statistics:', error);
       return {
         total_events: 0,
+        published_events: 0,
+        completed_events: 0,
         upcoming_events: 0,
         past_events: 0
       };

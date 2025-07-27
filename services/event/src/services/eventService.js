@@ -371,90 +371,106 @@ export const deleteEventService = async (eventId) => {
 };
 
 export const getEventsOfClubService = async ({ clubId, status, start_from, start_to, page = 1, limit = 10 }) => {
-  console.log(`Getting events for club ID: ${clubId}`);
-  
-  // Build query for the club - convert clubId to ObjectId
-  const { ObjectId } = mongoose.Types;
-  let query;
-  
-  // Convert clubId to ObjectId if it's a valid ObjectId string
-  if (ObjectId.isValid(clubId)) {
-    query = { club_id: new ObjectId(clubId) };
-  } else {
-    // If not a valid ObjectId, the query will not match anything
-    throw new Error('Invalid club ID format');
-  }
-  
-  // Add status filter if specified
-  if (status === 'upcoming') {
+    // 1. Xác thực và Xây dựng Query
+    if (!mongoose.Types.ObjectId.isValid(clubId)) {
+        throw new Error('Invalid club ID format');
+    }
+
+    const query = { club_id: new mongoose.Types.ObjectId(clubId) };
     const now = new Date();
-    query.start_date = { $gte: now };
-  }
-  
-  // Add date range filter if specified
-  if (start_from || start_to) {
-    const dateQuery = {};
-    if (start_from) dateQuery.$gte = new Date(start_from);
-    if (start_to) dateQuery.$lte = new Date(start_to);
-    
-    // Only add date filter if we haven't already added status filter
-    if (!query.start_date) {
-      query.start_date = dateQuery;
-    } else {
-      // Merge with existing date filter
-      query.start_date = { ...query.start_date, ...dateQuery };
+
+    // Logic lọc theo ngày và trạng thái
+    const dateConditions = [];
+
+    // Xử lý bộ lọc trạng thái
+    if (status === 'upcoming') {
+        dateConditions.push({ start_date: { $gte: now } });
+    } else if (status === 'published' || status === 'completed') {
+        query.status = status;
     }
-  }
 
-  // 2. Pagination
-  const pageNumber = parseInt(page, 10) || 1;
-  const pageSize = parseInt(limit, 10) || 10;
-  const skip = (pageNumber - 1) * pageSize;
-
-  // 3. Query DB
-  console.log(`Query being executed:`, JSON.stringify(query, null, 2));
-  
-  const total = await Event.countDocuments(query);
-  const events = await Event.find(query)
-    .sort({ start_date: 1 })
-    .skip(skip)
-    .limit(pageSize);
-
-  // 4. Format results with comprehensive event data
-  console.log(`Found ${events.length} events for club ${clubId} (total: ${total})`);
-  
-  return {
-    success: true,
-    data: events.map(e => ({
-      id: e._id,
-      title: e.title,
-      description: e.description,
-      short_description: e.short_description,
-      category: e.category,
-      location: e.location,
-      start_date: e.start_date,
-      end_date: e.end_date,
-      max_participants: e.max_participants || e.max_attendees,
-      participation_fee: e.participation_fee !== undefined ? e.participation_fee : e.fee,
-      fee: e.fee !== undefined ? e.fee : e.participation_fee, // For backward compatibility
-      currency: e.currency || 'USD',
-      status: e.status || ((e.start_date || e.start_at) > new Date() ? 'upcoming' : 'ongoing'),
-      visibility: e.visibility,
-      club_id: e.club_id,
-      created_by: e.created_by,
-      created_at: e.created_at,
-      updated_at: e.updated_at,
-      statistics: e.statistics || {
-        total_registrations: 0,
-        total_interested: 0,
-        total_attended: 0
-      }
-    })),
-    meta: {
-      total,
-      page: pageNumber,
-      limit: pageSize,
-      total_pages: Math.ceil(total / pageSize)
+    // Xử lý bộ lọc khoảng thời gian tùy chỉnh
+    const customDateRange = {};
+    if (start_from) {
+        customDateRange.$gte = new Date(start_from);
     }
-  };
+    if (start_to) {
+        customDateRange.$lte = new Date(start_to);
+    }
+    if (Object.keys(customDateRange).length > 0) {
+        dateConditions.push({ start_date: customDateRange });
+    }
+
+    // Kết hợp tất cả các điều kiện liên quan đến ngày bằng $and
+    if (dateConditions.length > 0) {
+        query.$and = dateConditions;
+    }
+
+    // 2. Phân trang
+    const pageNumber = parseInt(page, 10) || 1;
+    const pageSize = parseInt(limit, 10) || 10;
+    const skip = (pageNumber - 1) * pageSize;
+
+    // 3. Truy vấn DB
+    // Sử dụng hai query riêng biệt cho đơn giản. Đối với nhu cầu hiệu suất rất cao,
+    // hãy xem xét một query tổng hợp (aggregation) duy nhất với giai đoạn $facet.
+    const total = await Event.countDocuments(query);
+    const events = await Event.find(query)
+        .sort({ start_date: 1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean(); // Dùng .lean() để query nhanh hơn, trả về đối tượng JS thuần túy
+
+    // 4. Định dạng kết quả
+    const getEventStatus = (event) => {
+        // Ưu tiên trạng thái đã được lưu trong DB
+        if (event.status) return event.status;
+
+        const now = new Date();
+        // Đảm bảo các ngày là đối tượng Date hợp lệ
+        const startDate = event.start_date ? new Date(event.start_date) : null;
+        const endDate = event.end_date ? new Date(event.end_date) : null;
+
+        if (endDate && endDate < now) return 'past';
+        if (startDate && startDate > now) return 'upcoming';
+        if (startDate && endDate && startDate <= now && endDate >= now) return 'ongoing';
+        
+        // Giá trị mặc định nếu không thể xác định
+        return 'unknown';
+    };
+
+    return {
+        success: true,
+        data: events.map(e => ({
+            id: e._id,
+            title: e.title,
+            description: e.description,
+            short_description: e.short_description,
+            category: e.category,
+            location: e.location,
+            start_date: e.start_date,
+            end_date: e.end_date,
+            max_participants: e.max_participants ?? e.max_attendees,
+            participation_fee: e.participation_fee ?? e.fee ?? 0,
+            fee: e.fee ?? e.participation_fee ?? 0, // Tương thích ngược
+            currency: e.currency ?? 'USD',
+            status: getEventStatus(e),
+            visibility: e.visibility,
+            club_id: e.club_id,
+            created_by: e.created_by,
+            created_at: e.created_at,
+            updated_at: e.updated_at,
+            statistics: e.statistics ?? {
+                total_registrations: 0,
+                total_interested: 0,
+                total_attended: 0
+            }
+        })),
+        meta: {
+            total,
+            page: pageNumber,
+            limit: pageSize,
+            total_pages: Math.ceil(total / pageSize)
+        }
+    };
 };
