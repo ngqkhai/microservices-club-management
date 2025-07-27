@@ -917,10 +917,10 @@ export function CampaignList({ campaigns: initialCampaigns, clubId, onCampaignUp
                 <h3 className="font-semibold mb-3">Thông tin ứng viên</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <strong>User ID:</strong> {selectedApplicationDetail.user_id}
+                    <strong>Họ và tên:</strong> {selectedApplicationDetail.user_full_name}
                   </div>
                   <div>
-                    <strong>Vai trò:</strong> {selectedApplicationDetail.role || 'member'}
+                    <strong>Email:</strong> {selectedApplicationDetail.user_email || 'Email không có'}
                   </div>
                   <div>
                     <strong>Trạng thái:</strong> 
