@@ -78,7 +78,7 @@ router.get('/clubs/:id/recruitments', authMiddleware.validateApiGatewaySecret, c
  */
 router.get(
   '/clubs/:clubId/campaigns/:campaignId',
-  authMiddleware.validateApiGatewaySecret, // Use public gateway validation
+  authMiddleware.validateApiGatewayHeaders, // Use public gateway validation
   RecruitmentCampaignController.getCampaign
 );
 

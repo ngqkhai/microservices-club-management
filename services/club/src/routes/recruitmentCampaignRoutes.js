@@ -29,7 +29,7 @@ router.get('/:clubId/campaigns', RecruitmentCampaignController.getCampaigns);
  * @desc Get campaign by ID
  * @access Public (for active campaigns) / Private (for draft campaigns)
  */
-// router.get('/:clubId/campaigns/:campaignId', RecruitmentCampaignController.getCampaign);
+router.get('/:clubId/campaigns/:campaignId', RecruitmentCampaignController.getCampaign);
 
 /**
  * @route PUT /api/clubs/:clubId/campaigns/:campaignId

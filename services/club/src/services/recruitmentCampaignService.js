@@ -47,7 +47,7 @@ class RecruitmentCampaignService {
       });
 
       // If campaign is published immediately, publish event
-      if (campaign.status === 'active') {
+      if (campaign.status === 'published') {
         await CampaignEventPublisher.publishCampaignPublished(campaign);
       } else {
         await CampaignEventPublisher.publishCampaignCreated(campaign);
@@ -96,25 +96,35 @@ class RecruitmentCampaignService {
       }
       
       // If campaign is published, anyone can view it
-      if (['published'].includes(campaign.status)) {
+      if (campaign.status === 'published') {
         return userId ? campaign.toManagerJSON() : campaign.toPublicJSON();
       }
       
-      // If campaign is draft, only club managers can view it
-      if (campaign.status === 'draft') {
+      // If campaign is draft, paused, or completed, only club managers can view it
+      if (['draft', 'paused', 'completed'].includes(campaign.status)) {
         if (!userId) {
-          throw new Error('Authentication required to view draft campaigns');
+          throw new Error('Authentication required to view this campaign');
         }
         
         const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
         if (!hasPermission) {
-          throw new Error('You do not have permission to view this draft campaign');
+          throw new Error('You do not have permission to view this campaign');
         }
         
         return campaign.toManagerJSON();
       }
 
-      return campaign.toPublicJSON();
+      // Unknown status - default to manager access only
+      if (!userId) {
+        throw new Error('Authentication required to view this campaign');
+      }
+      
+      const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
+      if (!hasPermission) {
+        throw new Error('You do not have permission to view this campaign');
+      }
+      
+      return campaign.toManagerJSON();
     } catch (error) {
       throw new Error(`Failed to get campaign: ${error.message}`);
     }
@@ -219,7 +229,7 @@ class RecruitmentCampaignService {
   }
 
   /**
-   * Publish campaign (change status from draft to active)
+   * Publish campaign (change status from draft to published)
    * @param {String} campaignId - Campaign ID
    * @param {String} userId - User ID
    * @returns {Object} Updated campaign
