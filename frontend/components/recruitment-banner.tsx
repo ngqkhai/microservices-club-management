@@ -116,7 +116,7 @@ export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps
                       </Button>
                     ) : (
                       <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        <Link href={`/campaigns/${campaign.id}`}>
+                        <Link href={`/clubs/${campaign.club_id}?campaign_id=${campaign.id}&apply=true`}>
                           Xem chi tiết
                           <ArrowRight className="h-3 w-3 ml-1" />
                         </Link>
