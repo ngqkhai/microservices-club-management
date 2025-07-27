@@ -49,3 +49,5 @@ Thumbs.db
 #Cursor
 .cursorignore
 .cursor
+
+test.json

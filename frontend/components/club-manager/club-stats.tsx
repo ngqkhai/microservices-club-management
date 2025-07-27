@@ -16,11 +16,11 @@ interface ClubStatsProps {
 export function ClubStats({ club, members, campaigns }: ClubStatsProps) {
   const totalMembers = members?.length || 0
   const totalEvents = club["total_events"] || 0
+  const publishedEvents = club["published_events_count"] || 0
+  const completedEvents = club["completed_events_count"] || 0
   const totalRequirements = club["total_recruitments"] || 0
   const activeRecruitments = club["active_recruitments"] || 0
   const inactiveRecruitments = totalRequirements - activeRecruitments
-  const publishedEvents = club["published_events"]?.length || 0
-  const upcomingEvents = club["upcoming_events"]?.length || 0
   const totalApplications = campaigns?.reduce((sum, c) => sum + (c.applications_count || 0), 0) || 0
 
   const getRoleLabel = (role: string) => {
@@ -160,17 +160,17 @@ export function ClubStats({ club, members, campaigns }: ClubStatsProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Đã xuất bản</Badge>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Đang diễn ra</Badge>
                   <span className="text-sm text-gray-600">{publishedEvents} sự kiện</span>
                 </div>
                 <Progress value={totalEvents > 0 ? (publishedEvents / totalEvents) * 100 : 0} className="w-24" />
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Sắp diễn ra</Badge>
-                  <span className="text-sm text-gray-600">{upcomingEvents} sự kiện</span>
+                  <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Đã diễn ra</Badge>
+                  <span className="text-sm text-gray-600">{completedEvents} sự kiện</span>
                 </div>
-                <Progress value={totalEvents > 0 ? (upcomingEvents / totalEvents) * 100 : 0} className="w-24" />
+                <Progress value={totalEvents > 0 ? (completedEvents / totalEvents) * 100 : 0} className="w-24" />
               </div>
             </div>
           </CardContent>

@@ -118,7 +118,7 @@ export interface Event {
  * Detailed club interface from API response (following CLUB_MEMBERS_APPLICATIONS_API.md)
  */
 export interface ClubDetail {
-  _id: string;
+  id: string;
   name: string;
   description: string;
   category: string;
@@ -126,21 +126,29 @@ export interface ClubDetail {
   contact_email: string;
   contact_phone: string;
   logo_url: string;
+  cover_url: string;
   website_url?: string;
   social_links?: {
     facebook?: string;
     instagram?: string;
+    twitter?: string;
     linkedin?: string;
+  };
+  settings?: {
+    is_public: boolean;
+    requires_approval: boolean;
+    max_members?: number;
   };
   status: string;
   member_count: number;
-  created_at: string;
-  updated_at: string;
+  created_by?: string;
   manager: {
     user_id: string;
     full_name: string;
     email: string;
+    assigned_at?: string;
   };
+  size?: number;
   current_recruitments: Array<{
     id: string;
     title: string;
@@ -154,18 +162,6 @@ export interface ClubDetail {
   }>;
   total_recruitments: number;
   active_recruitments: number;
-  upcoming_events: Array<{
-    id: string;
-    title: string;
-    description: string;
-    date: string;
-    time: string;
-    location: string;
-    fee: number;
-    max_participants: number;
-    current_participants: number;
-    status: string;
-  }>;
   published_events: Array<{
     id: string;
     title: string;
@@ -175,7 +171,18 @@ export interface ClubDetail {
     participants_count: number;
     status: string;
   }>;
+  completed_events: Array<{
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    location: string;
+    participants_count: number;
+    status: string;
+  }>;
   total_events: number;
+  published_events_count: number;
+  completed_events_count: number;
 }
 
 /**
