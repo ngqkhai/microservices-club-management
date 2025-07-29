@@ -15,11 +15,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Users, Calendar, Settings, BarChart3, Plus } from "lucide-react"
+import { Users, Calendar, Settings, BarChart3, Plus, MapPin } from "lucide-react"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import { MemberList } from "@/components/club-manager/member-list"
 import { CampaignList } from "@/components/club-manager/campaign-list"
+import { EventList } from "@/components/club-manager/event-list"
 import { ClubStats } from "@/components/club-manager/club-stats"
 import { AddMemberForm } from "@/components/club-manager/add-member-form"
 import { clubService, type ClubDetail, type ClubMember } from "@/services/club.service"
@@ -35,6 +36,7 @@ export default function ClubManagerDashboard() {
   const [club, setClub] = useState<ClubDetail | null>(null)
   const [members, setMembers] = useState<ClubMember[]>([])
   const [campaigns, setCampaigns] = useState<ClubDetail['current_recruitments']>([])
+  const [events, setEvents] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
@@ -93,6 +95,63 @@ export default function ClubManagerDashboard() {
           // Overview data is already loaded with basic club data
           if (club?.current_recruitments) {
             setCampaigns(club.current_recruitments)
+          }
+          break
+
+        case "events":
+          if (events.length === 0) {
+            // Mock events data - replace with actual API call
+            const mockEvents = [
+              {
+                _id: "event-1",
+                title: "Spring Concert 2024",
+                description: "Đêm nhạc mùa xuân với các tiết mục đa dạng",
+                start_date: "2024-04-15T19:00:00Z",
+                end_date: "2024-04-15T21:30:00Z",
+                location: "University Auditorium",
+                max_participants: 300,
+                current_participants: 156,
+                status: "published",
+                fee: 0,
+                category: "Arts & Culture",
+                event_type: "Concert",
+                created_at: "2024-03-01T00:00:00Z",
+                updated_at: "2024-03-15T00:00:00Z",
+              },
+              {
+                _id: "event-2",
+                title: "Tech Workshop: AI Basics",
+                description: "Workshop về AI cơ bản cho sinh viên",
+                start_date: "2024-04-20T14:00:00Z",
+                end_date: "2024-04-20T17:00:00Z",
+                location: "Tech Hub, Room 301",
+                max_participants: 50,
+                current_participants: 32,
+                status: "ongoing",
+                fee: 50000,
+                category: "Technology",
+                event_type: "Workshop",
+                created_at: "2024-03-10T00:00:00Z",
+                updated_at: "2024-03-10T00:00:00Z",
+              },
+              {
+                _id: "event-3",
+                title: "Football Tournament",
+                description: "Giải bóng đá sinh viên mùa xuân 2024",
+                start_date: "2024-04-25T08:00:00Z",
+                end_date: "2024-04-25T18:00:00Z",
+                location: "Sân bóng đá trường",
+                max_participants: 200,
+                current_participants: 180,
+                status: "published",
+                fee: 0,
+                category: "Sports",
+                event_type: "Tournament",
+                created_at: "2024-03-05T00:00:00Z",
+                updated_at: "2024-03-05T00:00:00Z",
+              },
+            ]
+            setEvents(mockEvents)
           }
           break
 
@@ -329,29 +388,36 @@ export default function ClubManagerDashboard() {
               <CardContent className="p-0">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <div className="border-b">
-                    <TabsList className="grid w-full grid-cols-3 h-12 bg-transparent rounded-none">
-                      <TabsTrigger
-                        value="overview"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
-                      >
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Tổng quan
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="members"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
-                      >
-                        <Users className="h-4 w-4 mr-2" />
-                        Thành viên
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="campaigns"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Chiến dịch
-                      </TabsTrigger>
-                    </TabsList>
+                                      <TabsList className="grid w-full grid-cols-4 h-12 bg-transparent rounded-none">
+                    <TabsTrigger
+                      value="overview"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
+                    >
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Tổng quan
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="members"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Thành viên
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="campaigns"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Chiến dịch
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="events"
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Sự kiện
+                    </TabsTrigger>
+                  </TabsList>
                   </div>
 
                   <TabsContent value="overview" className="p-6">
@@ -427,6 +493,32 @@ export default function ClubManagerDashboard() {
                             applications_count: campaign.total_applications,
                             status: campaign.status,
                           })))
+                        }} 
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center min-h-[300px]">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="events" className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold">Quản lý sự kiện</h3>
+                      <Button
+                        onClick={() => router.push(`/clubs/${clubId}/manage/events/new`)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tạo sự kiện
+                      </Button>
+                    </div>
+                    {loadedTabs.has("events") ? (
+                      <EventList 
+                        events={events} 
+                        clubId={clubId} 
+                        onEventUpdate={(updatedEvents) => {
+                          setEvents(updatedEvents)
                         }} 
                       />
                     ) : (
