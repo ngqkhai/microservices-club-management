@@ -282,7 +282,7 @@ export default function ClubManagerDashboard() {
     } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: error.message || "Không thể tải chi tiết chiến dịch.",
+        description: error.message || "Không thể tải chi tiết đợt tuyển.",
         variant: "destructive",
       })
     }
@@ -374,7 +374,7 @@ export default function ClubManagerDashboard() {
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Tạo chiến dịch mới
+                Tạo đợt tuyển mới
               </Button>
             </div>
           </div>
@@ -408,7 +408,7 @@ export default function ClubManagerDashboard() {
                       className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600"
                     >
                       <Calendar className="h-4 w-4 mr-2" />
-                      Chiến dịch
+                      Đợt tuyển
                     </TabsTrigger>
                     <TabsTrigger
                       value="events"
@@ -459,13 +459,13 @@ export default function ClubManagerDashboard() {
 
                   <TabsContent value="campaigns" className="p-6">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold">Quản lý chiến dịch</h3>
+                      <h3 className="text-lg font-semibold">Quản lý đợt tuyển</h3>
                       <Button
                         onClick={() => router.push(`/clubs/${clubId}/manage/campaigns/new`)}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        Tạo chiến dịch
+                        Tạo đợt tuyển
                       </Button>
                     </div>
                     {loadedTabs.has("campaigns") ? (
@@ -588,7 +588,7 @@ export default function ClubManagerDashboard() {
                   onClick={() => router.push(`/clubs/${clubId}/manage/campaigns/new`)}
                 >
                   <Calendar className="h-4 w-4 mr-2" />
-                  Tạo chiến dịch
+                  Tạo đợt tuyển
                 </Button>
                 <Button
                   variant="outline"
@@ -597,6 +597,14 @@ export default function ClubManagerDashboard() {
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Xem thành viên
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start bg-transparent"
+                  onClick={() => router.push(`/clubs/${clubId}/manage/events/new`)}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Tạo sự kiện
                 </Button>
               </CardContent>
             </Card>
