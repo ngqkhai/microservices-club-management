@@ -167,32 +167,6 @@ export function FilterSidebar({
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
-      {!isMobile && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Event Statistics</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">This Week</span>
-              <Badge variant="secondary">12</Badge>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">This Month</span>
-              <Badge variant="secondary">45</Badge>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Free Events</span>
-              <Badge variant="secondary">28</Badge>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Paid Events</span>
-              <Badge variant="secondary">17</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

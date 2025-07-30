@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -13,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Search, Calendar, SlidersHorizontal } from "lucide-react"
+import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 
@@ -114,6 +115,54 @@ const mockEvents = [
       "Join us for a morning of environmental service. Help clean up the beach and protect marine life. Transportation provided.",
     category: "Service",
   },
+  {
+    event_id: "photography-workshop",
+    title: "Digital Photography Workshop",
+    date: "2024-04-20",
+    time: "10:00",
+    location: "Art Studio",
+    club: "Creative Arts Club",
+    fee: 25,
+    description:
+      "Learn digital photography techniques including composition, lighting, and post-processing. Bring your own camera.",
+    category: "Arts",
+  },
+  {
+    event_id: "coding-bootcamp",
+    title: "Web Development Bootcamp",
+    date: "2024-04-12",
+    time: "09:00",
+    location: "Computer Lab 301",
+    club: "Tech Innovation Club",
+    fee: 30,
+    description:
+      "Intensive 2-day bootcamp covering HTML, CSS, JavaScript, and React. Build a complete web application.",
+    category: "Technology",
+  },
+  {
+    event_id: "soccer-tournament",
+    title: "Spring Soccer Tournament",
+    date: "2024-04-18",
+    time: "15:00",
+    location: "Soccer Field",
+    club: "Sports & Fitness Club",
+    fee: 10,
+    description:
+      "Annual soccer tournament with teams from different departments. Great opportunity to showcase your skills.",
+    category: "Sports",
+  },
+  {
+    event_id: "science-fair",
+    title: "University Science Fair",
+    date: "2024-04-22",
+    time: "11:00",
+    location: "Science Building",
+    club: "Science Society",
+    fee: 0,
+    description:
+      "Showcase of student research projects and scientific innovations. Open to all students and faculty.",
+    category: "Academic",
+  },
 ]
 
 const categories = ["All", "Arts", "Technology", "Sports", "Academic", "Service"]
@@ -127,6 +176,10 @@ const locations = [
   "Main Auditorium",
   "Art Gallery",
   "Sunset Beach",
+  "Art Studio",
+  "Computer Lab 301",
+  "Soccer Field",
+  "Science Building",
 ]
 const clubs = [
   "All",
@@ -136,9 +189,11 @@ const clubs = [
   "Debate Society",
   "Creative Arts Club",
   "Community Service Club",
+  "Science Society",
 ]
 
 export default function EventsPage() {
+  const router = useRouter()
   const [events, setEvents] = useState(mockEvents)
   const [filteredEvents, setFilteredEvents] = useState(mockEvents)
   const [searchTerm, setSearchTerm] = useState("")
@@ -148,6 +203,10 @@ export default function EventsPage() {
   const [selectedDate, setSelectedDate] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const eventsPerPage = 6
 
   useEffect(() => {
     filterEvents()
@@ -191,6 +250,7 @@ export default function EventsPage() {
       }
 
       setFilteredEvents(filtered)
+      setCurrentPage(1) // Reset to first page when filters change
       setIsLoading(false)
     }, 300)
   }
@@ -210,6 +270,28 @@ export default function EventsPage() {
     selectedDate !== "",
     searchTerm !== "",
   ].filter(Boolean).length
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage)
+  const startIndex = (currentPage - 1) * eventsPerPage
+  const endIndex = startIndex + eventsPerPage
+  const currentEvents = filteredEvents.slice(startIndex, endIndex)
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -259,7 +341,7 @@ export default function EventsPage() {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             {/* Mobile Search and Filter Toggle */}
             <div className="lg:hidden mb-6">
               <div className="flex gap-2 mb-4">
@@ -317,7 +399,9 @@ export default function EventsPage() {
             {/* Results Header */}
             <div className="flex justify-between items-center mb-6">
               <div>
-                <p className="text-gray-600">{isLoading ? "Searching..." : `Found ${filteredEvents.length} events`}</p>
+                <p className="text-gray-600">
+                  {isLoading ? "Searching..." : `Showing ${startIndex + 1}-${Math.min(endIndex, filteredEvents.length)} of ${filteredEvents.length} events`}
+                </p>
                 {activeFiltersCount > 0 && (
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-sm text-gray-500">Active filters:</span>
@@ -337,29 +421,95 @@ export default function EventsPage() {
 
             {/* Events Grid */}
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 {[...Array(6)].map((_, i) => (
                   <Card key={i} className="animate-pulse">
-                    <CardHeader>
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 mb-4">
-                        <div className="h-4 bg-gray-200 rounded"></div>
-                        <div className="h-4 bg-gray-200 rounded"></div>
-                        <div className="h-4 bg-gray-200 rounded"></div>
+                    <CardContent className="p-6">
+                      <div className="flex gap-4">
+                        <div className="w-32 h-24 bg-gray-200 rounded"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                          <div className="h-8 bg-gray-200 rounded w-24"></div>
+                        </div>
                       </div>
-                      <div className="h-8 bg-gray-200 rounded"></div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            ) : filteredEvents.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredEvents.map((event) => (
-                  <EventCard key={event.event_id} event={event} showClub={true} />
+            ) : currentEvents.length > 0 ? (
+              <div className="space-y-4">
+                {currentEvents.map((event) => (
+                  <Card key={event.event_id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex gap-4">
+                        {/* Event Image Placeholder */}
+                        <div className="w-32 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
+                          <Calendar className="h-8 w-8 text-gray-400" />
+                        </div>
+                        
+                        {/* Event Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">
+                                {event.title}
+                              </h3>
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                                {event.description}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Event Info */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <Calendar className="h-4 w-4" />
+                              <span>{event.date}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <span className="font-medium">{event.time}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <span className="truncate">{event.location}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <span className="truncate">{event.club}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Category and Fee */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {event.category}
+                              </Badge>
+                              {event.fee > 0 ? (
+                                <Badge variant="outline" className="text-xs">
+                                  ${event.fee}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-green-600">
+                                  Free
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => router.push(`/events/${event.event_id}`)}>
+                                View Details
+                              </Button>
+                              <Button size="sm">
+                                Interested
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -375,11 +525,43 @@ export default function EventsPage() {
               </div>
             )}
 
-            {/* Load More Button (for pagination) */}
-            {filteredEvents.length > 0 && !isLoading && (
-              <div className="text-center mt-8">
-                <Button variant="outline" size="lg">
-                  Load More Events
+            {/* Pagination */}
+            {filteredEvents.length > 0 && !isLoading && totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             )}
