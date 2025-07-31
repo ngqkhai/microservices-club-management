@@ -1,5 +1,12 @@
 _format_version: "3.0"
 
+# Top-level declaration to inform Kong of all plugins that are in use.
+plugins:
+  - name: jwt-claims-headers
+  - name: api-gateway-secret
+  - name: jwt
+  - name: cors
+
 services:
   # Auth Service
   - name: auth-service
@@ -326,10 +333,9 @@ plugins:
   # Global CORS plugin
   - name: cors
     config:
+      # This will be overridden by the KONG_CORS_ORIGINS environment variable
       origins:
-        - "http://localhost:3000"
-        - "https://localhost:3000"
-        - "https://frontend-ivory-five-20.vercel.app"
+        - "http://localhost:3000" 
       methods:
         - GET
         - POST
