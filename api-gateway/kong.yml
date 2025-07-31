@@ -343,7 +343,7 @@ consumers:
 
 # Global plugins are defined here
 # Note: The top-level 'plugins' key enables them, this section configures them globally
-global_plugins:
+plugins:
   # Global API Gateway Secret plugin (applies to all routes)
   - name: api-gateway-secret
     tags: [global, api-gateway-secret]
