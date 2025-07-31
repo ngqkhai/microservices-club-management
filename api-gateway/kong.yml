@@ -21,8 +21,6 @@ services:
     url: ${NOTIFY_SERVICE_URL}
     tags: [club-management-system, notify]
 
-# --- All routes, consumers, and plugins remain the same ---
-
 routes:
   # Auth Service Public Routes (no JWT required)
   - name: auth-public-route
@@ -98,8 +96,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [campaigns-secret]
     
   # Club Service Public Routes (US007 - Search & Filter)
   - name: club-public-routes
@@ -113,9 +109,6 @@ routes:
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, public]
-    plugins:
-      - name: api-gateway-secret
-        tags: [club-secret]
         
   # Club Member Management Routes (JWT required)
   - name: club-member-routes
@@ -145,8 +138,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [members-secret]
         
   # Simplified Application Management Routes (JWT required)
   - name: club-applications-simple-routes
@@ -175,8 +166,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [applications-simple-secret]
         
   # Individual Club Routes (Some public, some protected)
   - name: club-individual-public-routes
@@ -187,9 +176,6 @@ routes:
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, individual, public]
-    plugins:
-      - name: api-gateway-secret
-        tags: [club-secret]
     
   # Club Service Protected Routes (JWT required)
   - name: club-protected-routes
@@ -216,8 +202,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [club-secret]
     
   # Public Campaign Routes
   - name: public-campaign-routes
@@ -229,9 +213,6 @@ routes:
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, public, campaigns]
-    plugins:
-      - name: api-gateway-secret
-        tags: [club-secret]
         
   # Campaign Application Routes (JWT required)
   - name: campaign-application-routes
@@ -260,8 +241,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [application-secret]
         
   # Event Service Routes (JWT required)
   - name: event-service-route
@@ -338,14 +317,13 @@ plugins:
   # Global API Gateway Secret plugin (applies to all routes)
   - name: api-gateway-secret
     tags: [global, api-gateway-secret]
+    config:
+      api_gateway_secret: ${API_GATEWAY_SECRET}
     
   # Global CORS plugin
   - name: cors
     config:
-      origins:
-        - "http://localhost:3000"
-        - "https://localhost:3000"
-        - "https://frontend-ivory-five-20.vercel.app"
+      origins: ${CORS_ORIGINS}
       methods:
         - GET
         - POST

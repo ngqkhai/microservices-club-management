@@ -1,6 +1,12 @@
 return {
   name = "api-gateway-secret",
   fields = {
-    -- No configuration needed for this plugin
+    { config = {
+        type = "record",
+        fields = {
+          { api_gateway_secret = { type = "string", default = "" } },
+        },
+      },
+    },
   }
 }
