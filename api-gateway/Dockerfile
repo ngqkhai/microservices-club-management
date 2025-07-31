@@ -14,7 +14,7 @@ COPY lua-plugins/jwt-claims-headers /usr/local/share/lua/5.1/kong/plugins/jwt-cl
 COPY lua-plugins/api-gateway-secret /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret/
 
 # Copy the declarative configuration file into the image
-COPY kong.yml /usr/local/kong/declarative/kong.yml
+COPY kong.yml /etc/kong/kong.yml
 
 # Copy the startup script and make it executable
 COPY start-kong.sh /usr/local/bin/start-kong.sh
