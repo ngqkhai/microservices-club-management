@@ -15,6 +15,9 @@ RUN mkdir -p /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret
 COPY lua-plugins/jwt-claims-headers /usr/local/share/lua/5.1/kong/plugins/jwt-claims-headers/
 COPY lua-plugins/api-gateway-secret /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret/
 
+# Change ownership of the plugins to the kong user
+RUN chown -R kong:kong /usr/local/share/lua/5.1/kong/plugins
+
 # Copy the declarative configuration file into the image
 COPY kong.yml /etc/kong/kong.yml
 
