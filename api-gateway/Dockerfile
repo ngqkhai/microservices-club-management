@@ -4,8 +4,8 @@ FROM kong:latest
 # Temporarily switch to the root user
 USER root
 
-# Install dependencies
-RUN apt-get update && apt-get install -y curl git build-essential && rm -rf /var/lib/apt/lists/*
+# Install envsubst (part of gettext package)
+RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*
 
 # Create and copy custom plugins
 RUN mkdir -p /usr/local/share/lua/5.1/kong/plugins/jwt-claims-headers
@@ -16,10 +16,12 @@ COPY lua-plugins/api-gateway-secret /usr/local/share/lua/5.1/kong/plugins/api-ga
 # Copy the declarative configuration
 COPY kong.yml /etc/kong/kong.yml
 
-# --- Add these two lines ---
 # Copy the startup script and make it executable
 COPY start-kong.sh /usr/local/bin/start-kong.sh
 RUN chmod +x /usr/local/bin/start-kong.sh
 
 # Revert to the non-privileged kong user
 USER kong
+
+# Set the custom startup script as the command to run
+CMD ["start-kong.sh"]

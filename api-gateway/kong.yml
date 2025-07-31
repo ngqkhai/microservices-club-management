@@ -3,23 +3,39 @@ _format_version: "3.0"
 services:
   # Auth Service
   - name: auth-service
-    url: http://auth-service:3001
+    url: ${AUTH_SERVICE_URL}
     tags: [club-management-system, auth]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
     
   # Club Service  
   - name: club-service
-    url: http://club-service:3002
+    url: ${CLUB_SERVICE_URL}
     tags: [club-management-system, club]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
     
   # Event Service
   - name: event-service
-    url: http://event-service:3003
+    url: ${EVENT_SERVICE_URL}
     tags: [club-management-system, event]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
     
   # Notification Service
   - name: notify-service
-    url: http://notify-service:3005
+    url: ${NOTIFY_SERVICE_URL}
     tags: [club-management-system, notify]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
 
 routes:
   # Auth Service Public Routes (no JWT required)
@@ -96,8 +112,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [campaigns-secret]
     
   # Club Service Public Routes (US007 - Search & Filter)
   - name: club-public-routes
@@ -111,9 +125,6 @@ routes:
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, public]
-    plugins:
-      - name: api-gateway-secret
-        tags: [club-secret]
         
   # Club Member Management Routes (JWT required)
   - name: club-member-routes
@@ -143,8 +154,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [members-secret]
         
   # Simplified Application Management Routes (JWT required)
   - name: club-applications-simple-routes
@@ -173,8 +182,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [applications-simple-secret]
         
   # Individual Club Routes (Some public, some protected)
   - name: club-individual-public-routes
@@ -185,9 +192,6 @@ routes:
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, individual, public]
-    plugins:
-      - name: api-gateway-secret
-        tags: [club-secret]
     
   # Club Service Protected Routes (JWT required)
   - name: club-protected-routes
@@ -214,8 +218,6 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [club-secret]
     
   # Public Campaign Routes
   - name: public-campaign-routes
@@ -227,9 +229,6 @@ routes:
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, public, campaigns]
-    plugins:
-      - name: api-gateway-secret
-        tags: [club-secret]
         
   # Campaign Application Routes (JWT required)
   - name: campaign-application-routes
@@ -258,14 +257,13 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-      - name: api-gateway-secret
-        tags: [application-secret]
         
   # Event Service Routes (JWT required)
   - name: event-service-route
     service: event-service
     paths:
       - /api/events
+      - /api/events/.*
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [event, protected]
@@ -286,12 +284,13 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-    
+
   # Notification Service Routes (JWT required)
   - name: notify-service-route
     service: notify-service
     paths:
       - /api/notifications
+      - /api/notifications/.*
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [notify, protected]
@@ -312,7 +311,7 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-    
+
 consumers:
   - username: club-management-app
     custom_id: club-app-001
@@ -320,23 +319,10 @@ consumers:
     jwt_secrets:
       - key: auth-service  # This must match the 'iss' claim in JWT
         algorithm: RS256
-        # Public key from the auth service
-        rsa_public_key: |
-          -----BEGIN PUBLIC KEY-----
-          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2EhYreDkbolZ8FytzEA0
-          ZkSmwQdG7AcID214WFfaeqFyBLE/JQLkihTDit9WT/mRR87ul0Bb05ZeWTlcDuL4
-          O+F3kl3T0kF3IFYINaE3su6jTROV85EJPd51AezLfgZHi2fX5tvf3DS8A6G1537h
-          v9ir/m6N5Dpp/zGYJ39vJSsyKCGLV5/wQZkpBERw5QZd7SiphWyK241r/l6w/bm7
-          VfpDujgozypl6piR7rGxpFJvW83M7F3yEDx24VKIJUSanPHuShg+H87QYUKmXFnW
-          GRIVloTZnrMlU21TELuEn8dc7rAF8VkFSli+FBvea7jDO1Fk7K7gXCn7EsTWpXfz
-          ZwIDAQAB
-          -----END PUBLIC KEY-----
+        # Public key from the auth service - will be replaced by start-kong.sh
+        rsa_public_key: ${JWT_RSA_PUBLIC_KEY}
 
 plugins:
-  # Global API Gateway Secret plugin (applies to all routes)
-  - name: api-gateway-secret
-    tags: [global, api-gateway-secret]
-    
   # Global CORS plugin
   - name: cors
     config:
@@ -374,11 +360,3 @@ plugins:
       max_age: 3600
       preflight_continue: false
     tags: [global, cors]
-    
-  # Global rate limiting (DISABLED)
-  # - name: rate-limiting
-  #   config:
-  #     minute: 100
-  #     hour: 1000
-  #     policy: local
-  #   tags: [global, rate-limiting]
