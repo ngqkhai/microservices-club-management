@@ -13,6 +13,7 @@ VARS_TO_SUBSTITUTE=$(printf '$%s,' \
   NOTIFY_SERVICE_URL \
   API_GATEWAY_SECRET \
   JWT_RSA_PUBLIC_KEY \
+  KONG_CORS_ORIGINS \
 )
 
 # Substitute all variables directly into kong.yml

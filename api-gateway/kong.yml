@@ -328,7 +328,7 @@ plugins:
     config:
       # This will be overridden by the KONG_CORS_ORIGINS environment variable
       origins:
-        - "http://localhost:3000"
+        - "${KONG_CORS_ORIGINS}"
       methods:
         - GET
         - POST
