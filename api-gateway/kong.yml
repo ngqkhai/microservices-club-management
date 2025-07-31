@@ -317,7 +317,7 @@ consumers:
     custom_id: club-app-001
     tags: [club-management-system]
     jwt_secrets:
-      - key: auth-service
+      - key: auth-service  # This must match the 'iss' claim in JWT
         algorithm: RS256
         # Public key from the auth service - will be replaced by start-kong.sh
         rsa_public_key: |
@@ -329,7 +329,7 @@ plugins:
     config:
       # This will be overridden by the KONG_CORS_ORIGINS environment variable
       origins:
-        - "http://localhost:3000" 
+        - "http://localhost:3000"
       methods:
         - GET
         - POST
