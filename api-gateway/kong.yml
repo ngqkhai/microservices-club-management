@@ -317,10 +317,11 @@ consumers:
     custom_id: club-app-001
     tags: [club-management-system]
     jwt_secrets:
-      - key: auth-service  # This must match the 'iss' claim in JWT
+      - key: auth-service
         algorithm: RS256
         # Public key from the auth service - will be replaced by start-kong.sh
-        rsa_public_key: ${JWT_RSA_PUBLIC_KEY}
+        rsa_public_key: |
+          ${JWT_RSA_PUBLIC_KEY}
 
 plugins:
   # Global CORS plugin
