@@ -2,6 +2,9 @@
 
 set -e
 
+# Format the public key into a single line with escaped newlines
+export JWT_RSA_PUBLIC_KEY=$(echo "$JWT_RSA_PUBLIC_KEY" | awk 'NF {printf "%s\\n", $0}' | sed 's/\\n$//')
+
 export DOLLAR='$'
 VARS_TO_SUBSTITUTE=$(printf '$%s,' \
   AUTH_SERVICE_URL \
