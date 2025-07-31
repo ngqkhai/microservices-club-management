@@ -11,14 +11,13 @@ RUN apt-get update && apt-get install -y curl git build-essential && rm -rf /var
 RUN mkdir -p /usr/local/share/lua/5.1/kong/plugins/jwt-claims-headers
 RUN mkdir -p /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret
 
-# Create a dedicated, isolated directory for custom plugins
+# Create a dedicated, isolated directory for your plugins
 RUN mkdir -p /opt/kong/custom-plugins
 
-# Copy the custom plugin folders into this new directory
-COPY lua-plugins/jwt-claims-headers /opt/kong/custom-plugins/jwt-claims-headers
-COPY lua-plugins/api-gateway-secret /opt/kong/custom-plugins/api-gateway-secret
+# Copy your entire lua-plugins directory into it
+COPY ./lua-plugins/ /opt/kong/custom-plugins/
 
-# Set correct ownership for the kong user
+# Set ownership for the kong user
 RUN chown -R kong:kong /opt/kong/custom-plugins
 
 # Copy the declarative configuration file into the image
