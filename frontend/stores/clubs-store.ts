@@ -77,17 +77,18 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
   filteredClubs: [],
   displayedClubs: [],
 
-  // Load all clubs and cache them with retry logic
+  // Load clubs theo page/limit/filter/sort từ server
   loadAllClubs: async () => {
     const state = get();
-    
-    // If already loading, return
-    if (state.cache.isLoading) {
+    const { filters, pagination, cache } = state;
+
+    // Nếu đang loading thì return
+    if (cache.isLoading) {
       return;
     }
 
-    // Check if max retries exceeded
-    if (state.cache.retryCount >= MAX_RETRY_ATTEMPTS) {
+    // Check nếu quá số lần retry
+    if (cache.retryCount >= MAX_RETRY_ATTEMPTS) {
       set((state) => ({
         cache: {
           ...state.cache,
@@ -97,7 +98,7 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
       return;
     }
 
-    // Set loading state and increment retry count
+    // Set loading và tăng retry
     set((state) => ({
       cache: {
         ...state.cache,
@@ -108,40 +109,49 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
     }));
 
     try {
-      // Add delay for retries (except first attempt)
-      if (state.cache.retryCount > 0) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * state.cache.retryCount));
+      // Thêm delay nếu retry
+      if (cache.retryCount > 0) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * cache.retryCount));
       }
 
-      // Fetch all clubs without pagination by setting a high limit
-      const response = await clubService.getClubs({ 
-        limit: 99, // Fetch all clubs
-        page: 1 
+      // Gọi API lấy clubs theo page/limit/filter/sort
+      const response = await clubService.getClubs({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: filters.search || undefined,
+        category: filters.category || undefined,
+        sort: filters.sort || undefined
       });
 
       if (response.success && response.data) {
-        const allClubs = response.data.results || [];
-        
+        const clubs = response.data.results || [];
+        const total = response.data.total || clubs.length;
+        const totalPages = Math.ceil(total / pagination.limit);
+
         set((state) => ({
           cache: {
-            allClubs,
+            ...state.cache,
+            allClubs: clubs, // Lưu clubs trang hiện tại
             isLoaded: true,
             isLoading: false,
             error: null,
             lastFetched: Date.now(),
-            retryCount: 0 // Reset retry count on success
+            retryCount: 0
+          },
+          filteredClubs: clubs, // Không filter phía client nữa
+          displayedClubs: clubs,
+          pagination: {
+            ...state.pagination,
+            total,
+            totalPages
           }
         }));
-
-        // Apply filters and pagination after loading
-        get().applyFiltersAndPagination();
       } else {
         throw new Error(response.message || 'Failed to fetch clubs');
       }
     } catch (error) {
       console.error('Error loading clubs:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
       set((state) => ({
         cache: {
           ...state.cache,
@@ -152,7 +162,7 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
     }
   },
 
-  // Clear cache (called on page reload)
+  // Clear cache (reset lại state)
   clearCache: () => {
     set({
       cache: {
@@ -170,7 +180,7 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
     });
   },
 
-  // Reset retry count to allow retrying
+  // Reset retry count
   resetRetry: () => {
     set((state) => ({
       cache: {
@@ -181,84 +191,23 @@ export const useClubsStore = create<ClubsState>((set, get) => ({
     }));
   },
 
-  // Set filters and apply them
+  // Set filters và fetch lại clubs từ server
   setFilters: (newFilters: Partial<ClubsFilters>) => {
     set((state) => ({
       filters: { ...state.filters, ...newFilters },
-      pagination: { ...state.pagination, page: 1 } // Reset to first page when filtering
+      pagination: { ...state.pagination, page: 1 }
     }));
-    
-    get().applyFiltersAndPagination();
+    get().loadAllClubs();
   },
 
-  // Set current page
+  // Set page và fetch lại clubs từ server
   setPage: (page: number) => {
     set((state) => ({
       pagination: { ...state.pagination, page }
     }));
-    
-    get().applyFiltersAndPagination();
+    get().loadAllClubs();
   },
 
-  // Apply current filters and pagination to cached data
-  applyFiltersAndPagination: () => {
-    const { cache, filters, pagination } = get();
-    
-    if (!cache.isLoaded || cache.allClubs.length === 0) {
-      return;
-    }
-
-    let filtered = [...cache.allClubs];
-
-    // Apply search filter
-    if (filters.search.trim()) {
-      const searchTerm = filters.search.toLowerCase().trim();
-      filtered = filtered.filter(club => 
-        club.name.toLowerCase().includes(searchTerm) ||
-        (club.description && club.description.toLowerCase().includes(searchTerm)) ||
-        club.category.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    // Apply category filter
-    if (filters.category && filters.category !== 'All' && filters.category !== '') {
-      filtered = filtered.filter(club => club.category === filters.category);
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (filters.sort) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'name_desc':
-          return b.name.localeCompare(a.name);
-        case 'category':
-          return a.category.localeCompare(b.category);
-        case 'newest':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'oldest':
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'relevance':
-        default:
-          return 0; // Keep original order for relevance
-      }
-    });
-
-    // Calculate pagination
-    const total = filtered.length;
-    const totalPages = Math.ceil(total / pagination.limit);
-    const startIndex = (pagination.page - 1) * pagination.limit;
-    const endIndex = startIndex + pagination.limit;
-    const displayedClubs = filtered.slice(startIndex, endIndex);
-
-    set({
-      filteredClubs: filtered,
-      displayedClubs,
-      pagination: {
-        ...pagination,
-        total,
-        totalPages
-      }
-    });
-  }
+  // Không cần filter/paginate phía client nữa
+  applyFiltersAndPagination: () => {},
 }));

@@ -393,13 +393,13 @@ export function CampaignList({ campaigns: initialCampaigns, clubId, onCampaignUp
 
         toast({
           title: "Thành công",
-          description: "Đã cập nhật trạng thái chiến dịch.",
+          description: "Đã cập nhật Trạng thái đợt tuyển.",
         })
       }
     } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: error.message || "Không thể cập nhật trạng thái chiến dịch.",
+        description: error.message || "Không thể cập nhật Trạng thái đợt tuyển.",
         variant: "destructive",
       })
     } finally {
@@ -472,7 +472,7 @@ export function CampaignList({ campaigns: initialCampaigns, clubId, onCampaignUp
             <PopoverContent className="w-64" align="start">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm">Trạng thái chiến dịch</h4>
+                  <h4 className="font-medium text-sm">Trạng thái đợt tuyển</h4>
                   {selectedStatuses.length > 0 && (
                     <Button
                       variant="ghost"
@@ -917,10 +917,10 @@ export function CampaignList({ campaigns: initialCampaigns, clubId, onCampaignUp
                 <h3 className="font-semibold mb-3">Thông tin ứng viên</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <strong>User ID:</strong> {selectedApplicationDetail.user_id}
+                    <strong>Họ và tên:</strong> {selectedApplicationDetail.user_full_name}
                   </div>
                   <div>
-                    <strong>Vai trò:</strong> {selectedApplicationDetail.role || 'member'}
+                    <strong>Email:</strong> {selectedApplicationDetail.user_email || 'Email không có'}
                   </div>
                   <div>
                     <strong>Trạng thái:</strong> 

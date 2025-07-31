@@ -56,12 +56,11 @@ export default function ClubsPage() {
     loadPublishedCampaigns({ limit: 5 }); // Load 5 campaigns for the banner
   }, [loadPublishedCampaigns]);
 
-  // Load clubs on component mount
+  // Load clubs on component mount hoặc khi filter/page đổi
   useEffect(() => {
-    if (!cache.isLoaded && !cache.isLoading) {
-      loadAllClubs()
-    }
-  }, [cache.isLoaded, cache.isLoading, loadAllClubs])
+    loadAllClubs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, pagination.page]);
 
   // Load categories on component mount
   useEffect(() => {

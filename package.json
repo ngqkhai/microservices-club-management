@@ -69,6 +69,7 @@
   "author": "Club Management System Team",
   "license": "MIT",
   "devDependencies": {
+    "@types/whatwg-url": "^13.0.0",
     "axios": "^1.6.0",
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
