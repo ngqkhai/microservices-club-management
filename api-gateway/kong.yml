@@ -3,23 +3,25 @@ _format_version: "3.0"
 services:
   # Auth Service
   - name: auth-service
-    url: http://auth-service:3001
+    url: ${AUTH_SERVICE_URL}
     tags: [club-management-system, auth]
     
   # Club Service  
   - name: club-service
-    url: http://club-service:3002
+    url: ${CLUB_SERVICE_URL}
     tags: [club-management-system, club]
     
   # Event Service
   - name: event-service
-    url: http://event-service:3003
+    url: ${EVENT_SERVICE_URL}
     tags: [club-management-system, event]
     
   # Notification Service
   - name: notify-service
-    url: http://notify-service:3005
+    url: ${NOTIFY_SERVICE_URL}
     tags: [club-management-system, notify]
+
+# --- All routes, consumers, and plugins remain the same ---
 
 routes:
   # Auth Service Public Routes (no JWT required)
@@ -374,11 +376,3 @@ plugins:
       max_age: 3600
       preflight_continue: false
     tags: [global, cors]
-    
-  # Global rate limiting (DISABLED)
-  # - name: rate-limiting
-  #   config:
-  #     minute: 100
-  #     hour: 1000
-  #     policy: local
-  #   tags: [global, rate-limiting]
