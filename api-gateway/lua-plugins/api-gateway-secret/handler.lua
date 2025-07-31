@@ -4,19 +4,15 @@ local plugin = {
 }
 
 function plugin:access(conf)
-  kong.log.debug("=== API Gateway Secret Plugin ===")
-  
-  local secret = conf.secret_value
-  
-  -- ADD THIS DEBUGGING BLOCK
-  if secret and secret ~= "" then
-    kong.log.debug("Plugin successfully read secret: ", secret)
-  else
-    kong.log.debug("Plugin secret is nil or empty.")
+  -- Only run the plugin logic if the request method is NOT OPTIONS
+  if kong.request.get_method() ~= "OPTIONS" then
+    kong.log.debug("=== API Gateway Secret Plugin ===")
+    
+    local secret = conf.secret_value
+    
+    kong.service.request.set_header("x-api-gateway-secret", secret)
+    kong.log.debug("Set header: x-api-gateway-secret = " .. secret)
   end
-  -- END DEBUGGING BLOCK
-
-  kong.service.request.set_header("x-api-gateway-secret", secret)
 end
 
 return plugin
