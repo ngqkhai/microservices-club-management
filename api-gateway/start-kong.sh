@@ -1,10 +1,7 @@
 #!/bin/sh
 
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Define the list of variables to be substituted.
-# This is safer than letting envsubst try to replace all shell variables.
 export DOLLAR='$'
 VARS_TO_SUBSTITUTE=$(printf '$%s,' \
   AUTH_SERVICE_URL \
@@ -18,6 +15,13 @@ VARS_TO_SUBSTITUTE=$(printf '$%s,' \
 # Substitute all variables directly into kong.yml
 envsubst "$VARS_TO_SUBSTITUTE" < /etc/kong/kong.yml > /tmp/kong.yml.substituted
 
+# ==========================================================
+# ADD THESE THREE LINES TO DEBUG THE GENERATED CONFIG
+echo "--- START OF GENERATED KONG CONFIG ---"
+cat /tmp/kong.yml.substituted
+echo "--- END OF GENERATED KONG CONFIG ---"
+# ==========================================================
+
 # Replace the original config with the new one
 mv /tmp/kong.yml.substituted /etc/kong/kong.yml
 
@@ -28,4 +32,3 @@ echo "Kong configuration has been processed."
 
 # Execute the original Kong entrypoint command to start the gateway
 exec /docker-entrypoint.sh kong docker-start
-start
