@@ -15,5 +15,8 @@ RUN mkdir -p /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret
 COPY lua-plugins/jwt-claims-headers /usr/local/share/lua/5.1/kong/plugins/jwt-claims-headers/
 COPY lua-plugins/api-gateway-secret /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret/
 
+# Copy the declarative configuration file into the image
+COPY kong.yml /etc/kong/kong.yml
+
 # Revert to the non-privileged kong user for security
 USER kong
