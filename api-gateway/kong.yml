@@ -1,12 +1,5 @@
 _format_version: "3.0"
 
-# Top-level declaration to inform Kong of all plugins that are in use.
-plugins:
-  - name: jwt-claims-headers
-  - name: api-gateway-secret
-  - name: jwt
-  - name: cors
-
 services:
   # Auth Service
   - name: auth-service
