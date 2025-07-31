@@ -347,8 +347,6 @@ global_plugins:
   # Global API Gateway Secret plugin (applies to all routes)
   - name: api-gateway-secret
     tags: [global, api-gateway-secret]
-    config:
-      api_gateway_secret: ${API_GATEWAY_SECRET}
     
   # Global CORS plugin
   - name: cors
