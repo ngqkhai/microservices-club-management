@@ -20,8 +20,8 @@ COPY ./lua-plugins/ /opt/kong/custom-plugins/
 # Set ownership for the kong user
 RUN chown -R kong:kong /opt/kong/custom-plugins
 
-# Copy the declarative configuration file into the image
-COPY kong.yml /etc/kong/kong.yml
+# Set the environment variable for the declarative config
+ENV KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
 
 # Revert to the non-privileged kong user for security
 USER kong
