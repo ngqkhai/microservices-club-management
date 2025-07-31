@@ -3,6 +3,11 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+#Validate that the PORT environment variable is set.
+echo "INFO: Validating configuration..."
+kong check /etc/kong/kong.yml
+echo "INFO: Configuration is valid."
+
 # Echo the port for debugging in the Render logs.
 echo "INFO: Launching Kong, listening on 0.0.0.0:${PORT}"
 
