@@ -17,11 +17,18 @@ class SimpleHttpClient {
       
       const requestOptions = {
         hostname: url.hostname,
-        port: url.port || (isHttps ? 443 : 80),
         path: url.pathname + url.search,
         method: 'GET',
-        headers: options.headers || {}
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        }
       };
+      
+      // Only add port if explicitly provided
+      if (url.port) {
+        requestOptions.port = url.port;
+      }
 
       const req = client.request(requestOptions, (res) => {
         let data = '';

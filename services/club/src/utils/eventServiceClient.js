@@ -10,11 +10,12 @@ class EventServiceClient {
     
     const url = new URL(eventServiceUrl);
     this.hostname = url.hostname;
-    this.port = url.port || (url.protocol === 'https:' ? 443 : 80);
     this.protocol = url.protocol === 'https:' ? 'https' : 'http';
+    // Only set port if explicitly provided in URL
+    this.port = url.port || undefined;
     this.timeout = 5000;
     
-    console.log(`Event service configured: ${this.protocol}://${this.hostname}:${this.port}`);
+    console.log(`Event service configured: ${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}`);
   }
 
   /**
@@ -33,18 +34,23 @@ class EventServiceClient {
       
       const fullPath = queryString ? `${path}?${queryString}` : path;
       
-      console.log(`Making request to: http://${this.hostname}:${this.port}${fullPath}`);
+      console.log(`Making request to: ${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}${fullPath}`);
       
       const options = {
         hostname: this.hostname,
-        port: this.port,
         path: fullPath,
         method: 'GET',
         timeout: this.timeout,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-api-gateway-secret': process.env.API_GATEWAY_SECRET || 'club-mgmt-internal-secret-2024'
         }
       };
+      
+      // Only add port if explicitly provided
+      if (this.port) {
+        options.port = this.port;
+      }
 
       const protocol = this.protocol === 'https' ? https : http;
       const req = protocol.request(options, (res) => {

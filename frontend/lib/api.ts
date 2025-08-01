@@ -148,11 +148,6 @@ const prepareHeaders = (options: RequestOptions = {}): HeadersInit => {
     ...options.headers,
   };
 
-  // Add API Gateway Secret header for public endpoints
-  if (process.env.NEXT_PUBLIC_API_GATEWAY_SECRET) {
-    (headers as Record<string, string>)['X-API-Gateway-Secret'] = process.env.NEXT_PUBLIC_API_GATEWAY_SECRET;
-  }
-
   // Add Authorization header if not skipped and token exists
   if (!options.skipAuth) {
     const token = getToken();
