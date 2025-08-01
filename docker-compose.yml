@@ -5,11 +5,19 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_API_TIMEOUT=${NEXT_PUBLIC_API_TIMEOUT:-10000}
+        - NEXT_PUBLIC_ENV=${NEXT_PUBLIC_ENV:-development}
+        - NEXT_PUBLIC_JWT_STORAGE_KEY=${NEXT_PUBLIC_JWT_STORAGE_KEY:-club_management_token}
+        - NEXT_PUBLIC_JWT_REFRESH_STORAGE_KEY=${NEXT_PUBLIC_JWT_REFRESH_STORAGE_KEY:-club_management_refresh_token}
+        - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME:-Club Management System}
+        - NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-1.0.0}
+        - NEXT_PUBLIC_DEBUG=${NEXT_PUBLIC_DEBUG:-true}
     container_name: club_management_frontend
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_BASE_URL: http://kong:8000
     ports:
       - "3000:3000"
     networks:
@@ -134,13 +142,30 @@ services:
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ERROR_LOG: /dev/stderr
+      # Service URLs - Use environment variables with fallback to local services
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:3001}
+      CLUB_SERVICE_URL: ${CLUB_SERVICE_URL:-http://club-service:3002}
+      EVENT_SERVICE_URL: ${EVENT_SERVICE_URL:-http://event-service:3003}
+      NOTIFY_SERVICE_URL: ${NOTIFY_SERVICE_URL:-http://notify-service:3005}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      # CORS Configuration
+      KONG_CORS_ORIGINS: '["http://localhost:3000", "https://club-frontend-hq5d.onrender.com"]'
+      # JWT Public Key
+      JWT_RSA_PUBLIC_KEY: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2EhYreDkbolZ8FytzEA0
+        ZkSmwQdG7AcID214WFfaeqFyBLE/JQLkihTDit9WT/mRR87ul0Bb05ZeWTlcDuL4
+        O+F3kl3T0kF3IFYINaE3su6jTROV85EJPd51AezLfgZHi2fX5tvf3DS8A6G1537h
+        v9ir/m6N5Dpp/zGYJ39vJSsyKCGLV5/wQZkpBERw5QZd7SiphWyK241r/l6w/bm7
+        VfpDujgozypl6piR7rGxpFJvW83M7F3yEDx24VKIJUSanPHuShg+H87QYUKmXFnW
+        GRIVloTZnrMlU21TELuEn8dc7rAF8VkFSli+FBvea7jDO1Fk7K7gXCn7EsTWpXfz
+        ZwIDAQAB
+        -----END PUBLIC KEY-----
     ports:
       - "8000:8000"
       - "8443:8443"
       - "8001:8001"
       - "8444:8444"
-    volumes:
-      - ./api-gateway/kong.yml:/etc/kong/kong.yml:ro
     networks:
       - club_network
     restart: unless-stopped

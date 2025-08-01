@@ -326,9 +326,8 @@ plugins:
   # Global CORS plugin
   - name: cors
     config:
-      # This will be overridden by the KONG_CORS_ORIGINS environment variable
-      origins:
-        - "${KONG_CORS_ORIGINS}"
+      # CORS origins from environment variable (JSON array format)
+      origins: ${KONG_CORS_ORIGINS}
       methods:
         - GET
         - POST
