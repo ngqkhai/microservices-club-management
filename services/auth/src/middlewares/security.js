@@ -319,6 +319,11 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, server-to-server, etc.)
     if (!origin) return callback(null, true);
     
+    // Handle wildcard origin
+    if (allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

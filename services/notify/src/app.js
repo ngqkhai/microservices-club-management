@@ -37,7 +37,18 @@ function createApp() {
 
   // CORS configuration
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
+      
+      // Allow requests with no origin (mobile apps, server-to-server, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS policy'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 
 // Configure CORS to allow frontend origin
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://localhost:3000'],
+  origin: ['http://localhost:3000', 'https://localhost:3000', 'https://club-frontend-hq5d.onrender.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Requested-With', 'X-API-Gateway-Secret']

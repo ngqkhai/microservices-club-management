@@ -73,7 +73,7 @@ class AuthController {
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: config.isProduction(),
-      sameSite: 'strict',
+      sameSite: config.isProduction() ? 'none' : 'strict', // Allow cross-site cookies in production
       maxAge: cookieMaxAge
     });
 
@@ -119,7 +119,7 @@ class AuthController {
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: config.isProduction(),
-      sameSite: 'strict',
+      sameSite: config.isProduction() ? 'none' : 'strict', // Allow cross-site cookies in production
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
