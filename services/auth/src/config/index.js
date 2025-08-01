@@ -271,7 +271,11 @@ class ConfigManager {
       RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) : undefined,
       
       // CORS
-      CORS_ORIGIN: process.env.CORS_ORIGIN,
+      CORS_ORIGIN: process.env.CORS_ORIGIN ? 
+        (process.env.CORS_ORIGIN.includes(',') ? 
+          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : 
+          process.env.CORS_ORIGIN) : 
+        undefined,
       
       // Health Check
       HEALTH_CHECK_TIMEOUT_MS: process.env.HEALTH_CHECK_TIMEOUT_MS ? parseInt(process.env.HEALTH_CHECK_TIMEOUT_MS, 10) : undefined,

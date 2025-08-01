@@ -293,7 +293,21 @@ const requestLogger = (req, res, next) => {
 const corsOptions = {
   origin: (origin, callback) => {
     const nodeEnv = process.env.NODE_ENV || 'development';
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
+    const corsOrigin = process.env.CORS_ORIGIN;
+    
+    let allowedOrigins = ['http://localhost:3000']; // default
+    
+    if (corsOrigin) {
+      if (corsOrigin === '*') {
+        allowedOrigins = ['*'];
+      } else if (typeof corsOrigin === 'string') {
+        allowedOrigins = corsOrigin.includes(',') ? 
+          corsOrigin.split(',').map(url => url.trim()) : 
+          [corsOrigin];
+      } else if (Array.isArray(corsOrigin)) {
+        allowedOrigins = corsOrigin;
+      }
+    }
     
     // In development, be more permissive for API testing
     if (nodeEnv === 'development') {
