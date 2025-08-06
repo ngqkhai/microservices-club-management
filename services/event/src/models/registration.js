@@ -28,7 +28,7 @@ const registrationSchema = new mongoose.Schema({
         type: String,
         maxLength: 1000
       },
-      emergency_contact: {
+      emergency_contact_legacy: {
         type: String,
         maxLength: 200
       }
@@ -78,7 +78,30 @@ const registrationSchema = new mongoose.Schema({
     type: String,
     enum: ['registered', 'cancelled', 'attended', 'no_show'],
     required: true,
-    default: 'registered'
+    default: 'registered' // Default status when registration is created
+  },
+  // Additional fields for registration management
+  notes: {
+    type: String,
+    maxLength: 1000
+  },
+  updated_by: {
+    type: String, // User ID who updated the registration status
+    maxLength: 100
+  },
+  emergency_contact: {
+    name: {
+      type: String,
+      maxLength: 100
+    },
+    phone: {
+      type: String,
+      maxLength: 20
+    },
+    relationship: {
+      type: String,
+      maxLength: 50
+    }
   },
   registered_at: {
     type: Date,
@@ -105,6 +128,6 @@ registrationSchema.index({ event_id: 1, user_id: 1 }, { unique: true });
 registrationSchema.index({ event_id: 1, status: 1 });
 registrationSchema.index({ user_id: 1, status: 1 });
 registrationSchema.index({ registered_at: 1 });
-registrationSchema.index({ ticket_id: 1 }, { unique: true });
+// ticket_id already has unique: true in schema, no need for duplicate index
 
 export const Registration = mongoose.model('Registration', registrationSchema);

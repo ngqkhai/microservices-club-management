@@ -474,3 +474,200 @@ export const getEventsOfClubService = async ({ clubId, status, start_from, start
         }
     };
 };
+
+/**
+ * Get individual event by ID with optional user context
+ */
+export const getEventByIdService = async (eventId, userId = null) => {
+  try {
+    const event = await Event.findById(eventId)
+      .populate('club_id', 'name logo_url description')
+      .lean();
+      
+    if (!event) {
+      return null;
+    }
+
+    // Add user-specific data if userId provided
+    let userStatus = null;
+    if (userId) {
+      userStatus = await getUserEventStatusService(eventId, userId);
+    }
+
+    // Calculate current participants
+    const currentParticipants = await Registration.countDocuments({ 
+      event_id: eventId, 
+      status: 'registered' 
+    });
+
+    return {
+      ...event,
+      current_participants: currentParticipants,
+      user_status: userStatus
+    };
+  } catch (error) {
+    console.error('getEventByIdService error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user-specific event status (registration, favorite)
+ */
+export const getUserEventStatusService = async (eventId, userId) => {
+  try {
+    const registration = await Registration.findOne({ 
+      event_id: eventId, 
+      user_id: userId 
+    });
+    
+    const favorite = await mongoose.connection.db.collection('event_interests').findOne({ 
+      event_id: eventId, 
+      user_id: userId,
+      interest_type: 'favorite'
+    });
+
+    const event = await Event.findById(eventId);
+    const canRegister = !registration && event && event.status === 'published';
+
+    return {
+      registration_status: registration?.status || 'not_registered',
+      is_favorited: !!favorite,
+      can_register: canRegister
+    };
+  } catch (error) {
+    console.error('getUserEventStatusService error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Toggle event favorite status for user
+ */
+export const toggleEventFavoriteService = async (eventId, userId) => {
+  try {
+    const collection = mongoose.connection.db.collection('event_interests');
+    
+    const existing = await collection.findOne({
+      event_id: eventId,
+      user_id: userId,
+      interest_type: 'favorite'
+    });
+
+    if (existing) {
+      await collection.deleteOne({ _id: existing._id });
+      return { is_favorited: false };
+    } else {
+      await collection.insertOne({
+        event_id: eventId,
+        user_id: userId,
+        interest_type: 'favorite',
+        created_at: new Date()
+      });
+      return { is_favorited: true };
+    }
+  } catch (error) {
+    console.error('toggleEventFavoriteService error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user's favorite events
+ */
+export const getUserFavoriteEventsService = async (userId, { page = 1, limit = 10 } = {}) => {
+  try {
+    const skip = (page - 1) * limit;
+    
+    const favoriteEventIds = await mongoose.connection.db.collection('event_interests')
+      .find({ user_id: userId, interest_type: 'favorite' })
+      .project({ event_id: 1 })
+      .toArray();
+    
+    const eventIds = favoriteEventIds.map(f => f.event_id);
+    
+    const total = eventIds.length;
+    const events = await Event.find({ _id: { $in: eventIds } })
+      .populate('club_id', 'name logo_url')
+      .sort({ start_date: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    return {
+      events,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    console.error('getUserFavoriteEventsService error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get event registrations (for management)
+ */
+export const getEventRegistrationsService = async (eventId, { page = 1, limit = 20, status } = {}) => {
+  try {
+    const skip = (page - 1) * limit;
+    
+    let query = { event_id: eventId };
+    if (status) {
+      query.status = status;
+    }
+    
+    const total = await Registration.countDocuments(query);
+    
+    // Get user service URL for user details
+    const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:3001';
+    
+    const registrations = await Registration.find(query)
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Fetch user details for each registration
+    const enrichedRegistrations = await Promise.all(
+      registrations.map(async (reg) => {
+        try {
+          const userResponse = await axios.get(`${userServiceUrl}/api/users/${reg.user_id}`);
+          const user = userResponse.data;
+          
+          return {
+            ...reg,
+            user_name: user.name || user.full_name,
+            user_email: user.email,
+            user_avatar: user.avatar_url || user.profile_picture
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch user details for ${reg.user_id}:`, error.message);
+          return {
+            ...reg,
+            user_name: 'Unknown User',
+            user_email: 'unknown@example.com',
+            user_avatar: null
+          };
+        }
+      })
+    );
+
+    return {
+      registrations: enrichedRegistrations,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    console.error('getEventRegistrationsService error:', error);
+    throw error;
+  }
+};

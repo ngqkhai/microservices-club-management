@@ -49,12 +49,53 @@ export interface EventParticipant {
 export interface CreateEventRequest {
   title: string;
   description: string;
-  startDate: string;
-  endDate: string;
+  short_description?: string;
+  category?: string;
+  event_type?: string;
+  start_date: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
   location: string;
-  maxParticipants?: number;
-  isPublic?: boolean;
-  clubId: string;
+  detailed_location?: string;
+  max_participants?: number;
+  participation_fee?: number;
+  currency?: string;
+  registration_deadline?: string;
+  requirements?: string[];
+  tags?: string[];
+  visibility?: 'public' | 'club_members';
+  allow_registration?: boolean;
+  club_id: string;
+  // Additional fields
+  agenda?: Array<{
+    time: string;
+    activity: string;
+  }>;
+  resources?: Array<{
+    name: string;
+    type: string;
+    url: string;
+    size?: string;
+  }>;
+  contact_info?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+  };
+  social_links?: {
+    facebook?: string;
+    instagram?: string;
+    discord?: string;
+  };
+  venue_capacity?: number;
+  organizer?: {
+    user_id: string;
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+  };
 }
 
 /**

@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { eventService, CreateEventRequest } from "@/services/event.service"
 
 export default function CreateEventPage() {
   const params = useParams()
@@ -55,8 +56,8 @@ export default function CreateEventPage() {
     max_participants: "",
     participation_fee: "",
     currency: "VND",
-    requirements: [""],
-    tags: [""],
+    requirements: [""] as string[],
+    tags: [""] as string[],
     is_public: true,
     allow_registration: true,
     registration_deadline: "",
@@ -69,37 +70,68 @@ export default function CreateEventPage() {
     }))
   }
 
-  const handleArrayChange = (field: string, index: number, value: string) => {
+  const handleArrayChange = (field: 'requirements' | 'tags', index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev].map((item: string, i: number) =>
+      [field]: prev[field].map((item: string, i: number) =>
         i === index ? value : item
       ),
     }))
   }
 
-  const addArrayItem = (field: string) => {
+  const addArrayItem = (field: 'requirements' | 'tags') => {
     setFormData((prev) => ({
       ...prev,
-      [field]: [...prev[field as keyof typeof prev], ""],
+      [field]: [...prev[field], ""],
     }))
   }
 
-  const removeArrayItem = (field: string, index: number) => {
+  const removeArrayItem = (field: 'requirements' | 'tags', index: number) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev].filter((_: string, i: number) => i !== index),
+      [field]: prev[field].filter((_: string, i: number) => i !== index),
     }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validation
-    if (!formData.title || !formData.description || !formData.start_date || !formData.location) {
+    // Enhanced validation
+    const requiredFields = {
+      title: "Tên sự kiện",
+      description: "Mô tả",
+      start_date: "Ngày bắt đầu",
+      location: "Địa điểm"
+    }
+
+    const missingFields = Object.entries(requiredFields).filter(
+      ([field, _]) => !formData[field as keyof typeof formData]
+    )
+
+    if (missingFields.length > 0) {
       toast({
         title: "Thông tin chưa đầy đủ",
-        description: "Vui lòng điền đầy đủ thông tin bắt buộc",
+        description: `Vui lòng điền: ${missingFields.map(([_, label]) => label).join(", ")}`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate dates
+    if (formData.end_date && formData.start_date > formData.end_date) {
+      toast({
+        title: "Thời gian không hợp lệ",
+        description: "Ngày kết thúc phải sau ngày bắt đầu",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate registration deadline
+    if (formData.registration_deadline && formData.registration_deadline > formData.start_date) {
+      toast({
+        title: "Hạn đăng ký không hợp lệ",
+        description: "Hạn đăng ký phải trước ngày bắt đầu sự kiện",
         variant: "destructive",
       })
       return
@@ -108,19 +140,65 @@ export default function CreateEventPage() {
     setIsSubmitting(true)
 
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Prepare data for API
+      const eventData: CreateEventRequest = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        short_description: formData.short_description?.trim() || undefined,
+        category: formData.category || undefined,
+        event_type: formData.event_type || undefined,
+        start_date: formData.start_date,
+        start_time: formData.start_time || undefined,
+        end_date: formData.end_date || undefined,
+        end_time: formData.end_time || undefined,
+        location: formData.location.trim(),
+        detailed_location: formData.detailed_location?.trim() || undefined,
+        max_participants: formData.max_participants ? parseInt(formData.max_participants) : undefined,
+        participation_fee: formData.participation_fee ? parseFloat(formData.participation_fee) : 0,
+        currency: formData.currency,
+        registration_deadline: formData.registration_deadline || undefined,
+        requirements: formData.requirements.filter(req => req.trim() !== ""),
+        tags: formData.tags.filter(tag => tag.trim() !== ""),
+        visibility: formData.is_public ? 'public' : 'club_members',
+        allow_registration: formData.allow_registration,
+        club_id: clubId,
+      }
 
-      toast({
-        title: "Tạo sự kiện thành công",
-        description: "Sự kiện đã được tạo và đang chờ duyệt",
-      })
+      console.log('Creating event with data:', eventData)
 
-      router.push(`/clubs/${clubId}/manage`)
-    } catch (error) {
+      // Create event via API
+      const response = await eventService.createEvent(eventData)
+
+      if (response.success) {
+        toast({
+          title: "Tạo sự kiện thành công",
+          description: "Sự kiện đã được tạo thành công",
+        })
+
+        // Redirect to club management page
+        router.push(`/clubs/${clubId}/manage`)
+      } else {
+        throw new Error(response.message || 'Failed to create event')
+      }
+    } catch (error: any) {
+      console.error('Error creating event:', error)
+      
+      // Handle specific error types
+      let errorMessage = "Không thể tạo sự kiện. Vui lòng thử lại."
+      
+      if (error.status === 401) {
+        errorMessage = "Bạn không có quyền tạo sự kiện. Vui lòng đăng nhập lại."
+      } else if (error.status === 403) {
+        errorMessage = "Bạn không có quyền tạo sự kiện cho câu lạc bộ này."
+      } else if (error.status === 400) {
+        errorMessage = error.message || "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       toast({
         title: "Lỗi",
-        description: "Không thể tạo sự kiện. Vui lòng thử lại.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -129,13 +207,12 @@ export default function CreateEventPage() {
   }
 
   const categories = [
-    "Arts & Culture",
-    "Technology",
-    "Sports",
-    "Academic",
+    "Workshop",
+    "Seminar",
+    "Competition",
     "Social",
-    "Business",
-    "Health & Wellness",
+    "Fundraiser",
+    "Meeting",
     "Other",
   ]
 

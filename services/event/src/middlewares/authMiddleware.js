@@ -1,14 +1,49 @@
 /**
- * Authentication middleware for Eve    // Extract user information from Kong-injected headers
-    const userId = req.headers['x-user-id'];
-    const userEmail = req.headers['x-user-email'];
-    const userRole = req.headers['x-user-role'];
-    const userFullName = req.headers['x-user-full-name'];ervice
+ * Authentication middleware for Event Service
  * Extracts user information from API Gateway headers (Kong)
  */
 
 import axios from 'axios';
 import { Event } from '../models/event.js';
+
+/**
+ * Middleware to validate API Gateway secret only (for public routes)
+ * This checks that the request comes through the API Gateway but doesn't require JWT headers
+ */
+export const validateApiGatewaySecret = (req, res, next) => {
+  // Skip validation for OPTIONS requests (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
+  // MANDATORY: Validate API Gateway secret header first
+  const gatewaySecret = req.headers['x-api-gateway-secret'];
+  const expectedSecret = process.env.API_GATEWAY_SECRET;
+  
+  if (!gatewaySecret || gatewaySecret !== expectedSecret) {
+    console.warn('EVENT SERVICE: Request rejected - Invalid or missing gateway secret', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+      userAgent: req.get('User-Agent'),
+      hasSecret: !!gatewaySecret,
+      timestamp: new Date().toISOString()
+    });
+    
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized: Request must come through API Gateway',
+      code: 'INVALID_GATEWAY'
+    });
+  }
+
+  console.debug('EVENT SERVICE: Gateway validation passed for public route', {
+    path: req.path,
+    method: req.method
+  });
+
+  next();
+};
 
 /**
  * Authentication middleware that extracts user info from Kong-injected headers
@@ -234,6 +269,89 @@ export const requireClubManager = async (req, res, next) => {
 
   } catch (error) {
     console.error('Club manager authorization error:', error.message);
+    const statusCode = error.message === 'Error verifying club membership' ? 503 : 500;
+    return res.status(statusCode).json({ success: false, message: 'Internal authorization error', code: 'AUTH_ERROR' });
+  }
+};
+
+// Helper function to check if a user has organizer role or is an event organizer
+async function isUserOrganizerForEvent(eventId, userId) {
+  try {
+    if (eventId) {
+      const event = await Event.findById(eventId);
+      if (event && event.organizer && event.organizer.user_id === userId) {
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking event organizer:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Authorization middleware to check if a user is a manager, organizer, or admin.
+ * This allows admin, club managers, and event organizers to manage events.
+ */
+export const requireClubManagerOrOrganizer = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const eventId = req.params.id;
+    const userRole = req.headers['x-user-role'];
+    
+    // Allow admin access
+    if (userRole === 'ADMIN') {
+      console.log('Admin access granted', { userId, userRole, path: req.path, method: req.method });
+      return next();
+    }
+    
+    // --- Authorization for UPDATE/DELETE operations (PUT/DELETE) ---
+    if (eventId) {
+      const event = await Event.findById(eventId);
+      if (!event) {
+        return res.status(404).json({ success: false, message: 'Event not found', code: 'EVENT_NOT_FOUND' });
+      }
+
+      // Allow if user is the original creator of the event
+      if (event.created_by === userId) {
+        return next();
+      }
+
+      // Allow if user is the designated organizer of the event
+      if (await isUserOrganizerForEvent(eventId, userId)) {
+        return next();
+      }
+
+      // Allow if user is a manager of the event's club
+      if (await isUserClubManager(event.club_id, userId)) {
+        return next();
+      }
+    } 
+    // --- Authorization for CREATE operations (POST) ---
+    else {
+      const { club_id } = req.body;
+
+      // If club_id is not provided, pass to the service layer
+      if (!club_id) {
+        return next();
+      }
+
+      // If club_id is provided, check if user is a manager of that club
+      if (await isUserClubManager(club_id, userId)) {
+        return next();
+      }
+    }
+    
+    // If none of the above conditions are met, deny access
+    return res.status(403).json({ 
+      success: false, 
+      message: 'User must be an admin, club manager, or event organizer to perform this action', 
+      code: 'FORBIDDEN' 
+    });
+
+  } catch (error) {
+    console.error('Authorization error:', error.message);
     const statusCode = error.message === 'Error verifying club membership' ? 503 : 500;
     return res.status(statusCode).json({ success: false, message: 'Internal authorization error', code: 'AUTH_ERROR' });
   }

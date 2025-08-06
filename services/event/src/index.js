@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import { eventRoutes, rsvpRoutes, joinRoutes, leaveRoutes } from './routes/eventRoutes.js';
+import { eventRoutes } from './routes/eventRoutes.js';
 import { adminRoutes } from './routes/adminRoutes.js';
 import { connectToDatabase } from './config/database.js';
 import cronJobManager from './utils/cronJobManager.js';
@@ -19,14 +19,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(bodyParser.json());
 
-// Routes
-app.use(eventRoutes);
-app.use(rsvpRoutes);
-app.use(joinRoutes);
-app.use(leaveRoutes);
-app.use(adminRoutes);
-
-// Health check endpoint
+// Health check endpoint (before other routes)
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
@@ -34,6 +27,10 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Routes
+app.use(eventRoutes);
+app.use(adminRoutes);
 
 // Start server
 const startServer = async () => {

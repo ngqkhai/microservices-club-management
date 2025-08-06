@@ -3,43 +3,27 @@ _format_version: "3.0"
 services:
   # Auth Service
   - name: auth-service
-    url: ${AUTH_SERVICE_URL}
+    url: http://auth-service:3001
     tags: [club-management-system, auth]
-    plugins:
-      - name: api-gateway-secret
-        config:
-          secret_value: ${API_GATEWAY_SECRET}
     
   # Club Service  
   - name: club-service
-    url: ${CLUB_SERVICE_URL}
+    url: http://club-service:3002
     tags: [club-management-system, club]
-    plugins:
-      - name: api-gateway-secret
-        config:
-          secret_value: ${API_GATEWAY_SECRET}
     
-  # Event Service
+  # Event Service  
   - name: event-service
-    url: ${EVENT_SERVICE_URL}
+    url: http://event-service:3003
     tags: [club-management-system, event]
-    plugins:
-      - name: api-gateway-secret
-        config:
-          secret_value: ${API_GATEWAY_SECRET}
     
   # Notification Service
   - name: notify-service
-    url: ${NOTIFY_SERVICE_URL}
+    url: http://notify-service:3005
     tags: [club-management-system, notify]
-    plugins:
-      - name: api-gateway-secret
-        config:
-          secret_value: ${API_GATEWAY_SECRET}
 
 routes:
   # Auth Service Public Routes (no JWT required)
-  - name: auth-public-route
+  - name: auth-public-routes
     service: auth-service
     paths:
       - /api/auth/login
@@ -54,9 +38,13 @@ routes:
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [auth, public]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
     
   # Auth Service Protected Routes (JWT required)
-  - name: auth-protected-route
+  - name: auth-protected-routes
     service: auth-service
     paths:
       - /api/auth/profile
@@ -69,15 +57,16 @@ routes:
     strip_path: false
     tags: [auth, protected]
     plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
       - name: jwt
-        tags: [auth-jwt]
         config:
           claims_to_verify:
             - exp
           key_claim_name: iss
           secret_is_base64: false
       - name: jwt-claims-headers
-        tags: [auth-claims]
         config:
           claims_to_include:
             - id
@@ -86,131 +75,56 @@ routes:
             - full_name
           header_prefix: "x-user-"
     
-  # Club Campaigns Routes (JWT required) - MORE SPECIFIC ROUTES FIRST
-  - name: club-campaigns-routes
-    service: club-service
-    paths:
-      - "~/api/clubs/[a-fA-F0-9]{24}/campaigns"
-      - "~/api/clubs/[a-fA-F0-9]{24}/campaigns/.*"
-    methods: [GET, POST, PUT, DELETE, OPTIONS]
-    strip_path: false
-    tags: [club, campaigns, protected]
-    plugins:
-      - name: jwt
-        tags: [campaigns-jwt]
-        config:
-          claims_to_verify:
-            - exp
-          key_claim_name: iss
-          secret_is_base64: false
-      - name: jwt-claims-headers
-        tags: [campaigns-claims]
-        config:
-          claims_to_include:
-            - id
-            - email
-            - role
-            - full_name
-          header_prefix: "x-user-"
-    
-  # Club Service Public Routes (US007 - Search & Filter)
+  # Club Service Public Routes
   - name: club-public-routes
     service: club-service
     paths:
       - /api/clubs
+      - /api/clubs/search
+      - /api/clubs/popular
       - /api/clubs/categories
-      - /api/clubs/locations
-      - /api/clubs/stats
-      - /api/clubs/member-count
+      - /api/clubs/featured
+      - /api/clubs/health
+      - /api/clubs/liveness
+      - /api/clubs/readiness
+      - /api/campaigns/published
+      - /api/campaigns/search
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [club, public]
-        
-  # Club Member Management Routes (JWT required)
-  - name: club-member-routes
-    service: club-service
-    paths:
-      - "~/api/clubs/[a-fA-F0-9]{24}/members"
-      - "~/api/clubs/[a-fA-F0-9]{24}/members/.*"
-      - "~/api/users/[a-fA-F0-9-]+/club-roles"
-      - "~/api/users/[a-fA-F0-9-]+/applications"
-    methods: [GET, POST, PUT, DELETE, OPTIONS]
-    strip_path: false
-    tags: [club, members, protected]
     plugins:
-      - name: jwt
-        tags: [members-jwt]
+      - name: api-gateway-secret
         config:
-          claims_to_verify:
-            - exp
-          key_claim_name: iss
-          secret_is_base64: false
-      - name: jwt-claims-headers
-        tags: [members-claims]
-        config:
-          claims_to_include:
-            - id
-            - email
-            - role
-            - full_name
-          header_prefix: "x-user-"
-        
-  # Simplified Application Management Routes (JWT required)
-  - name: club-applications-simple-routes
-    service: club-service
-    paths:
-      - "~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/status"
-      - "~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/approve"
-      - "~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/reject"
-    methods: [PUT, POST, OPTIONS]
-    strip_path: false
-    tags: [club, applications, simplified, protected]
-    plugins:
-      - name: jwt
-        tags: [applications-simple-jwt]
-        config:
-          claims_to_verify:
-            - exp
-          key_claim_name: iss
-          secret_is_base64: false
-      - name: jwt-claims-headers
-        tags: [applications-simple-claims]
-        config:
-          claims_to_include:
-            - id
-            - email
-            - role
-            - full_name
-          header_prefix: "x-user-"
-        
-  # Individual Club Routes (Some public, some protected)
-  - name: club-individual-public-routes
-    service: club-service
-    paths:
-      - "~/api/clubs/[a-fA-F0-9]{24}$"
-      - "~/api/clubs/[a-fA-F0-9]{24}/recruitments"
-    methods: [GET, OPTIONS]
-    strip_path: false
-    tags: [club, individual, public]
+          secret_value: "${API_GATEWAY_SECRET}"
     
   # Club Service Protected Routes (JWT required)
   - name: club-protected-routes
     service: club-service
     paths:
-      - /api/clubs
-    methods: [POST, PUT, DELETE, OPTIONS]
+      - /api/clubs/create
+      - /api/clubs/join
+      - /api/clubs/leave
+      - /api/clubs/manage
+      - /api/clubs/members
+      - /api/clubs/campaigns
+      - /api/clubs/analytics
+      - /api/campaigns/create
+      - /api/campaigns/manage
+      - /api/campaigns/analytics
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [club, protected]
     plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
       - name: jwt
-        tags: [club-jwt]
         config:
           claims_to_verify:
             - exp
           key_claim_name: iss
           secret_is_base64: false
       - name: jwt-claims-headers
-        tags: [club-claims]
         config:
           claims_to_include:
             - id
@@ -219,64 +133,50 @@ routes:
             - full_name
           header_prefix: "x-user-"
     
-  # Public Campaign Routes
-  - name: public-campaign-routes
-    service: club-service
-    paths:
-      - /api/campaigns/published
-      - "~/api/campaigns/[a-fA-F0-9]{24}$"
-      - "~/api/campaigns/clubs/.*/published"
-    methods: [GET, OPTIONS]
-    strip_path: false
-    tags: [club, public, campaigns]
-        
-  # Campaign Application Routes (JWT required)
-  - name: campaign-application-routes
-    service: club-service
-    paths:
-      - "~/api/campaigns/[a-fA-F0-9]{24}/apply"
-      - "~/api/campaigns/[a-fA-F0-9]{24}/applications/.*"
-      - "~/api/applications/[a-fA-F0-9]{24}$"
-    methods: [GET, POST, PUT, DELETE, OPTIONS]
-    strip_path: false
-    tags: [club, applications, protected]
-    plugins:
-      - name: jwt
-        tags: [application-jwt]
-        config:
-          claims_to_verify:
-            - exp
-          key_claim_name: iss
-          secret_is_base64: false
-      - name: jwt-claims-headers
-        tags: [application-claims]
-        config:
-          claims_to_include:
-            - id
-            - email
-            - role
-            - full_name
-          header_prefix: "x-user-"
-        
-  # Event Service Routes (JWT required)
-  - name: event-service-route
+  # Event Service Public Routes
+  - name: event-public-routes
     service: event-service
     paths:
       - /api/events
-      - /api/events/.*
+      - /api/events/search
+      - /api/events/upcoming
+      - /api/events/featured
+      - /api/events/categories
+      - /api/events/health
+      - /api/events/liveness
+      - /api/events/readiness
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [event, public]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+    
+  # Event Service Protected Routes (JWT required)
+  - name: event-protected-routes
+    service: event-service
+    paths:
+      - /api/events/create
+      - /api/events/register
+      - /api/events/unregister
+      - /api/events/manage
+      - /api/events/analytics
+      - /api/events/participants
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [event, protected]
     plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
       - name: jwt
-        tags: [event-jwt]
         config:
           claims_to_verify:
             - exp
           key_claim_name: iss
           secret_is_base64: false
       - name: jwt-claims-headers
-        tags: [event-claims]
         config:
           claims_to_include:
             - id
@@ -284,26 +184,32 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
-
-  # Notification Service Routes (JWT required)
-  - name: notify-service-route
+    
+  # Notification Service Protected Routes (JWT required)
+  - name: notify-protected-routes
     service: notify-service
     paths:
       - /api/notifications
-      - /api/notifications/.*
+      - /api/notifications/send
+      - /api/notifications/mark-read
+      - /api/notifications/preferences
+      - /api/notifications/health
+      - /api/notifications/liveness
+      - /api/notifications/readiness
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [notify, protected]
     plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
       - name: jwt
-        tags: [notify-jwt]
         config:
           claims_to_verify:
             - exp
           key_claim_name: iss
           secret_is_base64: false
       - name: jwt-claims-headers
-        tags: [notify-claims]
         config:
           claims_to_include:
             - id
@@ -312,48 +218,38 @@ routes:
             - full_name
           header_prefix: "x-user-"
 
-consumers:
-  - username: club-management-app
-    custom_id: club-app-001
-    tags: [club-management-system]
-    jwt_secrets:
-      - key: auth-service  # This must match the 'iss' claim in JWT
-        algorithm: RS256
-        # Public key from the auth service - will be replaced by start-kong.sh
-        rsa_public_key: "${JWT_RSA_PUBLIC_KEY}"
-
 plugins:
-  # Global CORS plugin
   - name: cors
     config:
-      # CORS origins from environment variable (JSON array format)
-      origins: ${KONG_CORS_ORIGINS}
+      origins:
+        - "http://localhost:3000"
+        - "https://club-frontend-hq5d.onrender.com"
       methods:
         - GET
         - POST
         - PUT
         - DELETE
         - OPTIONS
-        - PATCH
-        - HEAD
       headers:
-        - Accept
-        - Accept-Language
-        - Authorization
-        - Content-Type
-        - Content-Length
-        - X-Requested-With
-        - X-API-Gateway-Secret
-        - X-User-Id
-        - X-User-Email
-        - X-User-Role
-        - X-User-Full-Name
-        - Cache-Control
-        - Origin
-        - Referer
-        - User-Agent
+        - "Accept"
+        - "Accept-Version"
+        - "Content-Length"
+        - "Content-MD5"
+        - "Content-Type"
+        - "Date"
+        - "X-Auth-Token"
+        - "Authorization"
+        - "X-User-Id"
+        - "X-User-Email"
+        - "X-User-Role"
+        - "X-User-Full-Name"
       exposed_headers:
-        - "*"
+        - "X-Auth-Token"
+        - "Authorization"
+        - "X-User-Id"
+        - "X-User-Email"
+        - "X-User-Role"
+        - "X-User-Full-Name"
       credentials: true
       max_age: 3600
       preflight_continue: false

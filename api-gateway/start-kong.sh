@@ -1,38 +1,23 @@
 #!/bin/sh
-
 set -e
 
-# Format the public key into a single line with escaped newlines
-export JWT_RSA_PUBLIC_KEY=$(echo "$JWT_RSA_PUBLIC_KEY" | awk 'NF {printf "%s\\n", $0}' | sed 's/\\n$//')
+echo "Starting Kong with environment variable substitution..."
 
-export DOLLAR='$'
-VARS_TO_SUBSTITUTE=$(printf '$%s,' \
-  AUTH_SERVICE_URL \
-  CLUB_SERVICE_URL \
-  EVENT_SERVICE_URL \
-  NOTIFY_SERVICE_URL \
-  API_GATEWAY_SECRET \
-  JWT_RSA_PUBLIC_KEY \
-  KONG_CORS_ORIGINS \
-)
+# Set default API Gateway secret if not provided
+export API_GATEWAY_SECRET=${API_GATEWAY_SECRET:-"c44d002c75b696ba2200d49c6fadb8f3"}
 
-# Substitute all variables directly into kong.yml
-envsubst "$VARS_TO_SUBSTITUTE" < /etc/kong/kong.yml > /tmp/kong.yml.substituted
+# Substitute environment variables in the kong config
+envsubst < /etc/kong/kong.yml > /tmp/kong-processed.yml
 
-# ==========================================================
-# ADD THESE THREE LINES TO DEBUG THE GENERATED CONFIG
-echo "--- START OF GENERATED KONG CONFIG ---"
-cat /tmp/kong.yml.substituted
-echo "--- END OF GENERATED KONG CONFIG ---"
-# ==========================================================
+# Set Kong to use the processed config
+export KONG_DECLARATIVE_CONFIG=/tmp/kong-processed.yml
 
-# Replace the original config with the new one
-mv /tmp/kong.yml.substituted /etc/kong/kong.yml
+# Debug: Show the processed config
+echo "--- START OF PROCESSED KONG CONFIG ---"
+cat /tmp/kong-processed.yml
+echo "--- END OF PROCESSED KONG CONFIG ---"
 
-# Clean up temporary file
-rm -f /tmp/kong.yml.temp
-
-echo "Kong configuration has been processed."
+echo "Kong configuration processed and loaded."
 
 # Execute the original Kong entrypoint command to start the gateway
 exec /docker-entrypoint.sh kong docker-start

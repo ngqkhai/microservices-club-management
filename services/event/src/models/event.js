@@ -21,8 +21,8 @@ const eventSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['workshop', 'seminar', 'competition', 'social', 'fundraiser', 'meeting', 'other'],
-    default: 'other'
+    enum: ['Workshop', 'Seminar', 'Competition', 'Social', 'Fundraiser', 'Meeting', 'Other'],
+    default: 'Other'
   },
   location: {
     location_type: {
@@ -82,6 +82,9 @@ const eventSchema = new mongoose.Schema({
   images: [{
     type: String
   }],
+  gallery: [{
+    type: String
+  }], // Additional image URLs for event gallery
   attachments: [{
     filename: {
       type: String,
@@ -99,6 +102,81 @@ const eventSchema = new mongoose.Schema({
       maxLength: 50
     }
   }],
+  // Event agenda/schedule
+  agenda: [{
+    time: {
+      type: String,
+      maxLength: 20
+    },
+    activity: {
+      type: String,
+      maxLength: 300
+    }
+  }],
+  // Additional resources
+  resources: [{
+    name: {
+      type: String,
+      maxLength: 200
+    },
+    type: {
+      type: String,
+      maxLength: 50
+    },
+    url: {
+      type: String,
+      maxLength: 500
+    },
+    size: {
+      type: String,
+      maxLength: 20
+    }
+  }],
+  // Contact information
+  contact_info: {
+    email: {
+      type: String,
+      maxLength: 100
+    },
+    phone: {
+      type: String,
+      maxLength: 20
+    },
+    website: {
+      type: String,
+      maxLength: 200
+    }
+  },
+  // Social media links
+  social_links: {
+    facebook: {
+      type: String,
+      maxLength: 200
+    },
+    instagram: {
+      type: String,
+      maxLength: 200
+    },
+    discord: {
+      type: String,
+      maxLength: 200
+    }
+  },
+  // Detailed location info
+  detailed_location: {
+    type: String,
+    maxLength: 500
+  },
+  venue_capacity: {
+    type: Number,
+    min: 1
+  },
+  // Current participants count (computed field)
+  current_participants: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   status: {
     type: String,
     enum: ['draft', 'published', 'cancelled', 'completed'],

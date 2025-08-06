@@ -1,5 +1,19 @@
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
-import { getFilteredEvents, rsvpToEvent, joinEventService, leaveEventService, createEventService, updateEventService, deleteEventService, getEventsOfClubService } from '../services/eventService.js';
+import { 
+  getFilteredEvents, 
+  rsvpToEvent, 
+  joinEventService, 
+  leaveEventService, 
+  createEventService, 
+  updateEventService, 
+  deleteEventService, 
+  getEventsOfClubService,
+  getEventByIdService,
+  getUserEventStatusService,
+  toggleEventFavoriteService,
+  getUserFavoriteEventsService,
+  getEventRegistrationsService,
+} from '../services/eventService.js';
 
 export const getEvents = async (req, res) => {
   try {
@@ -13,7 +27,7 @@ export const getEvents = async (req, res) => {
 
 export const handleEventRSVP = async (req, res) => {
   try {
-    const event_id = req.params.event_id;
+    const event_id = req.params.id;
     const dto = new RSVPDTO({ ...req.body, event_id });
     const user_id = req.user.id; // Get user ID from API Gateway headers
     const result = await rsvpToEvent(dto.event_id, dto.status, user_id); 
@@ -295,3 +309,132 @@ export const getEventsOfClub = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get individual event by ID with user context
+ */
+export const getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.headers['x-user-id']; // Optional user context
+    const event = await getEventByIdService(id, userId);
+    
+    if (!event) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Event not found',
+        code: 'EVENT_NOT_FOUND'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: event
+    });
+  } catch (error) {
+    console.error('getEventById error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
+
+/**
+ * Get user-specific event status (registration, favorite)
+ */
+export const getUserEventStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.headers['x-user-id'];
+    const status = await getUserEventStatusService(id, userId);
+    
+    res.status(200).json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    console.error('getUserEventStatus error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
+
+/**
+ * Toggle event favorite status for user
+ */
+export const toggleEventFavorite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.headers['x-user-id'];
+    const result = await toggleEventFavoriteService(id, userId);
+    
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: result.is_favorited ? 'Event added to favorites' : 'Event removed from favorites'
+    });
+  } catch (error) {
+    console.error('toggleEventFavorite error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
+
+/**
+ * Get user's favorite events
+ */
+export const getUserFavoriteEvents = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.headers['x-user-id'];
+    const { page = 1, limit = 10 } = req.query;
+    const result = await getUserFavoriteEventsService(userId, { page: parseInt(page), limit: parseInt(limit) });
+    
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('getUserFavoriteEvents error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
+
+/**
+ * Get event registrations (for management)
+ */
+export const getEventRegistrations = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 20, status } = req.query;
+    const result = await getEventRegistrationsService(id, { 
+      page: parseInt(page), 
+      limit: parseInt(limit),
+      status 
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('getEventRegistrations error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
+

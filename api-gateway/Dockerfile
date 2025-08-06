@@ -13,7 +13,7 @@ RUN mkdir -p /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret
 COPY lua-plugins/jwt-claims-headers /usr/local/share/lua/5.1/kong/plugins/jwt-claims-headers/
 COPY lua-plugins/api-gateway-secret /usr/local/share/lua/5.1/kong/plugins/api-gateway-secret/
 
-# Copy the declarative configuration file into the image
+# Copy the declarative configuration files into the image
 COPY kong.yml /etc/kong/kong.yml
 
 # Copy the startup script and make it executable
