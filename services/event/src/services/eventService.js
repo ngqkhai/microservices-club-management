@@ -254,6 +254,8 @@ export const createEventService = async (eventData) => {
     location, 
     start_date,
     end_date,
+    start_time,
+    end_time,
     registration_deadline,
     max_participants,
     participation_fee,
@@ -274,9 +276,13 @@ export const createEventService = async (eventData) => {
     fee
   } = eventData;
 
-  // Handle field mapping for backward compatibility
+  // Handle field mapping for backward compatibility and combine date/time if provided
   const startDate = start_date || start_at;
   const endDate = end_date || end_at;
+  
+  // Combine date and time if both are provided
+  const startDateTime = start_time ? `${startDate}T${start_time}:00` : startDate;
+  const endDateTime = end_time ? `${endDate}T${end_time}:00` : endDate;
   const maxCapacity = max_participants || max_attendees;
   const eventFee = participation_fee !== undefined ? participation_fee : fee;
 
@@ -294,8 +300,9 @@ export const createEventService = async (eventData) => {
     throw error;
   }
 
-  if (new Date(endDate) <= new Date(startDate)) {
-    const error = new Error('Event end date must be after start date.');
+  // Allow same-day events by checking if end date/time is before start date/time
+  if (new Date(endDateTime) < new Date(startDateTime)) {
+    const error = new Error('Event end date/time must be after start date/time.');
     error.status = 400;
     throw error;
   }
@@ -336,8 +343,8 @@ export const createEventService = async (eventData) => {
     short_description,
     category: category || 'other',
     location,
-    start_date: startDate,
-    end_date: endDate,
+    start_date: startDateTime,
+    end_date: endDateTime,
     registration_deadline,
     max_participants: maxCapacity,
     participation_fee: eventFee || 0,

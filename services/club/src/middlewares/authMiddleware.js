@@ -89,7 +89,10 @@ const validateApiGatewayHeaders = (req, res, next) => {
       path: req.path
     });
     
-    return next(new AuthenticationError('Missing required authentication headers'));
+    return res.status(401).json({
+      success: false,
+      message: 'Missing required authentication headers'
+    });
   }
 
   // Extract and validate user information
@@ -101,19 +104,28 @@ const validateApiGatewayHeaders = (req, res, next) => {
   // Validate UUID format for user ID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(userId)) {
-    return next(new AuthenticationError('Invalid user ID format'));
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid user ID format'
+    });
   }
 
   // Validate role
   if (!['user', 'admin'].includes(userRole)) {
-    return next(new AuthenticationError('Invalid user role'));
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid user role'
+    });
   }
 
   // Validate email format if provided
   if (userEmail) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userEmail)) {
-      return next(new AuthenticationError('Invalid email format'));
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email format'
+      });
     }
   }
 

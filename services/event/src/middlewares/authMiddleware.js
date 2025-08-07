@@ -81,6 +81,7 @@ export const authMiddleware = (req, res, next) => {
     const userId = req.headers['x-user-id'];
     const userEmail = req.headers['x-user-email'];
     const userRole = req.headers['x-user-role'];
+    const userFullName = req.headers['x-user-full-name'];
 
     // Validate that all required headers are present
     if (!userId || !userEmail || !userRole) {
@@ -102,8 +103,8 @@ export const authMiddleware = (req, res, next) => {
       });
     }
 
-    // Validate user role
-    const validRoles = ['USER', 'ADMIN'];
+    // Validate user role (accepting lowercase roles from JWT)
+    const validRoles = ['user', 'admin'];
     if (!validRoles.includes(userRole)) {
       console.warn('Invalid user role from API Gateway', {
         userId,
@@ -191,23 +192,33 @@ export const requireRole = (allowedRoles) => {
 /**
  * Middleware to require admin role
  */
-export const requireAdmin = requireRole('ADMIN');
+export const requireAdmin = requireRole('admin');
 
 /**
  * Middleware to require user role (or admin)
  */
-export const requireUser = requireRole(['USER', 'ADMIN']);
+export const requireUser = requireRole(['user', 'admin']);
 
 // Helper function to check a user's role within a club via an internal API call.
-async function isUserClubManager(clubId, userId) {
+async function isUserClubManager(clubId, userId, req) {
   const clubServiceUrl = process.env.CLUB_SERVICE_URL || 'http://club-service:3002';
   const membershipCheckUrl = `${clubServiceUrl}/api/clubs/${clubId}/members/${userId}`;
   console.log('membershipCheckUrl', membershipCheckUrl);
 
   try {
-    const response = await axios.get(membershipCheckUrl);
+    // Include API Gateway secret and user headers for internal service-to-service communication
+    const headers = {
+      'x-api-gateway-secret': process.env.API_GATEWAY_SECRET,
+      'x-user-id': req.headers['x-user-id'],
+      'x-user-email': req.headers['x-user-email'],
+      'x-user-role': req.headers['x-user-role'],
+      'x-user-full-name': req.headers['x-user-full-name'],
+      'Content-Type': 'application/json'
+    };
+
+    const response = await axios.get(membershipCheckUrl, { headers });
     console.log('response', response.data);
-    return response.data && response.data.role === 'MANAGER';
+    return response.data && response.data.data && response.data.data.role === 'club_manager';
   } catch (error) {
     if (error.response && error.response.status === 404) {
       // User is not a member of the club, therefore not a manager.
@@ -227,7 +238,7 @@ export const requireClubManager = async (req, res, next) => {
     const userId = req.user.id;
     const eventId = req.params.id;
     const userRole = req.headers['x-user-role'];
-    if (userRole === 'ADMIN') {
+    if (userRole === 'admin') {
       console.log('Admin access granted', { userId, userRole, path: req.path, method: req.method });
       return next();
     }
@@ -244,7 +255,7 @@ export const requireClubManager = async (req, res, next) => {
       }
 
       // If not the creator, check if they are a manager of the event's club.
-      if (await isUserClubManager(event.club_id, userId)) {
+      if (await isUserClubManager(event.club_id, userId, req)) {
         return next();
       }
     } 
@@ -259,7 +270,7 @@ export const requireClubManager = async (req, res, next) => {
       }
 
       // If club_id is provided, check if user is a manager of that club.
-      if (await isUserClubManager(club_id, userId)) {
+      if (await isUserClubManager(club_id, userId, req)) {
         return next();
       }
     }
@@ -301,7 +312,7 @@ export const requireClubManagerOrOrganizer = async (req, res, next) => {
     const userRole = req.headers['x-user-role'];
     
     // Allow admin access
-    if (userRole === 'ADMIN') {
+    if (userRole === 'admin') {
       console.log('Admin access granted', { userId, userRole, path: req.path, method: req.method });
       return next();
     }
@@ -324,7 +335,7 @@ export const requireClubManagerOrOrganizer = async (req, res, next) => {
       }
 
       // Allow if user is a manager of the event's club
-      if (await isUserClubManager(event.club_id, userId)) {
+      if (await isUserClubManager(event.club_id, userId, req)) {
         return next();
       }
     } 
@@ -338,7 +349,7 @@ export const requireClubManagerOrOrganizer = async (req, res, next) => {
       }
 
       // If club_id is provided, check if user is a manager of that club
-      if (await isUserClubManager(club_id, userId)) {
+      if (await isUserClubManager(club_id, userId, req)) {
         return next();
       }
     }

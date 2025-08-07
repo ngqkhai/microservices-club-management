@@ -87,9 +87,12 @@ function plugin:access(conf)
         header_name = (conf.header_prefix or "x-user-") .. "role"
       elseif claim_name == "email" then
         header_name = (conf.header_prefix or "x-user-") .. "email"
+      elseif claim_name == "full_name" then
+        header_name = (conf.header_prefix or "x-user-") .. "full-name"
       else
-        -- Default behavior for other claims
-        header_name = (conf.header_prefix or "X-") .. claim_name:gsub("^%l", string.upper)
+        -- Default behavior for other claims - normalize to kebab-case
+        local normalized_name = claim_name:gsub("_", "-"):lower()
+        header_name = (conf.header_prefix or "x-user-") .. normalized_name
       end
       
       -- Set the header for upstream service
