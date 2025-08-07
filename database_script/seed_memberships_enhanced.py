@@ -81,10 +81,38 @@ def get_existing_clubs():
         logging.error(f"[FAILED] Error fetching clubs: {e}")
         return []
 
-def generate_membership_data(users, clubs):
+def get_existing_campaigns():
+    """Fetch existing recruitment campaigns from MongoDB club service"""
+    try:
+        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        db = client.club_service_db
+
+        campaigns = list(db.recruitment_campaigns.find(
+            {},  # Get all campaigns regardless of status
+            {'_id': 1, 'club_id': 1, 'title': 1}
+        ))
+
+        client.close()
+
+        logging.info(f"[SUCCESS] Retrieved {len(campaigns)} campaigns from MongoDB")
+        return campaigns
+
+    except Exception as e:
+        logging.error(f"[FAILED] Error fetching campaigns: {e}")
+        return []
+
+def generate_membership_data(users, clubs, campaigns):
     """Generate realistic membership data"""
     memberships = []
-    
+
+    # Create campaign mapping by club_id for easy lookup
+    campaigns_by_club = {}
+    for campaign in campaigns:
+        club_id = campaign['club_id']
+        if club_id not in campaigns_by_club:
+            campaigns_by_club[club_id] = []
+        campaigns_by_club[club_id].append(campaign['_id'])
+
     # Membership roles and their probabilities
     role_weights = {
         'member': 0.80,      # 80% regular members
@@ -155,13 +183,19 @@ def generate_membership_data(users, clubs):
             days_ago = random.randint(1, 365)
             joined_at = datetime.utcnow() - timedelta(days=days_ago)
             
+            # Assign campaign_id if available for this club
+            campaign_id = None
+            if club_id in campaigns_by_club and campaigns_by_club[club_id]:
+                # 100% chance of being associated with a campaign
+                campaign_id = random.choice(campaigns_by_club[club_id])
+
             membership = {
                 '_id': ObjectId(),
                 'club_id': club_id,
                 'user_id': user_id,
                 'user_email': user['email'],
                 'user_full_name': user['full_name'],
-                'campaign_id': None,  # Will be updated when campaigns are created
+                'campaign_id': campaign_id,
                 'role': role,
                 'status': status,
                 'application_message': f"Tôi muốn tham gia {club_name} để học hỏi và đóng góp cho cộng đồng.",
@@ -198,18 +232,19 @@ def seed_memberships():
         # Get existing data
         users = get_existing_users()
         clubs = get_existing_clubs()
-        
+        campaigns = get_existing_campaigns()
+
         if not users:
             logging.error("[FAILED] No users found. Please seed users first.")
             return False
-            
+        
         if not clubs:
             logging.error("[FAILED] No clubs found. Please seed clubs first.")
             return False
         
         # Generate membership data
         logging.info("[STATS] Generating membership data...")
-        memberships_data = generate_membership_data(users, clubs)
+        memberships_data = generate_membership_data(users, clubs, campaigns)
         
         # Connect to MongoDB and seed
         client = MongoClient(MONGODB_URI)

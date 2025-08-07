@@ -11,16 +11,21 @@ from datetime import datetime, timedelta
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, BulkWriteError
 from bson import ObjectId
+import psycopg2
 import random
 
 # Configuration
 MONGODB_URI = "mongodb+srv://ngqkhai:byNceAIfBWS8xDvT@club-management-cluster.jgzkju5.mongodb.net/event_service_db?retryWrites=true&w=majority"
+DB_NAME = "event_service_db"
+CLUB_DB_NAME = "club_service_db"  # For fetching clubs
+SUPABASE_DB_URL = "postgresql://postgres.rkzyqtmqflkuxbcghkmy:tDUBMmQzQ5ilqlgU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
 
 def generate_events_data():
     """Generate comprehensive event data"""
@@ -269,15 +274,55 @@ def generate_events_data():
     
     # Generate multiple events from templates
     events_data = []
-    club_ids = [ObjectId() for _ in range(25)]  # 25 different clubs
-    organizer_ids = [ObjectId() for _ in range(50)]  # 50 different organizers
-    admin_user_id = ObjectId()
+    # Use actual club IDs and user IDs instead of mock IDs
+    users = fetch_users()
+    clubs = fetch_clubs()
+    
+    if not users or not clubs:
+        logger.error("Cannot proceed without users and clubs data")
+        return
+    
+    # Use actual club IDs instead of mock IDs
+    club_ids = [club['_id'] for club in clubs]
+    
+    # Create club-event category mapping for thematic alignment
+    club_category_to_events = {
+        'Công nghệ': tech_events,
+        'Thể thao': sports_events,  
+        'Văn hóa': cultural_events,
+        'Học thuật': academic_events,
+        'Tình nguyện': volunteer_events,
+        'Kinh doanh': business_events
+    }
+    
+    # Group clubs by category for better matching
+    clubs_by_category = {}
+    for club in clubs:
+        category = club.get('category', 'Học thuật')  # Default to academic
+        if category not in clubs_by_category:
+            clubs_by_category[category] = []
+        clubs_by_category[category].append(club['_id'])
+    
+    # Use actual user IDs instead of mock organizer IDs
+    user_ids = [user['id'] for user in users]
+    # REMOVED: admin_user_id = ObjectId()  # Now using actual user IDs
     
     # Generate 3-5 events per template to create variety
     for template in all_event_templates:
         for i in range(random.randint(3, 5)):
-            club_id = random.choice(club_ids)
-            organizer_id = random.choice(organizer_ids)
+            # Find the appropriate club category for this event template
+            appropriate_clubs = []
+            for category, event_list in club_category_to_events.items():
+                if template in event_list:
+                    appropriate_clubs = clubs_by_category.get(category, [])
+                    break
+            
+            # If no appropriate clubs found, use all clubs
+            if not appropriate_clubs:
+                appropriate_clubs = club_ids
+            
+            club_id = random.choice(appropriate_clubs)
+            organizer_id = random.choice(user_ids)
             
             # Randomize dates
             start_date = datetime.now() + timedelta(days=random.randint(-30, 60))
@@ -351,7 +396,7 @@ def generate_events_data():
                     'total_interested': random.randint(0, template['max_participants'] * 2),
                     'total_attended': 0 if start_date > datetime.now() else random.randint(0, template['max_participants'])
                 },
-                'created_by': admin_user_id,
+                'created_by': random.choice(user_ids),
                 'current_participants': random.randint(0, template['max_participants']),
                 'created_at': datetime.now() - timedelta(days=random.randint(1, 60)),
                 'updated_at': datetime.now() - timedelta(days=random.randint(0, 5))
@@ -389,6 +434,37 @@ def generate_agenda(self, duration_hours):
         current_time += timedelta(minutes=random.randint(30, 90))
     
     return agenda
+
+def fetch_users():
+    """Fetch actual users from PostgreSQL authentication service"""
+    try:
+        conn = psycopg2.connect(SUPABASE_DB_URL)
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE deleted_at IS NULL")
+        users = [{"id": row[0]} for row in cur.fetchall()]
+        cur.close()
+        conn.close()
+        logger.info(f"[SUCCESS] Retrieved {len(users)} users from PostgreSQL")
+        return users
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to fetch users: {e}")
+        return []
+
+def fetch_clubs():
+    """Fetch actual clubs from MongoDB club service"""
+    try:
+        # Connect to club service database
+        club_uri = "mongodb+srv://ngqkhai:byNceAIfBWS8xDvT@club-management-cluster.jgzkju5.mongodb.net/club_service_db?retryWrites=true&w=majority"
+        client = MongoClient(club_uri)
+        db = client[CLUB_DB_NAME]
+        clubs_collection = db['clubs']
+        clubs = list(clubs_collection.find({}, {"_id": 1, "category": 1}))
+        client.close()
+        logger.info(f"[SUCCESS] Retrieved {len(clubs)} clubs from MongoDB")
+        return clubs
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to fetch clubs: {e}")
+        return []
 
 def seed_events():
     """Seed events collection with enhanced data"""

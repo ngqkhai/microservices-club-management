@@ -14,7 +14,44 @@ from bson import ObjectId
 import random
 
 # Configuration
+from pymongo import MongoClient
+from bson import ObjectId
+import psycopg2
+
+# Database configuration
 MONGODB_URI = "mongodb+srv://ngqkhai:byNceAIfBWS8xDvT@club-management-cluster.jgzkju5.mongodb.net/club_service_db?retryWrites=true&w=majority"
+SUPABASE_DB_URL = "postgresql://postgres.rkzyqtmqflkuxbcghkmy:tDUBMmQzQ5ilqlgU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+
+def get_existing_users():
+    """Fetch existing user IDs from PostgreSQL auth service"""
+    try:
+        conn = psycopg2.connect(SUPABASE_DB_URL)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, email,
+                   COALESCE(full_name, email) as name
+            FROM users
+            WHERE deleted_at IS NULL
+            ORDER BY created_at
+        """)
+        
+        users = []
+        for row in cursor.fetchall():
+            users.append({
+                'id': row[0],
+                'email': row[1], 
+                'name': row[2]
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        logging.info(f"[SUCCESS] Retrieved {len(users)} users from PostgreSQL")
+        return users
+        
+    except Exception as e:
+        logging.error(f"Error fetching users from PostgreSQL: {e}")
+        return []
 
 # Logging setup
 logging.basicConfig(
@@ -287,11 +324,26 @@ def generate_clubs_data():
     all_clubs = tech_clubs + sports_clubs + cultural_clubs + academic_clubs + volunteer_clubs + business_clubs
     
     # Generate ObjectIds and additional data for each club
-    admin_user_id = ObjectId()
+    
+    # Get actual users from auth service
+    users = get_existing_users()
+    if not users:
+        logging.error("No users found in auth service. Please seed users first.")
+        return []
+    
+    # Select admin/manager users to create clubs
+    admin_users = [user for user in users if 'admin' in user['email'].lower()]
+    if not admin_users:
+        # If no admin users, use first few regular users as club creators
+        admin_users = users[:10]  # First 10 users can create clubs
+    
+    logging.info(f"Using {len(admin_users)} users as club creators")
     
     clubs_data = []
     for club in all_clubs:
-        manager_id = ObjectId()
+        # Select a random user as club manager
+        manager_user = random.choice(users)
+        manager_id = manager_user['id']
         founding_year = random.randint(2020, 2024)
         founding_month = random.randint(1, 12)
         founding_day = random.randint(1, 28)
@@ -312,7 +364,7 @@ def generate_clubs_data():
             },
             'status': random.choice(['ACTIVE', 'ACTIVE', 'ACTIVE', 'RECRUITING']),  # 75% active
             'manager': manager_id,
-            'created_by': admin_user_id,
+            'created_by': random.choice(admin_users)['id'],  # Using actual user ID from auth service
             'founding_date': datetime(founding_year, founding_month, founding_day),
             'member_count': club['member_count'],
             'created_at': datetime.now() - timedelta(days=random.randint(30, 365)),
