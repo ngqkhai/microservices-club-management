@@ -1,15 +1,118 @@
 import { Event } from '../models/event.js';
 
-export async function getEventsFromMock({ filter, club_id }) {
+export async function getEventsFromMock({ filter, club_id, status, category, location, search, start_from, start_to, page = 1, limit = 10 }) {
+  // Build the query
   const query = {};
+  const now = new Date();
+  
+  // Club filter
   if (club_id) {
     query.club_id = club_id;
   }
-  if (filter === 'upcoming') {
-    query.start_date = { $gte: new Date() };
+  
+  // Status filter
+  if (status) {
+    query.status = status;
   }
   
-  return await Event.find(query).sort({ start_date: 1 });
+  // Category filter
+  if (category) {
+    query.category = category;
+  }
+  
+  // Location filter (case-insensitive partial match)
+  if (location) {
+    query.$or = query.$or || [];
+    query.$or.push({
+      $or: [
+        { 'location.address': { $regex: location, $options: 'i' } },
+        { 'location.room': { $regex: location, $options: 'i' } },
+        { detailed_location: { $regex: location, $options: 'i' } }
+      ]
+    });
+  }
+  
+  // Search filter (across multiple fields)
+  if (search) {
+    const searchRegex = { $regex: search, $options: 'i' };
+    const searchConditions = [
+      { title: searchRegex },
+      { description: searchRegex },
+      { short_description: searchRegex },
+      { tags: { $in: [searchRegex] } },
+      { 'location.address': searchRegex },
+      { detailed_location: searchRegex }
+    ];
+    
+    if (query.$or) {
+      // If location filter already added $or, combine with $and
+      query.$and = [
+        { $or: query.$or },
+        { $or: searchConditions }
+      ];
+      delete query.$or;
+    } else {
+      query.$or = searchConditions;
+    }
+  }
+  
+  // Date range filters
+  const dateConditions = [];
+  
+  // Filter by date range
+  if (start_from || start_to) {
+    const dateRange = {};
+    if (start_from) {
+      dateRange.$gte = start_from;
+    }
+    if (start_to) {
+      dateRange.$lte = start_to;
+    }
+    dateConditions.push({ start_date: dateRange });
+  }
+  
+  // Filter by upcoming events
+  if (filter === 'upcoming') {
+    dateConditions.push({ start_date: { $gte: now } });
+  }
+  
+  // Combine date conditions with existing query
+  if (dateConditions.length > 0) {
+    if (query.$and) {
+      query.$and = [...query.$and, ...dateConditions];
+    } else if (query.$or) {
+      query.$and = [{ $or: query.$or }, ...dateConditions];
+      delete query.$or;
+    } else {
+      query.$and = dateConditions;
+    }
+  }
+  
+  // Pagination
+  const skip = (page - 1) * limit;
+  
+  // Get total count for pagination
+  const total = await Event.countDocuments(query);
+  
+  // Get events with pagination
+  const events = await Event.find(query)
+    .sort({ start_date: 1, created_at: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('club_id', 'name logo_url description')
+    .lean();
+  
+  return {
+    events,
+    meta: {
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit),
+      has_next: page < Math.ceil(total / limit),
+      has_previous: page > 1
+    }
+  };
 }
 
 export async function findEventById(eventId) {

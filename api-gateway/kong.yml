@@ -3,27 +3,43 @@ _format_version: "3.0"
 services:
   # Auth Service
   - name: auth-service
-    url: http://auth-service:3001
+    url: ${AUTH_SERVICE_URL}
     tags: [club-management-system, auth]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
     
   # Club Service  
   - name: club-service
-    url: http://club-service:3002
+    url: ${CLUB_SERVICE_URL}
     tags: [club-management-system, club]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
     
-  # Event Service  
+  # Event Service
   - name: event-service
-    url: http://event-service:3003
+    url: ${EVENT_SERVICE_URL}
     tags: [club-management-system, event]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
     
   # Notification Service
   - name: notify-service
-    url: http://notify-service:3005
+    url: ${NOTIFY_SERVICE_URL}
     tags: [club-management-system, notify]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
 
 routes:
   # Auth Service Public Routes (no JWT required)
-  - name: auth-public-routes
+  - name: auth-public-route
     service: auth-service
     paths:
       - /api/auth/login
@@ -38,13 +54,9 @@ routes:
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [auth, public]
-    plugins:
-      - name: api-gateway-secret
-        config:
-          secret_value: "${API_GATEWAY_SECRET}"
     
   # Auth Service Protected Routes (JWT required)
-  - name: auth-protected-routes
+  - name: auth-protected-route
     service: auth-service
     paths:
       - /api/auth/profile
@@ -57,16 +69,15 @@ routes:
     strip_path: false
     tags: [auth, protected]
     plugins:
-      - name: api-gateway-secret
-        config:
-          secret_value: "${API_GATEWAY_SECRET}"
       - name: jwt
+        tags: [auth-jwt]
         config:
           claims_to_verify:
             - exp
           key_claim_name: iss
           secret_is_base64: false
       - name: jwt-claims-headers
+        tags: [auth-claims]
         config:
           claims_to_include:
             - id
@@ -79,10 +90,11 @@ routes:
   - name: club-public-routes
     service: club-service
     paths:
-      - /api/clubs
       - /api/clubs/search
       - /api/clubs/popular
       - /api/clubs/categories
+      - /api/clubs/locations
+      - /api/clubs/stats
       - /api/clubs/featured
       - /api/clubs/health
       - /api/clubs/liveness
@@ -96,6 +108,33 @@ routes:
       - name: api-gateway-secret
         config:
           secret_value: "${API_GATEWAY_SECRET}"
+
+  # Club Service GET /api/clubs (Public)
+  - name: club-get-public
+    service: club-service
+    paths:
+      - /api/clubs
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [club, public, get]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
+  # Club Service Individual Club Routes (with ID parameter)
+  - name: club-individual-public-routes
+    service: club-service
+    paths:
+      - ~/api/clubs/[0-9a-fA-F]{24}$
+      - ~/api/clubs/[0-9a-fA-F]{24}/recruitments$
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [club, public, individual]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
     
   # Club Service Protected Routes (JWT required)
   - name: club-protected-routes
@@ -105,12 +144,12 @@ routes:
       - /api/clubs/join
       - /api/clubs/leave
       - /api/clubs/manage
-      - /api/clubs/members
-      - /api/clubs/campaigns
       - /api/clubs/analytics
       - /api/campaigns/create
       - /api/campaigns/manage
       - /api/campaigns/analytics
+      - /api/users/*/club-roles
+      - /api/users/*/applications
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [club, protected]
@@ -132,22 +171,215 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
+
+  # Club Service POST /api/clubs (Protected - Create Club)
+  - name: club-post-protected
+    service: club-service
+    paths:
+      - /api/clubs
+    methods: [POST, OPTIONS]
+    strip_path: false
+    tags: [club, protected, post]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Club Service Individual Club Protected Routes
+  - name: club-individual-protected-routes
+    service: club-service
+    paths:
+      - ~/api/clubs/[0-9a-fA-F]{24}/status$
+      - ~/api/clubs/[0-9a-fA-F]{24}/members$
+      - ~/api/clubs/[0-9a-fA-F]{24}/members/[0-9a-fA-F]{24}$
+      - ~/api/clubs/[0-9a-fA-F]{24}/members/[0-9a-fA-F]{24}/role$
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [club, protected, individual]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
     
+  # Event Service - Simple Routes (Higher Priority)
+  - name: event-create
+    service: event-service
+    paths:
+      - /api/events
+    methods: [POST]
+    strip_path: false
+    tags: [event, create]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service - Get Events (Public)
+  - name: event-list
+    service: event-service
+    paths:
+      - /api/events
+    methods: [GET]
+    strip_path: false
+    tags: [event, list]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
+  # Event Service - Health Check
+  - name: event-health
+    service: event-service
+    paths:
+      - /health
+    methods: [GET]
+    strip_path: false
+    tags: [event, health]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
   # Event Service Public Routes
   - name: event-public-routes
     service: event-service
     paths:
-      - /api/events
+      - /api/events-test
       - /api/events/search
       - /api/events/upcoming
       - /api/events/featured
       - /api/events/categories
-      - /api/events/health
-      - /api/events/liveness
-      - /api/events/readiness
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [event, public]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
+  # Event Service - Individual Event Routes (GET only)
+  - name: event-individual-get
+    service: event-service
+    paths:
+      - ~/api/events/[a-fA-F0-9]{24}$
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [event, individual, get]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
+  # Event Service - Individual Event Routes (Protected)
+  - name: event-individual-protected
+    service: event-service
+    paths:
+      - ~/api/events/[a-fA-F0-9]{24}$
+      - ~/api/events/[a-fA-F0-9]{24}/user-status$
+      - ~/api/events/[a-fA-F0-9]{24}/favorite$
+      - ~/api/events/[a-fA-F0-9]{24}/registrations$
+      - ~/api/events/[a-fA-F0-9]{24}/rsvp$
+      - ~/api/events/[a-fA-F0-9]{24}/join$
+      - ~/api/events/[a-fA-F0-9]{24}/leave$
+    methods: [POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, individual, protected]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service - User Favorite Events
+  - name: event-user-favorites
+    service: event-service
+    paths:
+      - /api/users/favorite-events
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, user, favorites]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service - Club Events
+  - name: event-club-events
+    service: event-service
+    paths:
+      - ~/api/clubs/[a-fA-F0-9]{24}/events$
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [event, club]
     plugins:
       - name: api-gateway-secret
         config:
@@ -157,15 +389,211 @@ routes:
   - name: event-protected-routes
     service: event-service
     paths:
-      - /api/events/create
-      - /api/events/register
-      - /api/events/unregister
-      - /api/events/manage
-      - /api/events/analytics
-      - /api/events/participants
+      - /api/users/favorite-events
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [event, protected]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service Individual Event Protected Routes (with ID parameter)
+  - name: event-individual-protected-routes
+    service: event-service
+    paths:
+      - ~/api/events/[a-fA-F0-9]{24}$
+      - ~/api/events/[a-fA-F0-9]{24}/user-status$
+      - ~/api/events/[a-fA-F0-9]{24}/favorite$
+      - ~/api/events/[a-fA-F0-9]{24}/registrations$
+      - ~/api/events/[a-fA-F0-9]{24}/rsvp$
+      - ~/api/events/[a-fA-F0-9]{24}/join$
+      - ~/api/events/[a-fA-F0-9]{24}/leave$
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, protected, individual]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service Admin Routes (JWT + Admin Role required)
+  - name: event-admin-routes
+    service: event-service
+    paths:
+      - /api/admin/status/events
+      - /api/admin/status/update
+      - /api/admin/cron/status
+      - ~/api/admin/cron/.*/restart$
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, admin]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service Admin Routes (JWT + Admin Role required)
+  - name: event-admin-routes
+    service: event-service
+    paths:
+      - /api/admin/status/events
+      - /api/admin/status/update
+      - /api/admin/cron/status
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, admin]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service Admin Cron Routes (with dynamic job name)
+  - name: event-admin-cron-restart
+    service: event-service
+    paths:
+      - ~/api/admin/cron/.*/restart$
+    methods: [POST, OPTIONS]
+    strip_path: false
+    tags: [event, admin, cron]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+    
+  # Event Service Individual Event Routes (with ObjectId validation)
+  - name: event-by-id
+    service: event-service
+    paths:
+      - ~/api/events/[a-f0-9]{24}$
+    methods: [GET, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, individual]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service User Favorite Routes
+  - name: event-favorites
+    service: event-service
+    paths:
+      - ~/api/events/[a-f0-9]{24}/favorite$
+      - ~/api/events/[a-f0-9]{24}/unfavorite$
+    methods: [POST, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, favorites]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service Club Events Routes
+  - name: event-club-routes
+    service: event-service
+    paths:
+      - ~/api/clubs/[a-f0-9]{24}/events$
+    methods: [GET, POST, OPTIONS]
+    strip_path: false
+    tags: [event, club]
     plugins:
       - name: api-gateway-secret
         config:
@@ -254,3 +682,12 @@ plugins:
       max_age: 3600
       preflight_continue: false
     tags: [global, cors]
+
+# JWT Consumers and Credentials
+consumers:
+  - username: auth-service
+    tags: [jwt, auth-service]
+    jwt_secrets:
+      - key: auth-service
+        rsa_public_key: "${JWT_RSA_PUBLIC_KEY}"
+        algorithm: RS256

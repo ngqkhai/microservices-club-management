@@ -6,8 +6,70 @@ import { Registration } from '../models/registration.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
 
-export async function getFilteredEvents({ filter, club_id }) {
-  return await getEventsFromMock({ filter, club_id });
+export async function getFilteredEvents(dto) {
+  const result = await getEventsFromMock({
+    filter: dto.filter,
+    club_id: dto.club_id,
+    status: dto.status,
+    category: dto.category,
+    location: dto.location,
+    search: dto.search,
+    start_from: dto.start_from,
+    start_to: dto.start_to,
+    page: dto.page,
+    limit: dto.limit
+  });
+
+  // Format events to match the expected structure
+  const formattedEvents = result.events.map(event => ({
+    id: event._id,
+    title: event.title,
+    description: event.description,
+    short_description: event.short_description,
+    category: event.category,
+    location: event.location,
+    detailed_location: event.detailed_location,
+    start_date: event.start_date,
+    end_date: event.end_date,
+    registration_deadline: event.registration_deadline,
+    max_participants: event.max_participants,
+    participation_fee: event.participation_fee,
+    currency: event.currency,
+    requirements: event.requirements,
+    tags: event.tags,
+    images: event.images,
+    status: event.status,
+    visibility: event.visibility,
+    club_id: event.club_id,
+    club: event.club_id ? {
+      id: event.club_id._id || event.club_id.id,
+      name: event.club_id.name,
+      logo_url: event.club_id.logo_url,
+      description: event.club_id.description
+    } : null,
+    organizers: event.organizers,
+    statistics: event.statistics,
+    created_by: event.created_by,
+    created_at: event.created_at,
+    updated_at: event.updated_at
+  }));
+
+  return {
+    success: true,
+    message: 'Events retrieved successfully',
+    data: {
+      events: formattedEvents,
+      meta: result.meta
+    },
+    pagination: {
+      current_page: result.meta.page,
+      total_pages: result.meta.total_pages,
+      total_items: result.meta.total,
+      items_per_page: result.meta.limit,
+      has_next: result.meta.has_next,
+      has_previous: result.meta.has_previous
+    }
+  };
 }
 
 export async function rsvpToEvent(event_id, status, user_id) {

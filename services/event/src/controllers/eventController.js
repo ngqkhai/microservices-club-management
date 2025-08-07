@@ -18,10 +18,15 @@ import {
 export const getEvents = async (req, res) => {
   try {
     const dto = new GetEventsDTO(req.query);
-    const events = await getFilteredEvents(dto);
-    res.status(200).json(events);
+    const result = await getFilteredEvents(dto);
+    res.status(200).json(result);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('getEvents error:', error);
+    res.status(400).json({ 
+      success: false,
+      message: error.message,
+      code: 'VALIDATION_ERROR'
+    });
   }
 };
 

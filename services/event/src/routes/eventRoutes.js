@@ -35,7 +35,27 @@ eventRoutes.use((req, res, next) => {
 });
 
 // Public routes - require API Gateway secret validation only
+/**
+ * @route GET /api/events
+ * @desc Get events with comprehensive filtering and pagination
+ * @access Public
+ * @query {string} [filter] - Filter events: 'upcoming', 'all' (default: 'all')
+ * @query {string} [club_id] - Filter by club ID (ObjectId)
+ * @query {string} [status] - Filter by status: 'draft', 'published', 'cancelled', 'completed'
+ * @query {string} [category] - Filter by category: 'Workshop', 'Seminar', 'Competition', 'Social', 'Fundraiser', 'Meeting', 'Other'
+ * @query {string} [location] - Filter by location (partial match across address, room, detailed_location)
+ * @query {string} [search] - Search across title, description, tags, location
+ * @query {string} [start_from] - Filter events starting from this date (ISO format)
+ * @query {string} [start_to] - Filter events starting before this date (ISO format)
+ * @query {number} [page] - Page number for pagination (default: 1)
+ * @query {number} [limit] - Items per page (default: 10, max: 100)
+ */
 eventRoutes.get('/api/events', validateApiGatewaySecret, getEvents);
+/**
+ * @route GET /api/events-test
+ * @desc Test route for events with same filtering capabilities
+ * @access Public
+ */
 eventRoutes.get('/api/events-test', validateApiGatewaySecret, getEvents); // TEST ROUTE
 eventRoutes.get('/api/events/:id', validateApiGatewaySecret, getEventById);
 eventRoutes.get('/api/clubs/:id/events', validateApiGatewaySecret, getEventsOfClub);
