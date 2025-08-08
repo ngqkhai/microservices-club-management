@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { eventService } from "@/services/event.service"
 import { useToast } from "@/hooks/use-toast"
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/browser"
 
 export default function EventCheckInPage() {
   const params = useParams()
@@ -19,49 +20,35 @@ export default function EventCheckInPage() {
 
   useEffect(() => {
     let stream: MediaStream | null = null
-    let frameTimer: number | null = null
-    let barcodeDetector: any = null
+    let codeReader: BrowserMultiFormatReader | null = null
 
     const start = async () => {
       try {
-        // Prefer environment-facing camera
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
+        const constraints = { video: { facingMode: { ideal: "environment" } }, audio: false }
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           await videoRef.current.play()
         }
-        // Use BarcodeDetector if available
-        // @ts-ignore
-        if (window.BarcodeDetector) {
-          // @ts-ignore
-          barcodeDetector = new window.BarcodeDetector({ formats: ["qr_code"] })
-          setScanning(true)
-          const scanFrame = async () => {
-            if (!videoRef.current) return
-            try {
-              const detections = await barcodeDetector.detect(videoRef.current)
-              if (detections && detections.length > 0) {
-                const raw = detections[0].rawValue || detections[0].raw || ''
-                if (raw) {
-                  await handleScan(raw)
-                }
-              }
-            } catch {}
-            frameTimer = requestAnimationFrame(scanFrame)
+        codeReader = new BrowserMultiFormatReader()
+        setScanning(true)
+        await codeReader.decodeFromVideoDevice(undefined, videoRef.current!, async (result, err) => {
+          if (result?.getText()) {
+            await handleScan(result.getText())
+          } else if (err && !(err instanceof NotFoundException)) {
+            // ignore non-not-found errors
           }
-          frameTimer = requestAnimationFrame(scanFrame)
-        } else {
-          setScanning(false)
-          toast({ title: "Thiếu hỗ trợ quét QR", description: "Trình duyệt không hỗ trợ BarcodeDetector." })
-        }
+        })
       } catch (e: any) {
-        toast({ title: "Không thể mở camera", description: e?.message || "Kiểm tra quyền truy cập camera" , variant: 'destructive'})
+        toast({ title: "Không thể mở camera", description: e?.message || "Kiểm tra quyền truy cập camera", variant: 'destructive' })
       }
     }
     start()
 
     return () => {
-      if (frameTimer) cancelAnimationFrame(frameTimer)
+      if (codeReader) {
+        try { codeReader.reset() } catch {}
+      }
       if (stream) stream.getTracks().forEach(t => t.stop())
     }
   }, [])

@@ -55,6 +55,7 @@
     "react-resizable-panels": "latest",
     "recharts": "latest",
     "react-qr-code": "^2.0.12",
+    "@zxing/browser": "^0.1.5",
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
