@@ -7,9 +7,9 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable pnpm && pnpm i --frozen-lockfile
+# Install dependencies using npm (aligns with your local workflow)
+COPY package.json package-lock.json* ./
+RUN npm install --no-audit --no-fund
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -37,7 +37,7 @@ ARG NEXT_PUBLIC_DEBUG
 ENV NEXT_PUBLIC_DEBUG=$NEXT_PUBLIC_DEBUG
 
 # Build the application
-RUN corepack enable pnpm && pnpm run build
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
