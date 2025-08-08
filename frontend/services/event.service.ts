@@ -286,6 +286,15 @@ class EventService {
   async getUserEventStatus(eventId: string): Promise<ApiResponse<{ registration_status: string; is_favorited: boolean; can_register: boolean }>> {
     return api.get<{ registration_status: string; is_favorited: boolean; can_register: boolean }>(`/api/events/${eventId}/user-status`);
   }
+
+  /** QR ticket endpoints */
+  async getEventTicket(eventId: string): Promise<ApiResponse<{ qr_token: string; expires_at: string }>> {
+    return api.get<{ qr_token: string; expires_at: string }>(`/api/events/${eventId}/ticket`);
+  }
+
+  async checkInWithToken(eventId: string, qr_token: string): Promise<ApiResponse<{ registration_id: string; status: string; check_in_time: string }>> {
+    return api.post<{ registration_id: string; status: string; check_in_time: string }>(`/api/events/${eventId}/check-in`, { qr_token });
+  }
 }
 
 // Export singleton instance

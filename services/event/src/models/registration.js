@@ -86,6 +86,14 @@ const registrationSchema = new mongoose.Schema({
     },
     default: {}
   },
+  // Anti-replay for QR tickets (planned QR check-in)
+  last_jti: {
+    type: String,
+    maxLength: 100
+  },
+  last_token_exp: {
+    type: Date
+  },
   status: {
     type: String,
     enum: ['registered', 'cancelled', 'attended', 'no_show'],

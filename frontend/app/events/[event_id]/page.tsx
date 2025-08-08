@@ -47,6 +47,7 @@ import { useToast } from "@/hooks/use-toast"
 import { EventRegistrationModal } from "@/components/event-registration-modal"
 import { EventComments } from "@/components/event-comments"
 import { eventService } from "@/services/event.service"
+import { EventQrModal } from "@/components/event-qr-modal"
 
 type UiEvent = {
   event_id: string
@@ -151,6 +152,7 @@ export default function EventDetailPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [relatedEvents, setRelatedEvents] = useState<UiEvent[]>([])
   const [isRelatedLoading, setIsRelatedLoading] = useState(false)
+  const [showQr, setShowQr] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -927,12 +929,13 @@ export default function EventDetailPage() {
           </div>
         </div>
 
-        {/* QR placeholder when registered (modal optional) */}
+        {/* QR modal trigger and modal when registered */}
         {isRegistered && (
           <div className="fixed bottom-6 right-6">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowQr(true)}>
               <QrCode className="h-4 w-4 mr-2" /> Vé/QR
             </Button>
+            <EventQrModal eventId={event.event_id} open={showQr} onOpenChange={setShowQr} />
           </div>
         )}
       </div>

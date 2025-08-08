@@ -4,6 +4,7 @@ import { generateRSVPQRCode } from '../utils/logger.js';
 import { Registration } from '../models/registration.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
+import jwt from 'jsonwebtoken';
 import { Event } from '../models/event.js';
 
 export async function getFilteredEvents(dto) {
@@ -281,6 +282,97 @@ export async function leaveEventService(eventId, userId) {
     throw error;
   }
 }
+
+/**
+ * Issue a short-lived QR ticket for a user's active registration
+ */
+export const issueEventTicketService = async (eventId, userId) => {
+  // Validate registration exists and is active
+  const registration = await Registration.findOne({ event_id: eventId, user_id: userId, status: 'registered' });
+  if (!registration) {
+    const err = new Error('No active registration for this event');
+    err.status = 400;
+    throw err;
+  }
+
+  // Sign a short-lived JWT as QR token
+  const ttlSeconds = 90; // 1.5 minutes
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const jti = `${registration._id}:${Date.now()}`;
+  const payload = {
+    typ: 'event_ticket',
+    evt: String(eventId),
+    reg: String(registration._id),
+    uid: String(userId),
+    iat: nowSeconds,
+    exp: nowSeconds + ttlSeconds,
+    jti
+  };
+  const secret = process.env.EVENT_QR_JWT_PRIVATE || process.env.JWT_SECRET || 'dev-secret';
+  const token = jwt.sign(payload, secret, { algorithm: 'HS256' });
+
+  // Persist anti-replay markers
+  registration.last_jti = jti;
+  registration.last_token_exp = new Date((nowSeconds + ttlSeconds) * 1000);
+  await registration.save();
+
+  return { qr_token: token, expires_at: registration.last_token_exp };
+};
+
+/**
+ * Verify QR token and mark registration attended
+ */
+export const checkInWithTicketService = async (eventId, qrToken, checkerUserId) => {
+  if (!qrToken) {
+    const err = new Error('qr_token is required');
+    err.status = 400;
+    throw err;
+  }
+  const secret = process.env.EVENT_QR_JWT_PRIVATE || process.env.JWT_SECRET || 'dev-secret';
+  let decoded;
+  try {
+    decoded = jwt.verify(qrToken, secret);
+  } catch (e) {
+    const err = new Error('Invalid or expired QR token');
+    err.status = 400;
+    throw err;
+  }
+  if (decoded.typ !== 'event_ticket' || String(decoded.evt) !== String(eventId)) {
+    const err = new Error('QR token does not match this event');
+    err.status = 400;
+    throw err;
+  }
+
+  const registration = await Registration.findById(decoded.reg);
+  if (!registration || String(registration.event_id) !== String(eventId) || String(registration.user_id) !== String(decoded.uid)) {
+    const err = new Error('Registration not found for token');
+    err.status = 404;
+    throw err;
+  }
+
+  // Anti-replay: require latest jti
+  if (!registration.last_jti || registration.last_jti !== decoded.jti) {
+    const err = new Error('QR token has been superseded');
+    err.status = 400;
+    throw err;
+  }
+
+  // Must be currently registered to check-in
+  if (registration.status !== 'registered') {
+    const err = new Error('Registration is not in a check-in eligible state');
+    err.status = 400;
+    throw err;
+  }
+
+  // Mark attended
+  registration.status = 'attended';
+  registration.ticket_info = registration.ticket_info || {};
+  registration.ticket_info.check_in_time = new Date();
+  registration.updated_by = checkerUserId;
+  await registration.save();
+
+  return { registration_id: String(registration._id), status: registration.status, check_in_time: registration.ticket_info.check_in_time };
+};
 
 export const createEventService = async (eventData) => {
   let { 

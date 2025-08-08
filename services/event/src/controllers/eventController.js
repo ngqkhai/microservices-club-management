@@ -15,7 +15,9 @@ import {
   getEventRegistrationsService,
   getDistinctEventCategoriesService,
   getDistinctEventLocationsService,
-  getMyEventsService
+  getMyEventsService,
+  issueEventTicketService,
+  checkInWithTicketService
 } from '../services/eventService.js';
 
 export const getEvents = async (req, res) => {
@@ -238,6 +240,37 @@ export const leaveEvent = async (req, res) => {
       error: 'INTERNAL_ERROR',
       message: 'An error occurred while leaving the event'
     });
+  }
+};
+
+/**
+ * Issue QR ticket for current user
+ */
+export const getEventTicket = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id;
+    const result = await issueEventTicketService(eventId, userId);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    const status = error.status || 400;
+    return res.status(status).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Verify QR token and check-in attendee
+ */
+export const checkInEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const { qr_token } = req.body || {};
+    const checkerUserId = req.user.id;
+    const result = await checkInWithTicketService(eventId, qr_token, checkerUserId);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    const status = error.status || 400;
+    return res.status(status).json({ success: false, message: error.message });
   }
 };
 

@@ -37,6 +37,7 @@ import {
   Pause,
   CheckCircle,
   RefreshCw,
+  QrCode,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { eventService } from "@/services/event.service"
@@ -259,10 +260,10 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
         actions.push("publish")
         break
       case "published":
-        actions.push("pause", "complete")
+        actions.push("pause", "complete", "checkin")
         break
       case "ongoing":
-        actions.push("complete", "pause")
+        actions.push("complete", "pause", "checkin")
         break
       case "paused":
         actions.push("resume", "complete")
@@ -460,6 +461,17 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
                     <DropdownMenuContent align="end">
                       {getAvailableActions(event.status).map((action) => {
                         switch (action) {
+                          case "checkin":
+                            return (
+                              <DropdownMenuItem
+                                key={action}
+                                onClick={() => router.push(`/clubs/${clubId}/manage/events/${event._id}/check-in`)}
+                                disabled={isLoading}
+                              >
+                                <QrCode className="h-4 w-4 mr-2" />
+                                Điểm danh (QR)
+                              </DropdownMenuItem>
+                            )
                           case "publish":
                             return (
                               <DropdownMenuItem

@@ -16,7 +16,9 @@ import {
   toggleEventFavorite,
   getUserFavoriteEvents,
   getEventCategories,
-  getEventLocations
+  getEventLocations,
+  getEventTicket,
+  checkInEvent
 } from '../controllers/eventController.js';
 import { authMiddleware, requireUser, requireClubManager, requireClubManagerOrOrganizer, validateApiGatewaySecret } from '../middlewares/authMiddleware.js';
 
@@ -97,5 +99,8 @@ eventRoutes.put('/api/events/:id/registrations/:regId/status', authMiddleware, r
 eventRoutes.post('/api/events/:id/rsvp', authMiddleware, requireUser, handleEventRSVP);
 eventRoutes.post('/api/events/:id/join', authMiddleware, requireUser, joinEvent);
 eventRoutes.delete('/api/events/:id/leave', authMiddleware, requireUser, leaveEvent);
+// QR ticket issuance and check-in
+eventRoutes.get('/api/events/:id/ticket', authMiddleware, requireUser, getEventTicket);
+eventRoutes.post('/api/events/:id/check-in', authMiddleware, requireClubManagerOrOrganizer, checkInEvent);
 
 export { eventRoutes };

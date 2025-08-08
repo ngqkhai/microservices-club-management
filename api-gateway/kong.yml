@@ -300,6 +300,8 @@ routes:
       - ~/api/events/[a-fA-F0-9]{24}/rsvp$
       - ~/api/events/[a-fA-F0-9]{24}/join$
       - ~/api/events/[a-fA-F0-9]{24}/leave$
+      - ~/api/events/[a-fA-F0-9]{24}/ticket$
+      - ~/api/events/[a-fA-F0-9]{24}/check-in$
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [event, individual, protected]
