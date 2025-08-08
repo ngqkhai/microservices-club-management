@@ -11,8 +11,12 @@ import {
   getEventById,
   getUserEventStatus,
   getEventRegistrations,
+  updateEventRegistrationStatus,
+  getMyEvents,
   toggleEventFavorite,
-  getUserFavoriteEvents
+  getUserFavoriteEvents,
+  getEventCategories,
+  getEventLocations
 } from '../controllers/eventController.js';
 import { authMiddleware, requireUser, requireClubManager, requireClubManagerOrOrganizer, validateApiGatewaySecret } from '../middlewares/authMiddleware.js';
 
@@ -57,6 +61,21 @@ eventRoutes.get('/api/events', validateApiGatewaySecret, getEvents);
  * @access Public
  */
 eventRoutes.get('/api/events-test', validateApiGatewaySecret, getEvents); // TEST ROUTE
+/**
+ * @route GET /api/events/categories
+ * @desc Get distinct event categories
+ * @access Public
+ */
+eventRoutes.get('/api/events/categories', validateApiGatewaySecret, getEventCategories);
+/**
+ * @route GET /api/events/locations
+ * @desc Get distinct event location addresses (and rooms when available)
+ * @access Public
+ */
+eventRoutes.get('/api/events/locations', validateApiGatewaySecret, getEventLocations);
+
+// My events for authenticated user - declare BEFORE :id to avoid matching 'my' as ID
+eventRoutes.get('/api/events/my', authMiddleware, requireUser, getMyEvents);
 eventRoutes.get('/api/events/:id', validateApiGatewaySecret, getEventById);
 eventRoutes.get('/api/clubs/:id/events', validateApiGatewaySecret, getEventsOfClub);
 
@@ -72,6 +91,7 @@ eventRoutes.get('/api/users/favorite-events', authMiddleware, requireUser, getUs
 
 // Event registration management routes
 eventRoutes.get('/api/events/:id/registrations', authMiddleware, requireClubManagerOrOrganizer, getEventRegistrations);
+eventRoutes.put('/api/events/:id/registrations/:regId/status', authMiddleware, requireClubManagerOrOrganizer, updateEventRegistrationStatus);
 
 // User interaction routes - require authentication from API Gateway
 eventRoutes.post('/api/events/:id/rsvp', authMiddleware, requireUser, handleEventRSVP);

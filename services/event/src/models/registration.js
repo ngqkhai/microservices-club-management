@@ -13,6 +13,18 @@ const registrationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Denormalized user info for fast access in registrations listing
+  user_email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    maxLength: 254
+  },
+  user_name: {
+    type: String,
+    trim: true,
+    maxLength: 200
+  },
   ticket_id: {
     type: String,
     unique: true,

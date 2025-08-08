@@ -24,6 +24,7 @@ import { EventList } from "@/components/club-manager/event-list"
 import { ClubStats } from "@/components/club-manager/club-stats"
 import { AddMemberForm } from "@/components/club-manager/add-member-form"
 import { clubService, type ClubDetail, type ClubMember } from "@/services/club.service"
+import { eventService } from "@/services/event.service"
 
 export default function ClubManagerDashboard() {
   const params = useParams()
@@ -100,58 +101,44 @@ export default function ClubManagerDashboard() {
 
         case "events":
           if (events.length === 0) {
-            // Mock events data - replace with actual API call
-            const mockEvents = [
-              {
-                _id: "event-1",
-                title: "Spring Concert 2024",
-                description: "Đêm nhạc mùa xuân với các tiết mục đa dạng",
-                start_date: "2024-04-15T19:00:00Z",
-                end_date: "2024-04-15T21:30:00Z",
-                location: "University Auditorium",
-                max_participants: 300,
-                current_participants: 156,
-                status: "published",
-                fee: 0,
-                category: "Arts & Culture",
-                event_type: "Concert",
-                created_at: "2024-03-01T00:00:00Z",
-                updated_at: "2024-03-15T00:00:00Z",
-              },
-              {
-                _id: "event-2",
-                title: "Tech Workshop: AI Basics",
-                description: "Workshop về AI cơ bản cho sinh viên",
-                start_date: "2024-04-20T14:00:00Z",
-                end_date: "2024-04-20T17:00:00Z",
-                location: "Tech Hub, Room 301",
-                max_participants: 50,
-                current_participants: 32,
-                status: "ongoing",
-                fee: 50000,
-                category: "Technology",
-                event_type: "Workshop",
-                created_at: "2024-03-10T00:00:00Z",
-                updated_at: "2024-03-10T00:00:00Z",
-              },
-              {
-                _id: "event-3",
-                title: "Football Tournament",
-                description: "Giải bóng đá sinh viên mùa xuân 2024",
-                start_date: "2024-04-25T08:00:00Z",
-                end_date: "2024-04-25T18:00:00Z",
-                location: "Sân bóng đá trường",
-                max_participants: 200,
-                current_participants: 180,
-                status: "published",
-                fee: 0,
-                category: "Sports",
-                event_type: "Tournament",
-                created_at: "2024-03-05T00:00:00Z",
-                updated_at: "2024-03-05T00:00:00Z",
-              },
-            ]
-            setEvents(mockEvents)
+            // Load real club events
+            const res = await eventService.getClubEvents(clubId, { page: 1, limit: 100 })
+            if (res.success && Array.isArray(res.data)) {
+              const mapped = (res.data as any[]).map((e: any) => {
+                // Normalize location text
+                const loc = e.location
+                let locationText = ""
+                if (typeof loc === "string") {
+                  locationText = loc
+                } else if (loc && typeof loc === "object") {
+                  if ((loc.location_type === 'online' || loc.location_type === 'virtual') && loc.platform) {
+                    locationText = `${loc.platform} (Online)`
+                  } else {
+                    const parts = [loc.address, loc.room, e.detailed_location].filter(Boolean)
+                    locationText = parts.join(" - ")
+                  }
+                }
+                return {
+                  _id: e.id || e._id,
+                  title: e.title,
+                  description: e.description || "",
+                  start_date: e.start_date || e.startDate,
+                  end_date: e.end_date || e.endDate,
+                  location: locationText || e.detailed_location || "TBA",
+                  max_participants: e.max_participants ?? e.max_attendees ?? 0,
+                  current_participants: e.participants_count ?? e.current_participants ?? 0,
+                  status: e.status || 'draft',
+                  fee: e.participation_fee ?? e.fee ?? 0,
+                  category: e.category || '',
+                  event_type: e.event_type || '',
+                  created_at: e.created_at,
+                  updated_at: e.updated_at,
+                }
+              })
+              setEvents(mapped)
+            } else {
+              setEvents([])
+            }
           }
           break
 

@@ -52,6 +52,7 @@ import {
   Mail,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { eventService } from "@/services/event.service"
 
 interface Registration {
   _id: string
@@ -60,7 +61,7 @@ interface Registration {
   user_email: string
   user_avatar?: string
   registration_date: string
-  status: "pending" | "approved" | "rejected" | "cancelled"
+  status: "registered" | "attended" | "cancelled"
   payment_status: "pending" | "paid" | "refunded"
   notes?: string
   emergency_contact?: {
@@ -84,10 +85,16 @@ export default function EventRegistrationsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
+  const [eventTitle, setEventTitle] = useState<string>("")
+  const [page, setPage] = useState<number>(1)
+  const [limit, setLimit] = useState<number>(20)
+  const [total, setTotal] = useState<number>(0)
+  const totalPages = Math.max(1, Math.ceil(total / limit))
 
   useEffect(() => {
     loadRegistrations()
-  }, [eventId])
+    loadEventTitle()
+  }, [eventId, page, limit])
 
   useEffect(() => {
     filterRegistrations()
@@ -96,57 +103,31 @@ export default function EventRegistrationsPage() {
   const loadRegistrations = async () => {
     setIsLoading(true)
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Mock registrations data
-      const mockRegistrations: Registration[] = [
-        {
-          _id: "reg-1",
-          user_id: "user-1",
-          user_name: "Nguyễn Văn A",
-          user_email: "nguyenvana@example.com",
-          user_avatar: "/placeholder-user.jpg",
-          registration_date: "2024-03-10T10:30:00Z",
-          status: "approved",
-          payment_status: "paid",
-          notes: "Sinh viên năm 3",
-          emergency_contact: {
-            name: "Nguyễn Thị B",
-            phone: "0123456789",
-            relationship: "Mẹ",
-          },
-        },
-        {
-          _id: "reg-2",
-          user_id: "user-2",
-          user_name: "Trần Thị C",
-          user_email: "tranthic@example.com",
-          user_avatar: "/placeholder-user.jpg",
-          registration_date: "2024-03-11T14:20:00Z",
-          status: "pending",
-          payment_status: "pending",
-          notes: "Sinh viên năm 2",
-          emergency_contact: {
-            name: "Trần Văn D",
-            phone: "0987654321",
-            relationship: "Bố",
-          },
-        },
-        {
-          _id: "reg-3",
-          user_id: "user-3",
-          user_name: "Lê Văn E",
-          user_email: "levane@example.com",
-          user_avatar: "/placeholder-user.jpg",
-          registration_date: "2024-03-12T09:15:00Z",
-          status: "rejected",
-          payment_status: "refunded",
-          notes: "Đã hủy do lý do cá nhân",
-        },
-      ]
-
-      setRegistrations(mockRegistrations)
+      const query: any = { page, limit }
+      if (statusFilter !== 'all') query.status = statusFilter
+      const res = await eventService.getEventRegistrations(eventId as string, query)
+      if (res && res.success && res.data) {
+        const items = (res.data.registrations || []).map((r: any) => ({
+          _id: r._id || r.id,
+          user_id: r.user_id,
+          user_name: r.user_name || r.user?.name || 'Unknown',
+          user_email: r.user_email || r.user?.email || 'unknown@example.com',
+          user_avatar: r.user_avatar || r.user?.avatar,
+          registration_date: r.registered_at || r.created_at || r.registration_date,
+          status: (r.status === 'approved' ? 'registered' : r.status) as Registration['status'],
+          payment_status: r.payment_status || 'pending',
+          notes: r.notes,
+          emergency_contact: r.emergency_contact,
+        })) as Registration[]
+        setRegistrations(items)
+        const meta = (res.data as any).meta || {}
+        setTotal(meta.total || items.length)
+        if (meta.limit) setLimit(meta.limit)
+        if (meta.page) setPage(meta.page)
+      } else {
+        setRegistrations([])
+        setTotal(0)
+      }
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -156,6 +137,13 @@ export default function EventRegistrationsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const loadEventTitle = async () => {
+    try {
+      const ev = await eventService.getEvent(eventId as string)
+      if (ev.success && ev.data?.title) setEventTitle(ev.data.title)
+    } catch {}
   }
 
   const filterRegistrations = () => {
@@ -178,11 +166,13 @@ export default function EventRegistrationsPage() {
     setFilteredRegistrations(filtered)
   }
 
-  const handleStatusChange = async (registrationId: string, newStatus: string) => {
+  const handleStatusChange = async (registrationId: string, newStatus: Registration['status']) => {
     setIsLoading(true)
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const res = await eventService.updateRegistrationStatus(eventId as string, registrationId, newStatus)
+      if (!res || !res.success) {
+        throw new Error('Cập nhật thất bại')
+      }
 
       const updatedRegistrations = registrations.map((reg) =>
         reg._id === registrationId ? { ...reg, status: newStatus as any } : reg
@@ -204,19 +194,13 @@ export default function EventRegistrationsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: "Chờ duyệt", variant: "secondary" as const },
-      approved: { label: "Đã duyệt", variant: "default" as const },
-      rejected: { label: "Từ chối", variant: "destructive" as const },
-      cancelled: { label: "Đã hủy", variant: "outline" as const },
+  const getStatusBadge = (status: Registration['status']) => {
+    const statusConfig: Record<Registration['status'], { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+      registered: { label: "Đã đăng ký", variant: "default" },
+      attended: { label: "Đã điểm danh", variant: "secondary" },
+      cancelled: { label: "Đã hủy", variant: "outline" },
     }
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      label: status,
-      variant: "secondary" as const,
-    }
-
+    const config = statusConfig[status] || { label: String(status), variant: "secondary" }
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
@@ -235,15 +219,13 @@ export default function EventRegistrationsPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  const getStatusLabel = (status: string) => {
-    const statusConfig = {
-      pending: "Chờ duyệt",
-      approved: "Đã duyệt",
-      rejected: "Từ chối",
+  const getStatusLabel = (status: Registration['status']) => {
+    const statusConfig: Record<Registration['status'], string> = {
+      registered: "Đã đăng ký",
+      attended: "Đã điểm danh",
       cancelled: "Đã hủy",
     }
-
-    return statusConfig[status as keyof typeof statusConfig] || status
+    return statusConfig[status] || String(status)
   }
 
   const formatDate = (dateString: string) => {
@@ -256,26 +238,26 @@ export default function EventRegistrationsPage() {
     })
   }
 
-  const getAvailableActions = (status: string) => {
-    const actions = []
-    
-    // Always available actions
-    actions.push("view")
-    
-    // Status-specific actions
+  const getAvailableActions = (status: Registration['status']) => {
+    const actions: Array<'view' | 'mark_attended' | 'mark_registered' | 'cancel'> = ['view']
     switch (status) {
-      case "pending":
-        actions.push("approve", "reject")
+      case 'registered':
+        actions.push('mark_attended', 'cancel')
         break
-      case "approved":
-        actions.push("reject")
+      case 'attended':
+        actions.push('mark_registered')
         break
-      case "rejected":
-        actions.push("approve")
+      case 'cancelled':
+        actions.push('mark_registered')
         break
     }
-    
     return actions
+  }
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U'
+    const parts = name.trim().split(/\s+/)
+    return (parts[0]?.[0] || 'U').toUpperCase()
   }
 
   return (
@@ -311,7 +293,7 @@ export default function EventRegistrationsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Quản lý đăng ký sự kiện</h1>
-              <p className="mt-2 text-gray-600">Spring Concert 2024</p>
+              <p className="mt-2 text-gray-600">{eventTitle || 'Sự kiện'}</p>
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="outline" onClick={() => router.back()}>
@@ -344,13 +326,12 @@ export default function EventRegistrationsPage() {
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-48">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Lọc theo trạng thái" />
+               <SelectValue placeholder="Lọc theo trạng thái" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả trạng thái</SelectItem>
-              <SelectItem value="pending">Chờ duyệt</SelectItem>
-              <SelectItem value="approved">Đã duyệt</SelectItem>
-              <SelectItem value="rejected">Từ chối</SelectItem>
+              <SelectItem value="registered">Đã đăng ký</SelectItem>
+              <SelectItem value="attended">Đã điểm danh</SelectItem>
               <SelectItem value="cancelled">Đã hủy</SelectItem>
             </SelectContent>
           </Select>
@@ -374,9 +355,9 @@ export default function EventRegistrationsPage() {
               <div className="flex items-center">
                 <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
                 <div>
-                  <p className="text-sm text-gray-600">Đã duyệt</p>
+                  <p className="text-sm text-gray-600">Đã đăng ký</p>
                   <p className="text-2xl font-bold">
-                    {registrations.filter(r => r.status === "approved").length}
+                    {registrations.filter(r => r.status === "registered").length}
                   </p>
                 </div>
               </div>
@@ -387,9 +368,9 @@ export default function EventRegistrationsPage() {
               <div className="flex items-center">
                 <Calendar className="h-8 w-8 text-yellow-600 mr-3" />
                 <div>
-                  <p className="text-sm text-gray-600">Chờ duyệt</p>
+                   <p className="text-sm text-gray-600">Đã điểm danh</p>
                   <p className="text-2xl font-bold">
-                    {registrations.filter(r => r.status === "pending").length}
+                     {registrations.filter(r => r.status === "attended").length}
                   </p>
                 </div>
               </div>
@@ -400,9 +381,9 @@ export default function EventRegistrationsPage() {
               <div className="flex items-center">
                 <XCircle className="h-8 w-8 text-red-600 mr-3" />
                 <div>
-                  <p className="text-sm text-gray-600">Từ chối</p>
+                   <p className="text-sm text-gray-600">Đã hủy</p>
                   <p className="text-2xl font-bold">
-                    {registrations.filter(r => r.status === "rejected").length}
+                     {registrations.filter(r => r.status === "cancelled").length}
                   </p>
                 </div>
               </div>
@@ -444,10 +425,10 @@ export default function EventRegistrationsPage() {
                       <TableRow key={registration._id}>
                         <TableCell>
                           <div className="flex items-center space-x-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={registration.user_avatar} alt={registration.user_name} />
-                              <AvatarFallback>{registration.user_name[0]}</AvatarFallback>
-                            </Avatar>
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={registration.user_avatar} alt={registration.user_name} />
+                                <AvatarFallback>{getInitials(registration.user_name)}</AvatarFallback>
+                              </Avatar>
                             <div>
                               <div className="font-medium">{registration.user_name}</div>
                               <div className="text-sm text-gray-500">{registration.user_email}</div>
@@ -489,27 +470,38 @@ export default function EventRegistrationsPage() {
                                         Xem chi tiết
                                       </DropdownMenuItem>
                                     )
-                                  case "approve":
+                                  case "mark_attended":
                                     return (
                                       <DropdownMenuItem
                                         key={action}
-                                        onClick={() => handleStatusChange(registration._id, "approved")}
+                                        onClick={() => handleStatusChange(registration._id, "attended")}
                                         disabled={isLoading}
                                       >
                                         <CheckCircle className="h-4 w-4 mr-2" />
-                                        Duyệt
+                                        Đánh dấu đã điểm danh
                                       </DropdownMenuItem>
                                     )
-                                  case "reject":
+                                  case "mark_registered":
                                     return (
                                       <DropdownMenuItem
                                         key={action}
-                                        onClick={() => handleStatusChange(registration._id, "rejected")}
+                                        onClick={() => handleStatusChange(registration._id, "registered")}
+                                        disabled={isLoading}
+                                      >
+                                        <Users className="h-4 w-4 mr-2" />
+                                        Đánh dấu đã đăng ký
+                                      </DropdownMenuItem>
+                                    )
+                                  case "cancel":
+                                    return (
+                                      <DropdownMenuItem
+                                        key={action}
+                                        onClick={() => handleStatusChange(registration._id, "cancelled")}
                                         disabled={isLoading}
                                         className="text-red-600"
                                       >
                                         <XCircle className="h-4 w-4 mr-2" />
-                                        Từ chối
+                                        Hủy đăng ký
                                       </DropdownMenuItem>
                                     )
                                   default:
@@ -527,6 +519,21 @@ export default function EventRegistrationsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-gray-600">
+            Trang {page} / {totalPages} • Tổng {total}
+          </div>
+          <div className="space-x-2">
+            <Button variant="outline" size="sm" disabled={page <= 1 || isLoading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              Trang trước
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages || isLoading} onClick={() => setPage((p) => p + 1)}>
+              Trang sau
+            </Button>
+          </div>
+        </div>
 
         {/* Registration Detail Dialog */}
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
@@ -588,28 +595,28 @@ export default function EventRegistrationsPage() {
                   <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
                     Đóng
                   </Button>
-                  {selectedRegistration.status === "pending" && (
+                  {selectedRegistration.status === "registered" && (
                     <>
                       <Button
                         onClick={() => {
-                          handleStatusChange(selectedRegistration._id, "approved")
+                          handleStatusChange(selectedRegistration._id, "attended")
                           setShowDetailDialog(false)
                         }}
                         disabled={isLoading}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Duyệt
+                        Đánh dấu đã điểm danh
                       </Button>
                       <Button
                         variant="destructive"
                         onClick={() => {
-                          handleStatusChange(selectedRegistration._id, "rejected")
+                          handleStatusChange(selectedRegistration._id, "cancelled")
                           setShowDetailDialog(false)
                         }}
                         disabled={isLoading}
                       >
                         <XCircle className="h-4 w-4 mr-2" />
-                        Từ chối
+                        Hủy đăng ký
                       </Button>
                     </>
                   )}

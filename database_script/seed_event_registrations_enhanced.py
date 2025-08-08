@@ -6,6 +6,7 @@ Ensures proper ID references between users (PostgreSQL) and events (MongoDB)
 """
 
 import logging
+import os
 import random
 from datetime import datetime, timedelta
 from pymongo import MongoClient
@@ -23,9 +24,15 @@ logging.basicConfig(
     ]
 )
 
-# Database connections
-MONGODB_URI = "mongodb+srv://ngqkhai:byNceAIfBWS8xDvT@club-management-cluster.jgzkju5.mongodb.net/event_service_db?retryWrites=true&w=majority"
-SUPABASE_DB_URL = "postgresql://postgres.rkzyqtmqflkuxbcghkmy:tDUBMmQzQ5ilqlgU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+# Database connections (can be overridden by env vars)
+MONGODB_URI = os.getenv(
+    "MONGODB_URI",
+    "mongodb+srv://ngqkhai:byNceAIfBWS8xDvT@club-management-cluster.jgzkju5.mongodb.net/event_service_db?retryWrites=true&w=majority",
+)
+SUPABASE_DB_URL = os.getenv(
+    "SUPABASE_DB_URL",
+    "postgresql://postgres.rkzyqtmqflkuxbcghkmy:tDUBMmQzQ5ilqlgU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres",
+)
 
 def get_existing_users():
     """Fetch existing user IDs and details from PostgreSQL"""
@@ -156,20 +163,18 @@ def generate_registration_data(users, events):
     """Generate realistic event registration data"""
     registrations = []
     
-    # Registration status distribution
+    # Registration status distribution (aligned with system: registered | attended | cancelled)
     status_weights = {
-        'registered': 0.70,  # 70% confirmed registrations
-        'waitlisted': 0.15,  # 15% waitlisted
-        'cancelled': 0.10,   # 10% cancelled
-        'attended': 0.05     # 5% already attended (for past events)
+        'registered': 0.80,
+        'cancelled': 0.10,
+        'attended': 0.10,
     }
     
-    # Payment status distribution
+    # Payment status distribution (aligned with UI: pending | paid | refunded)
     payment_weights = {
-        'paid': 0.60,      # 60% paid
-        'pending': 0.25,   # 25% pending
-        'waived': 0.10,    # 10% waived (free events or special cases)
-        'refunded': 0.05   # 5% refunded
+        'paid': 0.60,
+        'pending': 0.30,
+        'refunded': 0.10,
     }
     
     for event in events:
@@ -200,8 +205,8 @@ def generate_registration_data(users, events):
             # Determine registration status
             if start_date < datetime.utcnow():  # Past events
                 reg_status = random.choices(
-                    ['attended', 'registered', 'cancelled', 'no_show'],
-                    weights=[0.6, 0.2, 0.15, 0.05]
+                    ['attended', 'registered', 'cancelled'],
+                    weights=[0.65, 0.25, 0.10]
                 )[0]
             else:  # Future events
                 reg_status = random.choices(
@@ -211,7 +216,8 @@ def generate_registration_data(users, events):
             
             # Determine payment status
             if participation_fee == 0:
-                payment_status = 'waived'
+                # For free events, mark as pending by default (UI supports pending/paid/refunded)
+                payment_status = 'pending'
             else:
                 payment_status = random.choices(
                     list(payment_weights.keys()),
@@ -241,6 +247,9 @@ def generate_registration_data(users, events):
                 'user_id': user_id,
                 'ticket_id': f"TK-{str(uuid.uuid4())[:8].upper()}",
                 'status': reg_status,
+                # Enrich with user info to avoid extra lookups in UI/services
+                'user_email': user['email'],
+                'user_name': user['full_name'],
                 'registration_data': {
                     'answers': [generate_registration_answers(event_category)],
                     'special_requirements': generate_registration_answers(event_category).get('special_requirements', ''),

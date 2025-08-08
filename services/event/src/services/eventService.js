@@ -1,16 +1,17 @@
 import { getEventsFromMock, createEventInDB, findEventById, updateEventInDB, deleteEventFromDB } from '../repositories/eventRepository.js';
 import { generateRSVPQRCode } from '../utils/logger.js';
-import { Event } from '../models/event.js';
 
 import { Registration } from '../models/registration.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
+import { Event } from '../models/event.js';
 
 export async function getFilteredEvents(dto) {
   const result = await getEventsFromMock({
     filter: dto.filter,
     club_id: dto.club_id,
-    status: dto.status,
+    // Enforce published-only for public listing layer; controller already sets dto.status
+    status: 'published',
     category: dto.category,
     location: dto.location,
     search: dto.search,
@@ -77,8 +78,9 @@ export async function rsvpToEvent(event_id, status, user_id) {
   return result;
 }
 
-export async function joinEventService(eventId, userId) {
+export async function joinEventService(eventId, userContext) {
   try {
+    const { userId, userEmail, userFullName } = typeof userContext === 'object' ? userContext : { userId: userContext };
     console.log('joinEventService called with:', { eventId, userId });
     
     // Validate eventId format (MongoDB ObjectId)
@@ -103,19 +105,23 @@ export async function joinEventService(eventId, userId) {
       throw new Error('Event not found');
     }
 
-    // Check if event is published and not cancelled
-    if (event.status !== 'published') {
+    // Check if event is available for joining
+    const now = new Date();
+    const allowedStatuses = ['published', 'ongoing'];
+    if (!allowedStatuses.includes(event.status)) {
       throw new Error('Event is not available for joining');
     }
+    if (event.registration_deadline && new Date(event.registration_deadline) < now) {
+      throw new Error('Registration deadline has passed');
+    }
 
-    // Check if user has already registered
+    // Check if user has already registered (any status)
     const existingRegistration = await Registration.findOne({
       event_id: eventId,
       user_id: userId,
-      status: { $in: ['registered', 'attended'] } // Active registrations
     });
 
-    if (existingRegistration) {
+    if (existingRegistration && ['registered', 'attended'].includes(existingRegistration.status)) {
       throw new Error('You already joined this event');
     }
 
@@ -132,20 +138,26 @@ export async function joinEventService(eventId, userId) {
       }
     }
 
-    // Create new registration record (joining event = registering for event)
-    const registration = new Registration({
-      event_id: eventId,
-      user_id: userId,
+    // Upsert registration to avoid duplicate key if a cancelled record exists
+    const registeredAt = new Date();
+    const registration = await Registration.findOneAndUpdate(
+      { event_id: eventId, user_id: userId },
+      { 
+        $set: { 
       status: 'registered',
-      registered_at: new Date()
-    });
-
-    await registration.save();
+          registered_at: registeredAt,
+          user_email: userEmail,
+          user_name: userFullName,
+        },
+        $unset: { cancelled_at: '', cancellation_reason: '' }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
 
     return {
       eventId,
       userId,
-      joinedAt: registration.registered_at,
+      joinedAt: registration.registered_at || registeredAt,
       eventTitle: event.title,
       eventStartAt: event.start_date
     };
@@ -159,6 +171,31 @@ export async function joinEventService(eventId, userId) {
       userId,
       dbState: mongoose.connection.readyState
     });
+    
+    // Handle duplicate key by treating as already existing registration
+    if (error && (error.code === 11000 || (typeof error.message === 'string' && error.message.includes('E11000')))) {
+      const registeredAt = new Date();
+      const registration = await Registration.findOneAndUpdate(
+        { event_id: eventId, user_id: userId },
+        { 
+          $set: { 
+            status: 'registered', 
+            registered_at: registeredAt,
+            user_email: userEmail,
+            user_name: userFullName,
+          },
+          $unset: { cancelled_at: '', cancellation_reason: '' }
+        },
+        { new: true }
+      );
+      return {
+        eventId,
+        userId,
+        joinedAt: registration?.registered_at || registeredAt,
+        eventTitle: (await Event.findById(eventId))?.title,
+        eventStartAt: (await Event.findById(eventId))?.start_date,
+      };
+    }
     
     // Handle database connection errors
     if (error.message === 'Database connection unavailable') {
@@ -445,7 +482,7 @@ export const getEventsOfClubService = async ({ clubId, status, start_from, start
         throw new Error('Invalid club ID format');
     }
 
-    const query = { club_id: new mongoose.Types.ObjectId(clubId) };
+    const query = { club_id: new mongoose.Types.ObjectId(clubId), status: 'published' };
     const now = new Date();
 
     // Logic lọc theo ngày và trạng thái
@@ -481,14 +518,32 @@ export const getEventsOfClubService = async ({ clubId, status, start_from, start
     const skip = (pageNumber - 1) * pageSize;
 
     // 3. Truy vấn DB
-    // Sử dụng hai query riêng biệt cho đơn giản. Đối với nhu cầu hiệu suất rất cao,
-    // hãy xem xét một query tổng hợp (aggregation) duy nhất với giai đoạn $facet.
     const total = await Event.countDocuments(query);
     const events = await Event.find(query)
         .sort({ start_date: 1 })
         .skip(skip)
         .limit(pageSize)
-        .lean(); // Dùng .lean() để query nhanh hơn, trả về đối tượng JS thuần túy
+        .lean();
+
+    // 3.1: Tính toán số người tham gia từ registrations (registered + attended) và attended
+    const eventIds = events.map(e => e._id);
+    let countsByEventId = new Map();
+    if (eventIds.length > 0) {
+        const pipeline = [
+            { $match: { event_id: { $in: eventIds } } },
+            { $group: {
+                _id: '$event_id',
+                participants_count: {
+                    $sum: { $cond: [{ $in: ['$status', ['registered', 'attended']] }, 1, 0] }
+                },
+                attended_count: {
+                    $sum: { $cond: [{ $eq: ['$status', 'attended'] }, 1, 0] }
+                }
+            } }
+        ];
+        const agg = await Registration.aggregate(pipeline);
+        countsByEventId = new Map(agg.map(r => [String(r._id), { participants_count: r.participants_count || 0, attended_count: r.attended_count || 0 }]));
+    }
 
     // 4. Định dạng kết quả
     const getEventStatus = (event) => {
@@ -533,7 +588,10 @@ export const getEventsOfClubService = async ({ clubId, status, start_from, start
                 total_registrations: 0,
                 total_interested: 0,
                 total_attended: 0
-            }
+            },
+            participants_count: (countsByEventId.get(String(e._id))?.participants_count) ?? 0,
+            attended_count: (countsByEventId.get(String(e._id))?.attended_count) ?? 0,
+            current_participants: (countsByEventId.get(String(e._id))?.participants_count) ?? 0 // backward compat
         })),
         meta: {
             total,
@@ -542,6 +600,50 @@ export const getEventsOfClubService = async ({ clubId, status, start_from, start
             total_pages: Math.ceil(total / pageSize)
         }
     };
+};
+
+/**
+ * Get distinct event categories
+ */
+export const getDistinctEventCategoriesService = async () => {
+  // Distinct categories from events collection
+  const categories = await Event.distinct('category');
+  // Filter falsy and normalize to unique non-empty strings
+  return (categories || []).filter(Boolean);
+};
+
+/**
+ * Get distinct event locations (addresses and rooms)
+ */
+export const getDistinctEventLocationsService = async () => {
+  // Aggregate distinct address/room values present in events
+  const results = await Event.aggregate([
+    {
+      $project: {
+        address: '$location.address',
+        room: '$location.room',
+        platform: '$location.platform',
+        detailed_location: '$detailed_location'
+      }
+    },
+    {
+      $project: {
+        values: {
+          $setUnion: [
+            { $cond: [{ $ifNull: ['$address', false] }, ['$address'], []] },
+            { $cond: [{ $ifNull: ['$room', false] }, ['$room'], []] },
+            { $cond: [{ $ifNull: ['$platform', false] }, ['$platform'], []] },
+            { $cond: [{ $ifNull: ['$detailed_location', false] }, ['$detailed_location'], []] }
+          ]
+        }
+      }
+    },
+    { $unwind: '$values' },
+    { $group: { _id: null, items: { $addToSet: '$values' } } },
+    { $project: { _id: 0, items: 1 } }
+  ]);
+  const items = results?.[0]?.items || [];
+  return items.filter(Boolean);
 };
 
 /**
@@ -563,15 +665,23 @@ export const getEventByIdService = async (eventId, userId = null) => {
       userStatus = await getUserEventStatusService(eventId, userId);
     }
 
-    // Calculate current participants
-    const currentParticipants = await Registration.countDocuments({ 
-      event_id: eventId, 
-      status: 'registered' 
-    });
+    // Calculate participants from registrations
+    const [participantsAgg] = await Registration.aggregate([
+      { $match: { event_id: new mongoose.Types.ObjectId(eventId) } },
+      { $group: {
+          _id: '$event_id',
+          participants_count: { $sum: { $cond: [{ $in: ['$status', ['registered', 'attended']] }, 1, 0] } },
+          attended_count: { $sum: { $cond: [{ $eq: ['$status', 'attended'] }, 1, 0] } }
+      } }
+    ]);
+    const participants_count = participantsAgg?.participants_count || 0;
+    const attended_count = participantsAgg?.attended_count || 0;
 
     return {
       ...event,
-      current_participants: currentParticipants,
+      participants_count,
+      attended_count,
+      current_participants: participants_count, // backward compat
       user_status: userStatus
     };
   } catch (error) {
@@ -692,39 +802,19 @@ export const getEventRegistrationsService = async (eventId, { page = 1, limit = 
     
     const total = await Registration.countDocuments(query);
     
-    // Get user service URL for user details
-    const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:3001';
-    
     const registrations = await Registration.find(query)
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
-    // Fetch user details for each registration
-    const enrichedRegistrations = await Promise.all(
-      registrations.map(async (reg) => {
-        try {
-          const userResponse = await axios.get(`${userServiceUrl}/api/users/${reg.user_id}`);
-          const user = userResponse.data;
-          
-          return {
+    // Use embedded fields; avoid external user-service dependency
+    const enrichedRegistrations = registrations.map((reg) => ({
             ...reg,
-            user_name: user.name || user.full_name,
-            user_email: user.email,
-            user_avatar: user.avatar_url || user.profile_picture
-          };
-        } catch (error) {
-          console.warn(`Failed to fetch user details for ${reg.user_id}:`, error.message);
-          return {
-            ...reg,
-            user_name: 'Unknown User',
-            user_email: 'unknown@example.com',
-            user_avatar: null
-          };
-        }
-      })
-    );
+      user_name: reg.user_name || 'Unknown User',
+      user_email: reg.user_email || 'unknown@example.com',
+      user_avatar: reg.user_avatar || null,
+    }));
 
     return {
       registrations: enrichedRegistrations,
@@ -737,6 +827,53 @@ export const getEventRegistrationsService = async (eventId, { page = 1, limit = 
     };
   } catch (error) {
     console.error('getEventRegistrationsService error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update event registration status
+ */
+export const updateEventRegistrationStatusService = async (eventId, registrationId, status) => {
+  try {
+    const allowed = ['registered', 'attended', 'cancelled'];
+    if (!allowed.includes(status)) {
+      const err = new Error('Invalid status');
+      err.status = 400;
+      throw err;
+    }
+
+    const updated = await Registration.findOneAndUpdate(
+      { _id: registrationId, event_id: eventId },
+      { status },
+      { new: true }
+    ).lean();
+
+    if (!updated) {
+      const err = new Error('Registration not found');
+      err.status = 404;
+      throw err;
+    }
+
+    return updated;
+  } catch (error) {
+    console.error('updateEventRegistrationStatusService error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get events of a user (by registrations)
+ */
+export const getMyEventsService = async (userId) => {
+  try {
+    const regs = await Registration.find({ user_id: userId }).select('event_id').lean();
+    const eventIds = [...new Set(regs.map((r) => r.event_id).filter(Boolean))];
+    if (eventIds.length === 0) return [];
+    const events = await Event.find({ _id: { $in: eventIds } }).lean();
+    return events;
+  } catch (error) {
+    console.error('getMyEventsService error:', error);
     throw error;
   }
 };

@@ -21,7 +21,7 @@ interface FilterSidebarProps {
   setSelectedDate: (value: string) => void
   categories: string[]
   locations: string[]
-  clubs: string[]
+  clubs: { label: string; value: string }[]
   onClearFilters: () => void
   activeFiltersCount: number
   isMobile?: boolean
@@ -130,8 +130,8 @@ export function FilterSidebar({
               </SelectTrigger>
               <SelectContent>
                 {clubs.map((club) => (
-                  <SelectItem key={club} value={club}>
-                    {club}
+                  <SelectItem key={club.value} value={club.value}>
+                    {club.label}
                   </SelectItem>
                 ))}
               </SelectContent>

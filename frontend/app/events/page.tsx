@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,185 +17,68 @@ import {
 import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
+import { eventService, type Event as ApiEvent } from "@/services/event.service"
+import { clubService } from "@/services/club.service"
 
-// Mock events data
-const mockEvents = [
-  {
-    event_id: "spring-concert-2024",
-    title: "Spring Concert 2024",
-    date: "2024-04-15",
-    time: "19:00",
-    location: "University Auditorium",
-    club: "CLB Âm nhạc",
-    fee: 0,
-    description:
-      "Annual spring concert featuring performances by music club members across various genres including classical, jazz, and contemporary music.",
-    category: "Arts",
-  },
-  {
-    event_id: "hackathon-2024",
-    title: "Innovation Hackathon 2024",
-    date: "2024-04-01",
-    time: "09:00",
-    location: "Tech Hub",
-    club: "Tech Innovation Club",
-    fee: 0,
-    description:
-      "48-hour hackathon where teams compete to build innovative solutions to real-world problems. Prizes and networking opportunities available.",
-    category: "Technology",
-  },
-  {
-    event_id: "jazz-workshop",
-    title: "Jazz Improvisation Workshop",
-    date: "2024-03-20",
-    time: "18:00",
-    location: "Music Room",
-    club: "CLB Âm nhạc",
-    fee: 15,
-    description:
-      "Learn jazz improvisation techniques from professional musicians. Suitable for intermediate to advanced players.",
-    category: "Arts",
-  },
-  {
-    event_id: "ai-workshop",
-    title: "Introduction to Machine Learning",
-    date: "2024-03-25",
-    time: "14:00",
-    location: "Computer Lab 201",
-    club: "Tech Innovation Club",
-    fee: 20,
-    description:
-      "Hands-on workshop covering machine learning fundamentals and practical applications using Python and popular ML libraries.",
-    category: "Technology",
-  },
-  {
-    event_id: "basketball-tournament",
-    title: "Inter-Club Basketball Tournament",
-    date: "2024-04-10",
-    time: "16:00",
-    location: "Sports Complex",
-    club: "Sports & Fitness Club",
-    fee: 5,
-    description: "Annual basketball tournament featuring teams from different clubs. Come support your favorite club!",
-    category: "Sports",
-  },
-  {
-    event_id: "debate-championship",
-    title: "University Debate Championship",
-    date: "2024-04-05",
-    time: "13:00",
-    location: "Main Auditorium",
-    club: "Debate Society",
-    fee: 0,
-    description:
-      "Final round of the university debate championship. Watch the best debaters compete on current social issues.",
-    category: "Academic",
-  },
-  {
-    event_id: "art-exhibition",
-    title: "Student Art Exhibition",
-    date: "2024-03-30",
-    time: "17:00",
-    location: "Art Gallery",
-    club: "Creative Arts Club",
-    fee: 0,
-    description:
-      "Showcase of student artwork including paintings, sculptures, and digital art. Meet the artists and enjoy refreshments.",
-    category: "Arts",
-  },
-  {
-    event_id: "volunteer-cleanup",
-    title: "Community Beach Cleanup",
-    date: "2024-03-28",
-    time: "08:00",
-    location: "Sunset Beach",
-    club: "Community Service Club",
-    fee: 0,
-    description:
-      "Join us for a morning of environmental service. Help clean up the beach and protect marine life. Transportation provided.",
-    category: "Service",
-  },
-  {
-    event_id: "photography-workshop",
-    title: "Digital Photography Workshop",
-    date: "2024-04-20",
-    time: "10:00",
-    location: "Art Studio",
-    club: "Creative Arts Club",
-    fee: 25,
-    description:
-      "Learn digital photography techniques including composition, lighting, and post-processing. Bring your own camera.",
-    category: "Arts",
-  },
-  {
-    event_id: "coding-bootcamp",
-    title: "Web Development Bootcamp",
-    date: "2024-04-12",
-    time: "09:00",
-    location: "Computer Lab 301",
-    club: "Tech Innovation Club",
-    fee: 30,
-    description:
-      "Intensive 2-day bootcamp covering HTML, CSS, JavaScript, and React. Build a complete web application.",
-    category: "Technology",
-  },
-  {
-    event_id: "soccer-tournament",
-    title: "Spring Soccer Tournament",
-    date: "2024-04-18",
-    time: "15:00",
-    location: "Soccer Field",
-    club: "Sports & Fitness Club",
-    fee: 10,
-    description:
-      "Annual soccer tournament with teams from different departments. Great opportunity to showcase your skills.",
-    category: "Sports",
-  },
-  {
-    event_id: "science-fair",
-    title: "University Science Fair",
-    date: "2024-04-22",
-    time: "11:00",
-    location: "Science Building",
-    club: "Science Society",
-    fee: 0,
-    description:
-      "Showcase of student research projects and scientific innovations. Open to all students and faculty.",
-    category: "Academic",
-  },
-]
+type UiEvent = {
+  event_id: string
+  title: string
+  date: string
+  time: string
+  location: string
+  club: string
+  fee: number
+  description: string
+  category: string
+}
 
-const categories = ["All", "Arts", "Technology", "Sports", "Academic", "Service"]
-const locations = [
-  "All",
-  "University Auditorium",
-  "Tech Hub",
-  "Music Room",
-  "Computer Lab 201",
-  "Sports Complex",
-  "Main Auditorium",
-  "Art Gallery",
-  "Sunset Beach",
-  "Art Studio",
-  "Computer Lab 301",
-  "Soccer Field",
-  "Science Building",
-]
-const clubs = [
-  "All",
-  "CLB Âm nhạc",
-  "Tech Innovation Club",
-  "Sports & Fitness Club",
-  "Debate Society",
-  "Creative Arts Club",
-  "Community Service Club",
-  "Science Society",
-]
+function transformEventForUI(event: ApiEvent): UiEvent {
+  const anyEvent: any = event as any
+  const startRaw = anyEvent.start_date || anyEvent.startDate
+  const start = startRaw ? new Date(startRaw) : undefined
+  const dateStr = start ? start.toISOString().slice(0, 10) : ""
+  const timeStr = start ? start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""
+
+  // Normalize location to a human-readable string
+  const loc = anyEvent.location
+  let locationText = "TBA"
+  if (typeof loc === "string" && loc.trim().length > 0) {
+    locationText = loc
+  } else if (loc && typeof loc === "object") {
+    const locationType = loc.location_type || loc.type
+    if (locationType === "online") {
+      locationText = loc.platform ? `${loc.platform} (Online)` : "Online"
+    } else {
+      const parts = [loc.address, loc.room, anyEvent.detailed_location].filter(Boolean)
+      if (parts.length > 0) {
+        locationText = parts.join(" - ")
+      }
+    }
+  } else if (anyEvent.detailed_location) {
+    locationText = anyEvent.detailed_location
+  }
+
+  return {
+    event_id: anyEvent.id || anyEvent._id,
+    title: anyEvent.title,
+    date: dateStr,
+    time: timeStr,
+    location: locationText,
+    club: anyEvent.club?.name || "",
+    fee: anyEvent.participation_fee ?? anyEvent.fee ?? 0,
+    description: anyEvent.description,
+    category: anyEvent.category || "General",
+  }
+}
+
+const DEFAULT_CATEGORIES = ["All"]
+const DEFAULT_LOCATIONS = ["All"]
+const DEFAULT_CLUBS = ["All"]
 
 export default function EventsPage() {
   const router = useRouter()
-  const [events, setEvents] = useState(mockEvents)
-  const [filteredEvents, setFilteredEvents] = useState(mockEvents)
+  const [events, setEvents] = useState<UiEvent[]>([])
+  const [filteredEvents, setFilteredEvents] = useState<UiEvent[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedLocation, setSelectedLocation] = useState("All")
@@ -203,50 +86,112 @@ export default function EventsPage() {
   const [selectedDate, setSelectedDate] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS)
+  const [clubs, setClubs] = useState<{ label: string; value: string }[]>([{ label: 'All', value: 'All' }])
+  
+  // Debounced search state to avoid firing requests on every keystroke
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim())
+    }, 400)
+    return () => clearTimeout(timerId)
+  }, [searchTerm])
+  
+  // Guard against race conditions from slow responses
+  const latestRequestIdRef = useRef(0)
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const eventsPerPage = 6
 
+  const loadEvents = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const requestId = ++latestRequestIdRef.current
+      const effectiveSearch = debouncedSearchTerm && debouncedSearchTerm.length >= 2 ? debouncedSearchTerm : undefined
+      const response = await eventService.getEvents({
+        // Fetch a reasonable batch; local filters and pagination will apply
+        page: 1,
+        limit: 100,
+        search: effectiveSearch,
+        start_from: selectedDate || undefined,
+        category: selectedCategory !== 'All' ? selectedCategory : undefined,
+        location: selectedLocation !== 'All' ? selectedLocation : undefined,
+        club_id: selectedClub !== 'All' ? selectedClub : undefined,
+        filter: 'all',
+      })
+
+      // Ignore stale responses
+      if (requestId === latestRequestIdRef.current) {
+        if (response.success && response.data) {
+          const data = response.data.events || []
+          const mapped = data.map(transformEventForUI)
+          setEvents(mapped)
+        } else {
+          setEvents([])
+        }
+      }
+    } catch (e) {
+      setEvents([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [debouncedSearchTerm, selectedDate, selectedCategory, selectedLocation, selectedClub])
+
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
+
+  // Load filter facets (categories, locations, clubs)
+  useEffect(() => {
+    (async () => {
+      try {
+        const [catRes, locRes, clubRes] = await Promise.all([
+          eventService.getEventCategories(),
+          eventService.getEventLocations(),
+          clubService.getClubs({ page: 1, limit: 100 })
+        ])
+        if (catRes.success && Array.isArray(catRes.data)) {
+          setCategories(["All", ...catRes.data])
+        }
+        if (locRes.success && Array.isArray(locRes.data)) {
+          setLocations(["All", ...locRes.data])
+        }
+        if (clubRes.success && clubRes.data?.results) {
+          setClubs([
+            { label: 'All', value: 'All' },
+            ...clubRes.data.results.map((c: any) => ({ label: c.name, value: c.id }))
+          ])
+        }
+      } catch (_) {
+        // keep defaults on failure
+      }
+    })()
+  }, [])
+
   useEffect(() => {
     filterEvents()
-  }, [searchTerm, selectedCategory, selectedLocation, selectedClub, selectedDate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, selectedCategory, selectedLocation, selectedClub])
 
   const filterEvents = () => {
     setIsLoading(true)
 
     // Simulate API call delay
     setTimeout(() => {
-      let filtered = mockEvents
-
-      // Search filter
+      // Server already applied category, location, club and date filters via loadEvents()
+      // Keep only client-side text search here to refine results locally.
+      let filtered = events
       if (searchTerm) {
+        const q = searchTerm.toLowerCase()
         filtered = filtered.filter(
           (event) =>
-            event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            event.club.toLowerCase().includes(searchTerm.toLowerCase()),
+            event.title.toLowerCase().includes(q) ||
+            event.description.toLowerCase().includes(q) ||
+            event.club.toLowerCase().includes(q),
         )
-      }
-
-      // Category filter
-      if (selectedCategory !== "All") {
-        filtered = filtered.filter((event) => event.category === selectedCategory)
-      }
-
-      // Location filter
-      if (selectedLocation !== "All") {
-        filtered = filtered.filter((event) => event.location === selectedLocation)
-      }
-
-      // Club filter
-      if (selectedClub !== "All") {
-        filtered = filtered.filter((event) => event.club === selectedClub)
-      }
-
-      // Date filter
-      if (selectedDate) {
-        filtered = filtered.filter((event) => event.date >= selectedDate)
       }
 
       setFilteredEvents(filtered)

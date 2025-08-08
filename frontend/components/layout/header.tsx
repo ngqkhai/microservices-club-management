@@ -34,8 +34,13 @@ export function Header() {
 
   // Add this after the existing navigation items
   let managedClubs: ClubRole[] = [];
-  if (user && user.club_roles) {
-    managedClubs = user.club_roles.filter((club) => club.role === "club_manager");
+  if (user && Array.isArray(user.club_roles)) {
+    const normalized = user.club_roles.map((r: any) => ({
+      clubId: r.clubId ?? r.club_id ?? r.club?.id ?? r.club,
+      clubName: r.clubName ?? r.club_name ?? r.club?.name ?? '',
+      role: r.role,
+    }))
+    managedClubs = normalized.filter((club) => club.role === "club_manager" && !!club.clubId);
     if (managedClubs.length === 1) {
       navigation.push({
         name: "Quản lý CLB",
@@ -85,7 +90,7 @@ export function Header() {
                   Quản lý CLB
                   <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </Button>
-                <div className="absolute left-0 mt-2 w-56 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-50">
+                <div className="absolute left-0 mt-2 w-56 bg-white border rounded shadow-lg hidden group-hover:block group-focus-within:block z-50">
                   {managedClubs.map((club) => (
                     <Link
                       key={club.clubId}

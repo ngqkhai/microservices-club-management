@@ -109,12 +109,14 @@ export interface UpdateEventRequest extends Partial<CreateEventRequest> {}
 export interface EventListQuery {
   page?: number;
   limit?: number;
-  clubId?: string;
+  club_id?: string;
   status?: string;
-  isPublic?: boolean;
+  category?: string;
+  location?: string;
   search?: string;
-  startDate?: string;
-  endDate?: string;
+  start_from?: string;
+  start_to?: string;
+  filter?: 'upcoming' | 'all';
 }
 
 /**
@@ -138,11 +140,16 @@ class EventService {
   async getEvents(query: EventListQuery = {}): Promise<ApiResponse<EventListResponse>> {
     const searchParams = new URLSearchParams();
     
-    Object.entries(query).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        searchParams.append(key, value.toString());
-      }
-    });
+    if (query.page) searchParams.append('page', String(query.page));
+    if (query.limit) searchParams.append('limit', String(query.limit));
+    if (query.club_id) searchParams.append('club_id', query.club_id);
+    if (query.status) searchParams.append('status', query.status);
+    if (query.category) searchParams.append('category', query.category);
+    if (query.location) searchParams.append('location', query.location);
+    if (query.search) searchParams.append('search', query.search);
+    if (query.start_from) searchParams.append('start_from', query.start_from);
+    if (query.start_to) searchParams.append('start_to', query.start_to);
+    if (query.filter) searchParams.append('filter', query.filter);
 
     const endpoint = searchParams.toString() 
       ? `${config.endpoints.events.list}?${searchParams.toString()}`
@@ -155,7 +162,8 @@ class EventService {
    * Get event by ID
    */
   async getEvent(id: string): Promise<ApiResponse<Event>> {
-    return api.get<Event>(config.endpoints.events.detail(id), { skipAuth: true });
+    // Include auth to receive user-specific status (registration, favorite)
+    return api.get<Event>(config.endpoints.events.detail(id));
   }
 
   /**
@@ -180,17 +188,40 @@ class EventService {
   }
 
   /**
+   * Get event registrations (manager)
+   */
+  async getEventRegistrations(eventId: string, query: { page?: number; limit?: number; status?: string } = {}): Promise<ApiResponse<{ registrations: any[]; meta?: any }>> {
+    const params = new URLSearchParams();
+    if (query.page) params.append('page', String(query.page));
+    if (query.limit) params.append('limit', String(query.limit));
+    if (query.status) params.append('status', String(query.status));
+    const qs = params.toString();
+    return api.get<{ registrations: any[]; meta?: any }>(`/api/events/${eventId}/registrations${qs ? `?${qs}` : ''}`);
+  }
+
+  /**
+   * Update registration status (manager)
+   */
+  async updateRegistrationStatus(eventId: string, registrationId: string, status: string): Promise<ApiResponse<any>> {
+    // Assuming PUT /api/events/:id/registrations/:regId/status (not yet defined in config)
+    return api.put<any>(`/api/events/${eventId}/registrations/${registrationId}/status`, { status });
+  }
+
+  /**
    * Register for event
    */
   async registerForEvent(id: string): Promise<ApiResponse<EventParticipant>> {
-    return api.post<EventParticipant>(config.endpoints.events.register(id));
+    // Deprecated in backend; prefer joinEvent
+    return this.joinEvent(id) as unknown as ApiResponse<EventParticipant>;
   }
 
   /**
    * Unregister from event
    */
   async unregisterFromEvent(id: string): Promise<ApiResponse<void>> {
-    return api.post<void>(config.endpoints.events.unregister(id));
+    // Deprecated in backend; prefer leaveEvent
+    await this.leaveEvent(id);
+    return { success: true, data: undefined, message: 'Left event' } as unknown as ApiResponse<void>;
   }
 
   /**
@@ -204,7 +235,56 @@ class EventService {
    * Get events by club
    */
   async getEventsByClub(clubId: string, query: Omit<EventListQuery, 'clubId'> = {}): Promise<ApiResponse<EventListResponse>> {
-    return this.getEvents({ ...query, clubId });
+    return this.getEvents({ ...query, club_id: clubId });
+  }
+
+  /** Club manager: get events of a specific club (includes participants_count/attended_count) */
+  async getClubEvents(clubId: string, query: { page?: number; limit?: number; status?: string; start_from?: string; start_to?: string } = {}): Promise<ApiResponse<{ data: any[]; meta: any }>> {
+    const sp = new URLSearchParams();
+    if (query.page) sp.append('page', String(query.page));
+    if (query.limit) sp.append('limit', String(query.limit));
+    if (query.status) sp.append('status', query.status);
+    if (query.start_from) sp.append('start_from', query.start_from);
+    if (query.start_to) sp.append('start_to', query.start_to);
+    const qs = sp.toString();
+    return api.get<{ data: any[]; meta: any }>(`/api/clubs/${clubId}/events${qs ? `?${qs}` : ''}`);
+  }
+
+  /** Facets for filters */
+  async getEventCategories(): Promise<ApiResponse<string[]>> {
+    return api.get<string[]>('/api/events/categories', { skipAuth: true });
+  }
+
+  async getEventLocations(): Promise<ApiResponse<string[]>> {
+    return api.get<string[]>('/api/events/locations', { skipAuth: true });
+  }
+
+  /** Toggle favorite for an event */
+  async toggleFavorite(eventId: string): Promise<ApiResponse<{ is_favorited: boolean }>> {
+    return api.post<{ is_favorited: boolean }>(`/api/events/${eventId}/favorite`);
+  }
+
+  /** Get user's favorite events */
+  async getUserFavoriteEvents(params: { page?: number; limit?: number } = {}): Promise<ApiResponse<{ events: any[]; meta: any }>> {
+    const sp = new URLSearchParams();
+    if (params.page) sp.append('page', String(params.page));
+    if (params.limit) sp.append('limit', String(params.limit));
+    const qs = sp.toString();
+    return api.get<{ events: any[]; meta: any }>(`/api/users/favorite-events${qs ? `?${qs}` : ''}`);
+  }
+
+  /** Join and Leave event */
+  async joinEvent(eventId: string): Promise<ApiResponse<any>> {
+    return api.post<any>(`/api/events/${eventId}/join`);
+  }
+
+  async leaveEvent(eventId: string): Promise<ApiResponse<any>> {
+    return api.delete<any>(`/api/events/${eventId}/leave`);
+  }
+
+  /** Get user-specific status for an event */
+  async getUserEventStatus(eventId: string): Promise<ApiResponse<{ registration_status: string; is_favorited: boolean; can_register: boolean }>> {
+    return api.get<{ registration_status: string; is_favorited: boolean; can_register: boolean }>(`/api/events/${eventId}/user-status`);
   }
 }
 

@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { eventService, type UpdateEventRequest } from "@/services/event.service"
 
 export default function EditEventPage() {
   const params = useParams()
@@ -71,33 +72,38 @@ export default function EditEventPage() {
   const loadEventData = async () => {
     setIsLoading(true)
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const res = await eventService.getEvent(eventId)
+      if (res.success && res.data) {
+        const e: any = res.data
+        const startRaw = e.start_date || e.startDate
+        const endRaw = e.end_date || e.endDate
+        const start = startRaw ? new Date(startRaw) : null
+        const end = endRaw ? new Date(endRaw) : null
+        const toDateInput = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "")
+        const toTimeInput = (d: Date | null) => (d ? d.toISOString().slice(11, 16) : "")
 
-      // Mock event data
-      const mockEvent = {
-        title: "Spring Concert 2024",
-        description: "Đêm nhạc mùa xuân với các tiết mục đa dạng",
-        short_description: "Đêm nhạc mùa xuân",
-        category: "Arts & Culture",
-        event_type: "Concert",
-        start_date: "2024-04-15",
-        start_time: "19:00",
-        end_date: "2024-04-15",
-        end_time: "21:30",
-        location: "University Auditorium",
-        detailed_location: "Hội trường lớn, Tòa nhà A",
-        max_participants: "300",
-        participation_fee: "0",
-        currency: "VND",
-        requirements: ["Không yêu cầu đặc biệt"],
-        tags: ["Âm nhạc", "Văn hóa"],
-        is_public: true,
-        allow_registration: true,
-        registration_deadline: "2024-04-14T23:59:00",
+        setFormData({
+          title: e.title || "",
+          description: e.description || "",
+          short_description: e.short_description || "",
+          category: e.category || "",
+          event_type: e.event_type || "",
+          start_date: toDateInput(start),
+          start_time: toTimeInput(start),
+          end_date: toDateInput(end),
+          end_time: toTimeInput(end),
+          location: typeof e.location === 'string' ? e.location : (e.location?.address || ''),
+          detailed_location: e.detailed_location || e.location?.room || "",
+          max_participants: String(e.max_participants ?? e.max_attendees ?? ""),
+          participation_fee: String(e.participation_fee ?? e.fee ?? ""),
+          currency: e.currency || "VND",
+          requirements: Array.isArray(e.requirements) && e.requirements.length ? e.requirements : [""],
+          tags: Array.isArray(e.tags) && e.tags.length ? e.tags : [""],
+          is_public: e.visibility ? e.visibility === 'public' : true,
+          allow_registration: e.allow_registration ?? true,
+          registration_deadline: e.registration_deadline ? new Date(e.registration_deadline).toISOString().slice(0,16) : "",
+        })
       }
-
-      setFormData(mockEvent)
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -155,8 +161,32 @@ export default function EditEventPage() {
     setIsSubmitting(true)
 
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const payload: UpdateEventRequest = {
+        title: formData.title,
+        description: formData.description,
+        short_description: formData.short_description,
+        category: formData.category,
+        event_type: formData.event_type,
+        start_date: formData.start_date,
+        start_time: formData.start_time,
+        end_date: formData.end_date,
+        end_time: formData.end_time,
+        location: formData.location,
+        detailed_location: formData.detailed_location,
+        max_participants: Number(formData.max_participants) || undefined,
+        participation_fee: Number(formData.participation_fee) || 0,
+        currency: formData.currency,
+        requirements: formData.requirements.filter(Boolean),
+        tags: formData.tags.filter(Boolean),
+        allow_registration: formData.allow_registration,
+        visibility: formData.is_public ? 'public' : 'club_members',
+        registration_deadline: formData.registration_deadline || undefined,
+      }
+
+      const res = await eventService.updateEvent(eventId, payload)
+      if (!res.success) {
+        throw new Error(res.message || 'Update failed')
+      }
 
       toast({
         title: "Cập nhật sự kiện thành công",

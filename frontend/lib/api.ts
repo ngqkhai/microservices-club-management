@@ -216,6 +216,8 @@ export const apiRequest = async <T = any>(
   try {
     const response = await fetch(url, {
       ...fetchOptions,
+      // Force network fetch to avoid 304/conditional cache issues from intermediary caches
+      cache: (fetchOptions as any).cache || 'no-store',
       headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,

@@ -27,6 +27,7 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
       $or: [
         { 'location.address': { $regex: location, $options: 'i' } },
         { 'location.room': { $regex: location, $options: 'i' } },
+        { 'location.platform': { $regex: location, $options: 'i' } },
         { detailed_location: { $regex: location, $options: 'i' } }
       ]
     });
@@ -39,8 +40,9 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
       { title: searchRegex },
       { description: searchRegex },
       { short_description: searchRegex },
-      { tags: { $in: [searchRegex] } },
+      { tags: { $elemMatch: searchRegex } },
       { 'location.address': searchRegex },
+      { 'location.platform': searchRegex },
       { detailed_location: searchRegex }
     ];
     

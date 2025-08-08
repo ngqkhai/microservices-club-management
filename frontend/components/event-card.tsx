@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Clock, DollarSign, Heart, Eye } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
+import { eventService } from "@/services/event.service"
 
 interface Event {
   event_id: string
@@ -21,6 +24,8 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, showClub = true }: EventCardProps) {
+  const { toast } = useToast()
+  const [favorited, setFavorited] = useState(false)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
@@ -86,9 +91,25 @@ export function EventCard({ event, showClub = true }: EventCardProps) {
               View Details
             </Link>
           </Button>
-          <Button size="sm" variant="outline">
-            <Heart className="h-4 w-4 mr-2" />
-            Interested
+          <Button
+            size="sm"
+            variant={favorited ? "default" : "outline"}
+            onClick={async () => {
+              try {
+                const res = await eventService.toggleFavorite(event.event_id)
+                if (res.success) {
+                  setFavorited(res.data?.is_favorited ?? !favorited)
+                  toast({
+                    title: res.data?.is_favorited ? "Đã thêm vào yêu thích" : "Đã bỏ yêu thích",
+                  })
+                }
+              } catch {
+                toast({ title: "Lỗi", description: "Không thể cập nhật yêu thích", variant: "destructive" })
+              }
+            }}
+          >
+            <Heart className={`h-4 w-4 mr-2 ${favorited ? "fill-red-500 text-red-500" : ""}`} />
+            {favorited ? "Đã yêu thích" : "Yêu thích"}
           </Button>
         </div>
       </CardContent>

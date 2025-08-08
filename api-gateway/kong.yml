@@ -296,12 +296,67 @@ routes:
       - ~/api/events/[a-fA-F0-9]{24}/favorite$
       - ~/api/events/[a-fA-F0-9]{24}/unfavorite$
       - ~/api/events/[a-fA-F0-9]{24}/registrations$
+      - ~/api/events/[a-fA-F0-9]{24}/registrations/[a-fA-F0-9]{24}/status$
       - ~/api/events/[a-fA-F0-9]{24}/rsvp$
       - ~/api/events/[a-fA-F0-9]{24}/join$
       - ~/api/events/[a-fA-F0-9]{24}/leave$
     methods: [GET, POST, PUT, DELETE, OPTIONS]
     strip_path: false
     tags: [event, individual, protected]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service My Events (Protected)
+  - name: event-my-events-protected
+    service: event-service
+    paths:
+      - /api/events/my
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [event, protected, my]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Event Service Individual Event Update/Delete (Protected)
+  - name: event-individual-update-protected
+    service: event-service
+    paths:
+      - ~/api/events/[a-fA-F0-9]{24}$
+    methods: [PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [event, individual, protected, update]
     plugins:
       - name: api-gateway-secret
         config:

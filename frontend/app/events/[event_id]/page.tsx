@@ -40,244 +40,99 @@ import {
   ImageIcon,
   Tag,
   CalendarDays,
+  QrCode
 } from "lucide-react"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import { EventRegistrationModal } from "@/components/event-registration-modal"
 import { EventComments } from "@/components/event-comments"
+import { eventService } from "@/services/event.service"
 
-// Mock event data with enhanced information
-const mockEventData = {
-  "spring-concert-2024": {
-    event_id: "spring-concert-2024",
-    title: "Spring Concert 2024",
-    description: `Chào mừng đến với Đêm nhạc mùa xuân 2024 - sự kiện âm nhạc lớn nhất trong năm của CLB Âm nhạc!
+type UiEvent = {
+  event_id: string
+  title: string
+  description: string
+  date: string
+  start_time: string
+  end_time?: string
+  location: string
+  detailed_location?: string
+  category?: string
+  event_type?: string
+  club: { id: string; name: string; logo_url?: string }
+  organizer: { name: string; role?: string; email?: string; phone?: string; avatar_url?: string }
+  fee: number
+  max_participants: number
+  current_participants: number
+  registration_deadline?: string
+  status?: string
+  tags: string[]
+  image_url?: string
+  gallery: string[]
+  attachments?: Array<{ id?: string; name: string; type: string; size?: string; url?: string; description?: string }>
+  requirements?: string[]
+  schedule: Array<{ time: string; activity: string }>
+  contact_info?: { email?: string; phone?: string; website?: string }
+  social_links?: { facebook?: string; instagram?: string; discord?: string }
+}
 
-Đây là dịp để các thành viên câu lạc bộ thể hiện tài năng âm nhạc đa dạng qua các thể loại từ cổ điển, jazz đến nhạc đương đại. Chương trình hứa hẹn mang đến những màn trình diễn đầy cảm xúc và chuyên nghiệp.
+function toUiEvent(api: any): UiEvent {
+  const start = api.start_date || api.startDate
+  const end = api.end_date || api.endDate
+  const startDt = start ? new Date(start) : null
+  const endDt = end ? new Date(end) : null
 
-Chương trình bao gồm:
-• Biểu diễn solo piano và violin
-• Tiết mục hòa tấu nhạc cổ điển
-• Jazz ensemble performance
-• Acoustic guitar và vocal
-• Nhạc đương đại với ban nhạc đầy đủ
+  // Normalize location
+  const loc = api.location
+  let locationText = "TBA"
+  if (typeof loc === "string" && loc.trim()) {
+    locationText = loc
+  } else if (loc && typeof loc === "object") {
+    const parts = [loc.address, loc.room, api.detailed_location].filter(Boolean)
+    locationText = parts.length ? parts.join(" - ") : (loc.virtual_link ? "Online" : "TBA")
+  } else if (api.detailed_location) {
+    locationText = api.detailed_location
+  }
 
-Sự kiện hoàn toàn miễn phí và mở cửa cho tất cả sinh viên và giảng viên trong trường. Hãy đến và cùng chúng tôi tận hưởng một đêm nhạc tuyệt vời!`,
-    date: "2024-04-15",
-    start_time: "19:00",
-    end_time: "21:30",
-    location: "University Auditorium",
-    detailed_location: "Hội trường lớn, Tầng 2, Tòa nhà chính",
-    category: "Arts & Culture",
-    event_type: "Concert",
-    club: {
-      id: "music-club",
-      name: "CLB Âm nhạc",
-      logo_url: "/placeholder.svg?height=64&width=64",
-    },
+  const club = api.club || api.club_id || {}
+  const organizers = api.organizers || []
+  const organizer = organizers[0] || {}
+
+  return {
+    event_id: api.id || api._id,
+    title: api.title,
+    description: api.description || "",
+    date: startDt ? startDt.toISOString().slice(0, 10) : "",
+    start_time: startDt ? startDt.toISOString().slice(11, 16) : "",
+    end_time: endDt ? endDt.toISOString().slice(11, 16) : undefined,
+    location: locationText,
+    detailed_location: api.detailed_location,
+    category: api.category,
+    event_type: api.event_type,
+    club: { id: club._id || club.id || "", name: club.name || "", logo_url: club.logo_url },
     organizer: {
-      name: "Nguyễn Thị Lan Anh",
-      role: "Trưởng ban tổ chức",
-      email: "lananh@music.club",
-      phone: "+84 987 654 321",
-      avatar_url: "/placeholder.svg?height=48&width=48",
+      name: organizer.name || "",
+      role: organizer.role,
+      email: api.contact_info?.email,
+      phone: api.contact_info?.phone,
+      avatar_url: organizer.avatar_url,
     },
-    fee: 0,
-    max_participants: 300,
-    current_participants: 156,
-    registration_deadline: "2024-04-10",
-    status: "open",
-    tags: ["Âm nhạc", "Biểu diễn", "Miễn phí", "Sinh viên"],
-    image_url: "/placeholder.svg?height=400&width=800",
-    gallery: [
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-    ],
-    attachments: [
-      {
-        id: "1",
-        name: "Chương trình biểu diễn chi tiết.pdf",
-        type: "pdf",
-        size: "2.5 MB",
-        url: "/placeholder.pdf",
-        description: "Danh sách các tiết mục và thời gian biểu diễn",
-      },
-      {
-        id: "2",
-        name: "Hướng dẫn tham gia sự kiện.docx",
-        type: "docx",
-        size: "1.2 MB",
-        url: "/placeholder.docx",
-        description: "Thông tin chi tiết về quy định và hướng dẫn",
-      },
-      {
-        id: "3",
-        name: "Bản đồ địa điểm.jpg",
-        type: "image",
-        size: "800 KB",
-        url: "/placeholder.svg?height=600&width=800",
-        description: "Sơ đồ đường đi đến hội trường",
-      },
-    ],
-    requirements: [
-      "Sinh viên hoặc giảng viên của trường",
-      "Đăng ký trước ngày 10/04/2024",
-      "Tuân thủ quy định về trang phục lịch sự",
-    ],
-    schedule: [
-      { time: "19:00", activity: "Chào mừng và giới thiệu" },
-      { time: "19:15", activity: "Biểu diễn solo piano" },
-      { time: "19:45", activity: "Hòa tấu nhạc cổ điển" },
-      { time: "20:15", activity: "Giải lao" },
-      { time: "20:30", activity: "Jazz ensemble" },
-      { time: "21:00", activity: "Acoustic performance" },
-      { time: "21:30", activity: "Kết thúc chương trình" },
-    ],
-    contact_info: {
-      email: "events@music.club",
-      phone: "+84 123 456 789",
-      website: "https://music.club.university.edu",
-    },
-    social_links: {
-      facebook: "https://facebook.com/musicclub.university",
-      instagram: "https://instagram.com/musicclub_uni",
-    },
-    created_at: "2024-03-01",
-    updated_at: "2024-03-15",
-  },
-  "hackathon-2024": {
-    event_id: "hackathon-2024",
-    title: "Innovation Hackathon 2024",
-    description: `Tham gia cuộc thi lập trình 48 giờ lớn nhất trong năm! Innovation Hackathon 2024 là nơi các lập trình viên, nhà thiết kế và những người đam mê công nghệ cùng nhau tạo ra những giải pháp sáng tạo cho các vấn đề thực tế.
-
-Chủ đề năm nay: "Technology for Sustainable Future"
-
-Các track thi đấu:
-• Web Development
-• Mobile App Development  
-• AI/Machine Learning
-• IoT & Hardware
-• Blockchain & Fintech
-
-Giải thưởng hấp dẫn:
-🥇 Giải Nhất: 50,000,000 VNĐ + Cơ hội thực tập tại các công ty công nghệ hàng đầu
-🥈 Giải Nhì: 30,000,000 VNĐ + Voucher khóa học online
-🥉 Giải Ba: 20,000,000 VNĐ + Thiết bị công nghệ
-🏆 Giải Đặc biệt: 15,000,000 VNĐ cho giải pháp sáng tạo nhất
-
-Sự kiện bao gồm:
-• Workshop từ các chuyên gia
-• Mentoring 1-1 với senior developers
-• Networking với các công ty công nghệ
-• Ăn uống miễn phí suốt 48 giờ`,
-    date: "2024-04-01",
-    start_time: "09:00",
-    end_time: "2024-04-03T17:00",
-    location: "Tech Hub",
-    detailed_location: "Tầng 3-4, Tòa nhà Công nghệ, Khu A",
-    category: "Technology",
-    event_type: "Competition",
-    club: {
-      id: "tech-club",
-      name: "Tech Innovation Club",
-      logo_url: "/placeholder.svg?height=64&width=64",
-    },
-    organizer: {
-      name: "Trần Minh Đức",
-      role: "Tech Lead",
-      email: "duc@tech.club",
-      phone: "+84 901 234 567",
-      avatar_url: "/placeholder.svg?height=48&width=48",
-    },
-    fee: 0,
-    max_participants: 200,
-    current_participants: 178,
-    registration_deadline: "2024-03-25",
-    status: "open",
-    tags: ["Lập trình", "Hackathon", "Công nghệ", "Giải thưởng"],
-    image_url: "/placeholder.svg?height=400&width=800",
-    gallery: [
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-    ],
-    attachments: [
-      {
-        id: "1",
-        name: "Hackathon Rules & Guidelines.pdf",
-        type: "pdf",
-        size: "3.2 MB",
-        url: "/placeholder.pdf",
-        description: "Quy định cuộc thi và hướng dẫn tham gia",
-      },
-      {
-        id: "2",
-        name: "API Documentation.zip",
-        type: "zip",
-        size: "15.8 MB",
-        url: "/placeholder.zip",
-        description: "Tài liệu API và SDK cho các track thi đấu",
-      },
-      {
-        id: "3",
-        name: "Sponsor Information.pptx",
-        type: "pptx",
-        size: "4.1 MB",
-        url: "/placeholder.pptx",
-        description: "Thông tin về các nhà tài trợ và đối tác",
-      },
-      {
-        id: "4",
-        name: "Tech Stack Templates.zip",
-        type: "zip",
-        size: "25.6 MB",
-        url: "/placeholder.zip",
-        description: "Template code và boilerplate cho các công nghệ",
-      },
-    ],
-    requirements: [
-      "Sinh viên đại học hoặc cao đẳng",
-      "Có kinh nghiệm lập trình cơ bản",
-      "Tham gia theo nhóm 2-4 người",
-      "Mang theo laptop và thiết bị cần thiết",
-    ],
-    schedule: [
-      { time: "09:00 - 01/04", activity: "Check-in và breakfast" },
-      { time: "10:00 - 01/04", activity: "Opening ceremony & Team formation" },
-      { time: "11:00 - 01/04", activity: "Hackathon bắt đầu" },
-      { time: "12:30 - 01/04", activity: "Lunch break" },
-      { time: "15:00 - 01/04", activity: "Workshop: AI/ML fundamentals" },
-      { time: "18:00 - 01/04", activity: "Dinner & Networking" },
-      { time: "20:00 - 01/04", activity: "Mentoring sessions" },
-      { time: "08:00 - 02/04", activity: "Breakfast" },
-      { time: "12:00 - 02/04", activity: "Lunch" },
-      { time: "15:00 - 02/04", activity: "Workshop: Pitching skills" },
-      { time: "18:00 - 02/04", activity: "Dinner" },
-      { time: "09:00 - 03/04", activity: "Final preparations" },
-      { time: "13:00 - 03/04", activity: "Project presentations" },
-      { time: "16:00 - 03/04", activity: "Awards ceremony" },
-      { time: "17:00 - 03/04", activity: "Closing & Networking" },
-    ],
-    contact_info: {
-      email: "hackathon@tech.club",
-      phone: "+84 987 123 456",
-      website: "https://hackathon.tech.club",
-    },
-    social_links: {
-      facebook: "https://facebook.com/techclub.hackathon",
-      instagram: "https://instagram.com/techclub_hackathon",
-      discord: "https://discord.gg/techclub",
-    },
-    created_at: "2024-02-15",
-    updated_at: "2024-03-20",
-  },
+    fee: api.participation_fee ?? api.fee ?? 0,
+    max_participants: api.max_participants ?? api.max_attendees ?? 0,
+    current_participants: api.current_participants ?? 0,
+    registration_deadline: api.registration_deadline,
+    status: api.status,
+    tags: Array.isArray(api.tags) ? api.tags : [],
+    image_url: Array.isArray(api.images) && api.images.length ? api.images[0] : undefined,
+    gallery: Array.isArray(api.images) ? api.images : [],
+    attachments: Array.isArray(api.attachments) ? api.attachments : [],
+    requirements: Array.isArray(api.requirements) ? api.requirements : [],
+    schedule: Array.isArray(api.agenda)
+      ? api.agenda.map((a: any) => ({ time: a.time, activity: a.activity }))
+      : [],
+    contact_info: api.contact_info,
+    social_links: api.social_links,
+  }
 }
 
 export default function EventDetailPage() {
@@ -294,22 +149,84 @@ export default function EventDetailPage() {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [relatedEvents, setRelatedEvents] = useState<UiEvent[]>([])
+  const [isRelatedLoading, setIsRelatedLoading] = useState(false)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const eventData = mockEventData[eventId as keyof typeof mockEventData]
-      if (eventData) {
-        setEvent(eventData)
-        // Mock check if user is registered/favorited
-        setIsRegistered(Math.random() > 0.7)
-        setIsFavorited(Math.random() > 0.5)
+    let mounted = true
+    ;(async () => {
+      setIsLoading(true)
+      try {
+        const res = await eventService.getEvent(eventId)
+        if (mounted && res.success && res.data) {
+          const ui = toUiEvent(res.data)
+          setEvent(ui)
+          // Initialize user-specific status if available
+          const userStatus = (res.data as any).user_status
+          if (userStatus) {
+            setIsRegistered(userStatus.registration_status === 'registered' || userStatus.registration_status === 'attended')
+            setIsFavorited(!!userStatus.is_favorited)
+          } else if (user) {
+            // Fallback: fetch status explicitly
+            try {
+              const st = await eventService.getUserEventStatus(eventId)
+              if (st.success && (st.data as any)) {
+                setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
+                setIsFavorited(!!st.data.is_favorited)
+              }
+            } catch {}
+          }
+        } else if (mounted) {
+          setEvent(null)
+        }
+      } catch (e) {
+        if (mounted) setEvent(null)
+      } finally {
+        if (mounted) setIsLoading(false)
       }
-      setIsLoading(false)
-    }, 1000)
+    })()
+    return () => {
+      mounted = false
+    }
   }, [eventId])
 
-  const handleRegister = () => {
+  // Load related events by same club, fallback to same category
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!event) return
+      setIsRelatedLoading(true)
+      try {
+        // Prefer related by same club
+        let items: any[] = []
+        if (event.club?.id) {
+          const res = await eventService.getEvents({ page: 1, limit: 10, club_id: event.club.id, filter: 'all' })
+          if (res.success && res.data?.events) items = res.data.events
+        }
+
+        // Fallback to same category if none found
+        if ((!items || items.length === 0) && event.category) {
+          const res2 = await eventService.getEvents({ page: 1, limit: 10, category: event.category, filter: 'all' })
+          if (res2.success && res2.data?.events) items = res2.data.events
+        }
+
+        const mapped = (items || [])
+          .map(toUiEvent)
+          .filter((e) => e.event_id !== event.event_id)
+          .slice(0, 5)
+        if (mounted) setRelatedEvents(mapped)
+      } catch (_) {
+        if (mounted) setRelatedEvents([])
+      } finally {
+        if (mounted) setIsRelatedLoading(false)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [event])
+
+  const handleRegister = async () => {
     if (!user) {
       toast({
         title: "Vui lòng đăng nhập",
@@ -320,10 +237,24 @@ export default function EventDetailPage() {
       return
     }
 
-    setShowRegistrationModal(true)
+    try {
+      const res = await eventService.joinEvent(event.event_id)
+      if (res.success) {
+        // Refresh status from server to avoid stale UI
+        const st = await eventService.getUserEventStatus(event.event_id)
+        if (st.success) {
+          setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
+        } else {
+          setIsRegistered(true)
+        }
+        toast({ title: "Đăng ký thành công!" })
+      }
+    } catch {
+      toast({ title: "Lỗi", description: "Không thể đăng ký tham gia", variant: "destructive" })
+    }
   }
 
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = async () => {
     if (!user) {
       toast({
         title: "Vui lòng đăng nhập",
@@ -333,11 +264,19 @@ export default function EventDetailPage() {
       return
     }
 
-    setIsFavorited(!isFavorited)
+    try {
+      const res = await eventService.toggleFavorite(event.event_id)
+      if (res.success) {
+        const fav = res.data?.is_favorited ?? !isFavorited
+        setIsFavorited(fav)
     toast({
-      title: isFavorited ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích",
-      description: `Sự kiện "${event.title}" ${isFavorited ? "đã được bỏ khỏi" : "đã được thêm vào"} danh sách yêu thích`,
+          title: fav ? "Đã thêm vào yêu thích" : "Đã bỏ yêu thích",
+          description: `Sự kiện "${event.title}" ${fav ? "đã được thêm vào" : "đã được bỏ khỏi"} danh sách yêu thích`,
     })
+      }
+    } catch {
+      toast({ title: "Lỗi", description: "Không thể cập nhật yêu thích", variant: "destructive" })
+    }
   }
 
   const handleShare = () => {
@@ -546,6 +485,25 @@ export default function EventDetailPage() {
                     </>
                   )}
                 </Button>
+
+                {isRegistered && (
+                  <Button variant="outline" onClick={async () => {
+                    try {
+                      await eventService.leaveEvent(event.event_id)
+                      const st = await eventService.getUserEventStatus(event.event_id)
+                      if (st.success) {
+                        setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
+                      } else {
+                        setIsRegistered(false)
+                      }
+                      toast({ title: 'Đã rời sự kiện' })
+                    } catch {
+                      toast({ title: 'Lỗi', description: 'Không thể rời sự kiện', variant: 'destructive' })
+                    }
+                  }}>
+                    Rời sự kiện
+                  </Button>
+                )}
 
                 <Button variant="outline" onClick={handleToggleFavorite} className="bg-transparent">
                   <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
@@ -942,35 +900,41 @@ export default function EventDetailPage() {
                 <CardTitle>Sự kiện liên quan</CardTitle>
               </CardHeader>
               <CardContent>
+                {isRelatedLoading ? (
+                  <div className="space-y-3 animate-pulse">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-14 bg-gray-100 rounded" />
+                    ))}
+                  </div>
+                ) : relatedEvents.length > 0 ? (
                 <div className="space-y-3">
+                    {relatedEvents.map((re) => (
+                      <Link key={re.event_id} href={`/events/${re.event_id}`} className="block">
                   <div className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <h4 className="font-medium text-sm">Jazz Workshop</h4>
-                    <p className="text-xs text-gray-500">CLB Âm nhạc • 20/03/2024</p>
+                          <h4 className="font-medium text-sm truncate">{re.title}</h4>
+                          <p className="text-xs text-gray-500 truncate">
+                            {re.club?.name || 'Câu lạc bộ'} • {re.date}
+                          </p>
                   </div>
-                  <div className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <h4 className="font-medium text-sm">AI Workshop</h4>
-                    <p className="text-xs text-gray-500">Tech Innovation Club • 25/03/2024</p>
+                      </Link>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Chưa có sự kiện liên quan</p>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Registration Modal */}
-        <EventRegistrationModal
-          event={event}
-          isOpen={showRegistrationModal}
-          onClose={() => setShowRegistrationModal(false)}
-          onSuccess={() => {
-            setIsRegistered(true)
-            setShowRegistrationModal(false)
-            toast({
-              title: "Đăng ký thành công!",
-              description: `Bạn đã đăng ký tham gia sự kiện "${event.title}"`,
-            })
-          }}
-        />
+        {/* QR placeholder when registered (modal optional) */}
+        {isRegistered && (
+          <div className="fixed bottom-6 right-6">
+            <Button variant="outline">
+              <QrCode className="h-4 w-4 mr-2" /> Vé/QR
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

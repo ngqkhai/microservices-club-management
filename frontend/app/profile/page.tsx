@@ -50,121 +50,10 @@ import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { authService } from "@/services"
+import { eventService } from "@/services/event.service"
+import { clubService } from "@/services/club.service"
 
-// Mock applications data
-const mockApplications = [
-  {
-    id: "1",
-    clubId: "photography-club",
-    clubName: "CLB Nhiếp ảnh",
-    position: "Thành viên",
-    status: "pending",
-    submittedDate: "2024-03-15",
-  },
-  {
-    id: "2",
-    clubId: "debate-club",
-    clubName: "CLB Tranh luận",
-    position: "Thành viên",
-    status: "accepted",
-    submittedDate: "2024-03-10",
-  },
-]
-
-// Mock favorite events data
-const mockFavoriteEvents = [
-  {
-    id: "workshop-photography",
-    title: "Workshop Nhiếp ảnh cơ bản",
-    clubName: "CLB Nhiếp ảnh",
-    date: "2024-03-28",
-    time: "14:00",
-  },
-  {
-    id: "debate-competition",
-    title: "Cuộc thi tranh luận liên trường",
-    clubName: "CLB Tranh luận",
-    date: "2024-04-05",
-    time: "09:00",
-  },
-]
-
-// Mock user data
-const mockUserData = {
-  id: "user123",
-  name: "Nguyễn Văn An",
-  email: "nguyenvanan@student.edu.vn",
-  phone: "+84 123 456 789",
-  avatar_url: "https://res.cloudinary.com/djupm4v0l/image/upload/v1718000000/sample_avatar.jpg", // ảnh thật trên Cloudinary
-  join_date: "2023-09-01",
-  stats: {
-    clubs_joined: 3,
-    events_participated: 12,
-    upcoming_rsvps: 2,
-  },
-}
-
-// Mock joined clubs
-const mockJoinedClubs = [
-  {
-    club_id: "tech-club",
-    name: "CLB Công nghệ thông tin",
-    logo_url: "/placeholder.svg?height=60&width=60",
-    join_date: "2023-09-15",
-    role: "member",
-    status: "active",
-  },
-  {
-    club_id: "music-club",
-    name: "CLB Âm nhạc",
-    logo_url: "/placeholder.svg?height=60&width=60",
-    join_date: "2023-10-01",
-    role: "member",
-    status: "active",
-  },
-  {
-    club_id: "volunteer-club",
-    name: "CLB Tình nguyện",
-    logo_url: "/placeholder.svg?height=60&width=60",
-    join_date: "2023-11-10",
-    role: "manager",
-    status: "active",
-  },
-]
-
-// Mock event participation
-const mockEventParticipation = [
-  {
-    event_id: "workshop-git",
-    title: "Workshop Git & GitHub",
-    date: "2024-07-18",
-    time: "13:00",
-    club_name: "CLB Công nghệ thông tin",
-    status: "confirmed",
-    qr_code: "QR123456",
-    location: "Phòng máy tính 201",
-  },
-  {
-    event_id: "music-concert",
-    title: "Đêm nhạc mùa xuân 2024",
-    date: "2024-07-20",
-    time: "19:00",
-    club_name: "CLB Âm nhạc",
-    status: "confirmed",
-    qr_code: "QR789012",
-    location: "Hội trường lớn",
-  },
-  {
-    event_id: "volunteer-activity",
-    title: "Hoạt động tình nguyện",
-    date: "2024-07-15",
-    time: "08:00",
-    club_name: "CLB Tình nguyện",
-    status: "pending",
-    qr_code: null,
-    location: "Cộng đồng địa phương",
-  },
-]
+// Replace mocks with live-loaded state
 
 export default function ProfilePage() {
   const { user, isInitialized, updateProfile, isLoading, logout } = useAuthStore()
@@ -182,8 +71,10 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [editForm, setEditForm] = useState<any>({})
-  const [eventParticipation] = useState(mockEventParticipation)
-  const [joinedClubs] = useState(mockJoinedClubs)
+  const [eventParticipation, setEventParticipation] = useState<any[]>([])
+  const [joinedClubs, setJoinedClubs] = useState<any[]>([])
+  const [applications, setApplications] = useState<any[]>([])
+  const [favoriteEvents, setFavoriteEvents] = useState<any[]>([])
   const [pageLoading, setPageLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -215,6 +106,60 @@ export default function ProfilePage() {
         upcoming_rsvps: 0
       }
     })
+
+    // Load joined clubs and my events
+    ;(async () => {
+      try {
+        // Joined clubs: normalize roles from auth store, no public fallback
+        const roles = Array.isArray(user.club_roles) ? user.club_roles : []
+        const normalized = roles.map((cr: any) => ({
+          club_id: cr.club_id ?? cr.clubId ?? cr.club?.id ?? cr.club,
+          name: cr.club_name ?? cr.clubName ?? cr.club?.name ?? String(cr.club_id ?? cr.clubId ?? ''),
+          logo_url: cr.club_logo ?? cr.clubLogo ?? cr.club?.logo_url ?? cr.club?.logo,
+          join_date: cr.joined_at ?? cr.joinedAt ?? user.createdAt,
+          role: cr.role,
+          status: 'active',
+        })).filter((c: any) => !!c.club_id)
+        setJoinedClubs(normalized)
+
+        // My events
+        const myEventsRes = await eventService.getMyEvents().catch(() => null)
+        if (myEventsRes && myEventsRes.success && Array.isArray(myEventsRes.data)) {
+          const items = myEventsRes.data.map((e: any) => {
+            const start = new Date(e.start_date || e.startDate)
+            return {
+              event_id: e.id || e._id,
+              title: e.title,
+              date: start.toISOString().slice(0,10),
+              time: start.toISOString().slice(11,16),
+              club_name: e.club?.name || '',
+              status: 'confirmed',
+              qr_code: null,
+              location: typeof e.location === 'string' ? e.location : (e.location?.address || ''),
+            }
+          })
+          setEventParticipation(items)
+        }
+
+        // Favorite events
+        const favRes = await eventService.getUserFavoriteEvents({ page: 1, limit: 20 }).catch(() => null)
+        if (favRes && favRes.success && favRes.data?.events) {
+          const favItems = favRes.data.events.map((e: any) => {
+            const start = new Date(e.start_date || e.startDate)
+            return {
+              id: e.id || e._id,
+              title: e.title,
+              clubName: e.club_id?.name || e.club?.name || '',
+              date: start.toISOString().slice(0,10),
+              time: start.toISOString().slice(11,16),
+            }
+          })
+          setFavoriteEvents(favItems)
+        }
+      } catch {
+        // noop
+      }
+    })()
   }, [user, isInitialized, router])
 
   // Show loading spinner while auth state is being initialized
@@ -303,7 +248,7 @@ export default function ProfilePage() {
     try {
       // Simulate avatar upload
       const url = URL.createObjectURL(avatarFile)
-      setUserData((prev: any) => ({ ...prev, avatar_url: url }))
+      setUserData((prev: any) => ({ ...prev, profile_picture_url: url }))
       setAvatarPreview(null)
       setAvatarFile(null)
       
@@ -342,13 +287,17 @@ export default function ProfilePage() {
     }, 1000)
   }
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase()
+  const getInitials = (name?: string) => {
+    if (typeof name !== 'string') return 'U'
+    const trimmed = name.trim()
+    if (!trimmed) return 'U'
+    const initials = trimmed
+      .split(/\s+/)
+      .filter(Boolean)
       .slice(0, 2)
+      .map((word) => word[0])
+      .join('')
+    return (initials || 'U').toUpperCase()
   }
 
   const formatDate = (dateString: string) => {
@@ -378,7 +327,7 @@ export default function ProfilePage() {
     try {
       const url = await uploadToCloudinary(avatarFile)
       await authService.updateProfilePicture({ profile_picture_url: url })
-      setUserData((prev: any) => ({ ...prev, avatar_url: url }))
+      setUserData((prev: any) => ({ ...prev, profile_picture_url: url }))
       setAvatarFile(null)
       setAvatarPreview(null)
       toast({ title: 'Cập nhật avatar thành công!' })
@@ -392,6 +341,10 @@ export default function ProfilePage() {
   if (!user) {
     return null
   }
+
+  // Split clubs by role for rendering
+  const managerClubs = (joinedClubs || []).filter((c: any) => c.role === 'club_manager')
+  const memberClubs = (joinedClubs || []).filter((c: any) => c.role !== 'club_manager')
 
   if (isLoading) {
     return (
@@ -568,43 +521,47 @@ export default function ProfilePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {mockApplications.map((application) => (
-                        <div
-                          key={application.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div>
-                            <h4 className="font-medium">{application.clubName}</h4>
-                            <p className="text-sm text-gray-600">{application.position}</p>
-                            <p className="text-xs text-gray-500">Nộp ngày {formatDate(application.submittedDate)}</p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge
-                              variant={
-                                application.status === "pending"
-                                  ? "secondary"
+                      {applications.length === 0 ? (
+                        <p className="text-sm text-gray-500">Bạn chưa có đơn ứng tuyển nào.</p>
+                      ) : (
+                        applications.map((application: any) => (
+                          <div
+                            key={application.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          >
+                            <div>
+                              <h4 className="font-medium">{application.clubName}</h4>
+                              <p className="text-sm text-gray-600">{application.position}</p>
+                              <p className="text-xs text-gray-500">Nộp ngày {formatDate(application.submittedDate)}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge
+                                variant={
+                                  application.status === "pending"
+                                    ? "secondary"
+                                    : application.status === "accepted"
+                                      ? "default"
+                                      : "destructive"
+                                }
+                              >
+                                {application.status === "pending"
+                                  ? "Đang xử lý"
                                   : application.status === "accepted"
-                                    ? "default"
-                                    : "destructive"
-                              }
-                            >
-                              {application.status === "pending"
-                                ? "Đang xử lý"
-                                : application.status === "accepted"
-                                  ? "Được chấp nhận"
-                                  : "Bị từ chối"}
-                            </Badge>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/clubs/${application.clubId}`}>Xem</Link>
-                            </Button>
-                            {application.status === "pending" && (
-                              <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
-                                Hủy
+                                    ? "Được chấp nhận"
+                                    : "Bị từ chối"}
+                              </Badge>
+                              <Button size="sm" variant="outline" asChild>
+                                <Link href={`/clubs/${application.clubId}`}>Xem</Link>
                               </Button>
-                            )}
+                              {application.status === "pending" && (
+                                <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
+                                  Hủy
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -620,25 +577,29 @@ export default function ProfilePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {mockFavoriteEvents.map((event) => (
-                        <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{event.title}</h4>
-                            <p className="text-sm text-gray-600">{event.clubName}</p>
-                            <p className="text-xs text-gray-500">
-                              {formatDate(event.date)} • {event.time}
-                            </p>
+                      {favoriteEvents.length === 0 ? (
+                        <p className="text-sm text-gray-500">Bạn chưa lưu sự kiện yêu thích nào.</p>
+                      ) : (
+                        favoriteEvents.map((event: any) => (
+                          <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <h4 className="font-medium">{event.title}</h4>
+                              <p className="text-sm text-gray-600">{event.clubName}</p>
+                              <p className="text-xs text-gray-500">
+                                {formatDate(event.date)} • {event.time}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                                Đăng ký ngay
+                              </Button>
+                              <Button size="sm" variant="outline" asChild>
+                                <Link href={`/events/${event.id}`}>Chi tiết</Link>
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                              Đăng ký ngay
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/events/${event.id}`}>Chi tiết</Link>
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -646,6 +607,49 @@ export default function ProfilePage() {
 
               {/* Clubs Tab */}
               <TabsContent value="clubs" className="space-y-6">
+                {/* Managed Clubs */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Users className="h-5 w-5 mr-2" />
+                      Câu lạc bộ bạn quản lý
+                    </CardTitle>
+                    <CardDescription>Danh sách các câu lạc bộ bạn là quản lý</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {managerClubs.length === 0 ? (
+                      <p className="text-sm text-gray-500">Bạn chưa là quản lý của câu lạc bộ nào.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {managerClubs.map((club: any) => (
+                          <div key={club.club_id} className="flex items-center space-x-4 p-4 border rounded-lg">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={club.logo_url || "/placeholder.svg"} alt={club.name} />
+                              <AvatarFallback>{getInitials(club.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <h4 className="font-medium">{club.name}</h4>
+                              <p className="text-sm text-gray-600">Tham gia: {formatDate(club.join_date)}</p>
+                              <Badge variant="default" className="mt-1">Quản lý</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={`/clubs/${club.club_id}`}>
+                                  <Eye className="h-4 w-4" />
+                                </a>
+                              </Button>
+                              <Button size="sm" asChild>
+                                <a href={`/clubs/${club.club_id}/manage`}>Quản lý</a>
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Member Clubs */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -655,28 +659,30 @@ export default function ProfilePage() {
                     <CardDescription>Danh sách các câu lạc bộ bạn là thành viên</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {joinedClubs.map((club) => (
-                        <div key={club.club_id} className="flex items-center space-x-4 p-4 border rounded-lg">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={club.logo_url || "/placeholder.svg"} alt={club.name} />
-                            <AvatarFallback>{getInitials(club.name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <h4 className="font-medium">{club.name}</h4>
-                            <p className="text-sm text-gray-600">Tham gia: {formatDate(club.join_date)}</p>
-                            <Badge variant={club.role === "manager" ? "default" : "secondary"} className="mt-1">
-                              {club.role === "manager" ? "Quản lý" : "Thành viên"}
-                            </Badge>
+                    {memberClubs.length === 0 ? (
+                      <p className="text-sm text-gray-500">Bạn chưa tham gia câu lạc bộ nào.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {memberClubs.map((club: any) => (
+                          <div key={club.club_id} className="flex items-center space-x-4 p-4 border rounded-lg">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={club.logo_url || "/placeholder.svg"} alt={club.name} />
+                              <AvatarFallback>{getInitials(club.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <h4 className="font-medium">{club.name}</h4>
+                              <p className="text-sm text-gray-600">Tham gia: {formatDate(club.join_date)}</p>
+                              <Badge variant="secondary" className="mt-1">Thành viên</Badge>
+                            </div>
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={`/clubs/${club.club_id}`}>
+                                <Eye className="h-4 w-4" />
+                              </a>
+                            </Button>
                           </div>
-                          <Button size="sm" variant="outline" asChild>
-                            <a href={`/clubs/${club.club_id}`}>
-                              <Eye className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

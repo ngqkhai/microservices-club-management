@@ -4,7 +4,6 @@ export class GetEventsDTO {
   constructor(query) {
     const allowedFilters = ['upcoming', 'all', null];
     const allowedStatuses = ['draft', 'published', 'cancelled', 'completed'];
-    const allowedCategories = ['Workshop', 'Seminar', 'Competition', 'Social', 'Fundraiser', 'Meeting', 'Other'];
 
     const filter = query.filter?.toLowerCase() || 'all';
     const club_id = query.club_id?.trim();
@@ -32,10 +31,8 @@ export class GetEventsDTO {
       throw new Error(`Invalid status value: '${status}'. Allowed values are: ${allowedStatuses.join(', ')}`);
     }
 
-    // Validate category
-    if (category && !allowedCategories.includes(category)) {
-      throw new Error(`Invalid category value: '${category}'. Allowed values are: ${allowedCategories.join(', ')}`);
-    }
+    // Do not rigidly validate categories here. Categories are dynamic and returned by DB.
+    // Optionally, you could add lightweight validation (length/charset) if needed.
 
     // Validate pagination
     if (page < 1) {

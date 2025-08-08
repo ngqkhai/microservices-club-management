@@ -13,11 +13,16 @@ import {
   toggleEventFavoriteService,
   getUserFavoriteEventsService,
   getEventRegistrationsService,
+  getDistinctEventCategoriesService,
+  getDistinctEventLocationsService,
+  getMyEventsService
 } from '../services/eventService.js';
 
 export const getEvents = async (req, res) => {
   try {
     const dto = new GetEventsDTO(req.query);
+    // Public route: only return published events regardless of client-provided status
+    dto.status = 'published';
     const result = await getFilteredEvents(dto);
     res.status(200).json(result);
   } catch (error) {
@@ -27,6 +32,32 @@ export const getEvents = async (req, res) => {
       message: error.message,
       code: 'VALIDATION_ERROR'
     });
+  }
+};
+
+/**
+ * Get distinct event categories
+ */
+export const getEventCategories = async (req, res) => {
+  try {
+    const categories = await getDistinctEventCategoriesService();
+    res.status(200).json({ success: true, data: categories });
+  } catch (error) {
+    console.error('getEventCategories error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', code: 'INTERNAL_ERROR' });
+  }
+};
+
+/**
+ * Get distinct event locations (addresses/rooms)
+ */
+export const getEventLocations = async (req, res) => {
+  try {
+    const locations = await getDistinctEventLocationsService();
+    res.status(200).json({ success: true, data: locations });
+  } catch (error) {
+    console.error('getEventLocations error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -45,11 +76,13 @@ export const handleEventRSVP = async (req, res) => {
 export const joinEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const userId = req.user.id; // Get user ID from API Gateway headers
+    const userId = req.user.id; // From API Gateway headers
+    const userEmail = req.user.email;
+    const userFullName = req.user.full_name;
     
     console.log('joinEvent called:', { eventId, userId });
     
-    const result = await joinEventService(eventId, userId);
+    const result = await joinEventService(eventId, { userId, userEmail, userFullName });
     
     res.status(200).json({
       status: 'success',
@@ -293,10 +326,11 @@ export const deleteEvent = async (req, res, next) => {
 export const getEventsOfClub = async (req, res, next) => {
   try {
     const clubId = req.params.id;
-    const { status, start_from, start_to, page, limit } = req.query;
+    const { start_from, start_to, page, limit } = req.query;
     const result = await getEventsOfClubService({
       clubId,
-      status,
+      // Public route: force published events only
+      status: 'published',
       start_from,
       start_to,
       page,
@@ -440,6 +474,45 @@ export const getEventRegistrations = async (req, res) => {
       message: 'Internal server error',
       code: 'INTERNAL_ERROR'
     });
+  }
+};
+
+/**
+ * Update event registration status (manager/organizer)
+ */
+export const updateEventRegistrationStatus = async (req, res) => {
+  try {
+    const { id, regId } = req.params;
+    const { status } = req.body;
+    if (!status || !['pending', 'approved', 'rejected', 'cancelled'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value', code: 'VALIDATION_ERROR' });
+    }
+
+    const result = await updateEventRegistrationStatusService(id, regId, status);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error('updateEventRegistrationStatus error:', error);
+    if (error.name === 'CastError') {
+      return res.status(404).json({ success: false, message: 'Registration not found', code: 'REGISTRATION_NOT_FOUND' });
+    }
+    return res.status(500).json({ success: false, message: 'Internal server error', code: 'INTERNAL_ERROR' });
+  }
+};
+
+/**
+ * Get events of the authenticated user
+ */
+export const getMyEvents = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+    }
+    const events = await getMyEventsService(userId);
+    return res.status(200).json({ success: true, data: events });
+  } catch (error) {
+    console.error('getMyEvents error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error', code: 'INTERNAL_ERROR' });
   }
 };
 

@@ -39,6 +39,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { eventService } from "@/services/event.service"
 import { useRouter } from "next/navigation"
 
 interface Event {
@@ -152,8 +153,10 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
   const handleStatusChange = async (eventId: string, newStatus: string) => {
     setIsLoading(true)
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const res = await eventService.updateEvent(eventId, { /* status update */ } as any)
+      if (!res.success) {
+        throw new Error(res.message || 'Failed to update status')
+      }
 
       const updatedEvents = events.map((event) =>
         event._id === eventId ? { ...event, status: newStatus } : event
@@ -165,10 +168,10 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
         title: "Cập nhật trạng thái thành công",
         description: `Sự kiện đã được ${getStatusLabel(newStatus).toLowerCase()}.`,
       })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
+        description: error.message || "Không thể cập nhật trạng thái. Vui lòng thử lại.",
         variant: "destructive",
       })
     } finally {
@@ -200,8 +203,10 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
 
     setIsLoading(true)
     try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const res = await eventService.deleteEvent(pendingDeleteEvent._id)
+      if (!res.success) {
+        throw new Error(res.message || 'Failed to delete event')
+      }
 
       const updatedEvents = events.filter((event) => event._id !== pendingDeleteEvent._id)
       setEvents(updatedEvents)
@@ -211,10 +216,10 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
         title: "Xóa sự kiện thành công",
         description: "Sự kiện đã được xóa.",
       })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: "Không thể xóa sự kiện. Vui lòng thử lại.",
+        description: error.message || "Không thể xóa sự kiện. Vui lòng thử lại.",
         variant: "destructive",
       })
     } finally {
@@ -222,31 +227,6 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
       setShowDeleteDialog(false)
       setPendingDeleteEvent(null)
       setDeleteConfirmText("")
-    }
-  }
-
-  const handleDeleteEvent = async (eventId: string) => {
-    setIsLoading(true)
-    try {
-      // Mock API call - replace with actual API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const updatedEvents = events.filter((event) => event._id !== eventId)
-      setEvents(updatedEvents)
-      onEventUpdate(updatedEvents)
-
-      toast({
-        title: "Xóa sự kiện thành công",
-        description: "Sự kiện đã được xóa.",
-      })
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể xóa sự kiện. Vui lòng thử lại.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
     }
   }
 

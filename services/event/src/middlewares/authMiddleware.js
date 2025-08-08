@@ -81,7 +81,19 @@ export const authMiddleware = (req, res, next) => {
     const userId = req.headers['x-user-id'];
     const userEmail = req.headers['x-user-email'];
     const userRole = req.headers['x-user-role'];
-    const userFullName = req.headers['x-user-full-name'];
+    const rawFullName = req.headers['x-user-full-name'];
+
+    // Attempt to correct mojibake when non-ASCII names travel via HTTP headers
+    const decodeHeaderUtf8 = (value) => {
+      if (!value || typeof value !== 'string') return value;
+      try {
+        // Re-interpret as latin1 bytes then decode to UTF-8
+        return Buffer.from(value, 'latin1').toString('utf8');
+      } catch (e) {
+        return value;
+      }
+    };
+    const userFullName = decodeHeaderUtf8(rawFullName);
 
     // Validate that all required headers are present
     if (!userId || !userEmail || !userRole) {
