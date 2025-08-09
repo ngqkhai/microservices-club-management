@@ -1,12 +1,12 @@
-export default {
+/** @type {import('jest').Config} */
+module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/?(*.)+(spec|test).[jt]s'],
-  transform: {},
   collectCoverageFrom: [
     'src/**/*.js',
-    '!src/index.js',
-    '!src/config/**'
+    '!src/server.js',
+    '!src/models/index.js'
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setupTests.js'],
 };

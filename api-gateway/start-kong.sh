@@ -12,10 +12,12 @@ envsubst < /etc/kong/kong.yml > /tmp/kong-processed.yml
 # Set Kong to use the processed config
 export KONG_DECLARATIVE_CONFIG=/tmp/kong-processed.yml
 
-# Debug: Show the processed config
-echo "--- START OF PROCESSED KONG CONFIG ---"
-cat /tmp/kong-processed.yml
-echo "--- END OF PROCESSED KONG CONFIG ---"
+# Debug: Show the processed config only if explicitly enabled
+if [ "${KONG_DEBUG_CONFIG:-false}" = "true" ]; then
+  echo "--- START OF PROCESSED KONG CONFIG ---"
+  cat /tmp/kong-processed.yml
+  echo "--- END OF PROCESSED KONG CONFIG ---"
+fi
 
 echo "Kong configuration processed and loaded."
 

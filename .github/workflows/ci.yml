@@ -1,0 +1,114 @@
+name: CI (Docker build)
+
+on:
+  push:
+    branches: [ khai-ngan ]
+  pull_request:
+    branches: [ khai-ngan ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ connectionStatus: 1 })'" 
+          --health-interval=10s --health-timeout=5s --health-retries=5
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: auth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres" 
+          --health-interval=10s --health-timeout=5s --health-retries=5
+      rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd="rabbitmq-diagnostics -q ping" 
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Use Node 18 for tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install club service deps
+        working-directory: services/club
+        run: npm ci
+
+      - name: Test club service
+        working-directory: services/club
+        env:
+          MONGODB_URI: mongodb://localhost:27017/club_test
+          API_GATEWAY_SECRET: test-secret
+        run: npm run test:ci
+
+      - name: Install event service deps
+        working-directory: services/event
+        run: npm ci
+
+      - name: Test event service
+        working-directory: services/event
+        env:
+          API_GATEWAY_SECRET: test-secret
+        run: npm run test:ci
+
+      - name: Install auth service deps
+        working-directory: services/auth
+        run: npm ci
+
+      - name: Test auth service (health only)
+        working-directory: services/auth
+        env:
+          NODE_ENV: test
+          API_GATEWAY_SECRET: test-secret
+          REFRESH_TOKEN_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        run: npm run test:ci -- tests/health.int.test.js
+
+      - name: Build API Gateway
+        run: docker build -t club/api-gateway:ci ./api-gateway
+
+      - name: Build Frontend
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000' }} \
+            --build-arg NEXT_PUBLIC_API_TIMEOUT=10000 \
+            --build-arg NEXT_PUBLIC_ENV=production \
+            --build-arg NEXT_PUBLIC_JWT_STORAGE_KEY=club_management_token \
+            --build-arg NEXT_PUBLIC_JWT_REFRESH_STORAGE_KEY=club_management_refresh_token \
+            --build-arg NEXT_PUBLIC_APP_NAME="Club Management System" \
+            --build-arg NEXT_PUBLIC_APP_VERSION=1.0.0 \
+            --build-arg NEXT_PUBLIC_DEBUG=false \
+            -t club/frontend:ci ./frontend
+
+      - name: Build Auth Service
+        run: docker build -t club/auth-service:ci ./services/auth
+
+      - name: Build Club Service
+        run: docker build -t club/club-service:ci ./services/club
+
+      - name: Build Event Service
+        run: docker build -t club/event-service:ci ./services/event
+
+      - name: Build Notify Service
+        run: docker build -t club/notify-service:ci ./services/notify
