@@ -2,6 +2,10 @@ import { test, expect } from '../fixtures/test-fixtures';
 
 test.describe('API Gateway and Service Integration', () => {
   test('API Gateway routes requests correctly', async ({ apiHelper }) => {
+    // Extend timeout in CI where containers can take longer to be ready
+    // Default test timeout is 30s; bump to 3 minutes on CI, 90s locally
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (test as any).setTimeout?.(process.env.CI ? 180000 : 90000);
     // Test health endpoints for all services
     const services = [
       { name: 'auth', path: '/api/auth/health' },
@@ -9,7 +13,7 @@ test.describe('API Gateway and Service Integration', () => {
       { name: 'event', path: '/health' },
     ];
 
-    const timeout = process.env.CI ? 120000 : 30000;
+    const timeout = process.env.CI ? 120000 : 60000;
     for (const service of services) {
       await apiHelper.waitForService(service.name, service.path, timeout);
     }
