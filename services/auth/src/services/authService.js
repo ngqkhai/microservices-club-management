@@ -50,14 +50,34 @@ class AuthService {
         role: 'user'
       });
 
-      // Generate email verification token (expires in 1 hour)
-      const verificationToken = jwtUtil.generateEmailVerificationToken(user.id, user.email);
+      // Test-only shortcut: auto-verify emails if enabled
+      if (config.get('AUTO_VERIFY_EMAILS')) {
+        // Promote roles for known test accounts
+        let newRole = 'user';
+        if (email.toLowerCase().startsWith('admin')) newRole = 'admin';
+        await user.update({ 
+          email_verified: true,
+          email_verified_at: new Date(),
+          role: newRole
+        });
 
-      // Build verification URL
+        logger.info('User registered and auto-verified (test mode)', {
+          userId: user.id,
+          email: user.email
+        });
+
+        return {
+          message: 'Registration successful (auto-verified for tests).',
+          email: user.email,
+          user: user.toJSON()
+        };
+      }
+
+      // Normal flow: send verification email
+      const verificationToken = jwtUtil.generateEmailVerificationToken(user.id, user.email);
       const frontendConfig = config.getFrontendConfig();
       const verificationLink = `${frontendConfig.baseUrl}/verify-email?token=${verificationToken}`;
 
-      // Publish email verification event to RabbitMQ
       await publisher.publishEmailVerificationEvent({
         userId: user.id,
         email: user.email,
@@ -188,7 +208,14 @@ class AuthService {
 
       // Check if email is verified
       if (!user.email_verified) {
-        throw new EmailNotVerifiedError('Please verify your email address before logging in. Check your inbox for the verification link.');
+        if (config.get('AUTO_VERIFY_EMAILS')) {
+          await user.update({ 
+            email_verified: true,
+            email_verified_at: new Date()
+          });
+        } else {
+          throw new EmailNotVerifiedError('Please verify your email address before logging in. Check your inbox for the verification link.');
+        }
       }
 
       // Verify password

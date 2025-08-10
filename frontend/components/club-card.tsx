@@ -53,7 +53,7 @@ export function ClubCard({ club }: ClubCardProps) {
   }
 
   return (
-    <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+    <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1" data-testid="club-card">
       <CardHeader className="pb-3">
         <div className="flex items-center space-x-4 mb-3">
           <Avatar className="h-16 w-16">

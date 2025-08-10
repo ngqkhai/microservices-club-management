@@ -40,7 +40,7 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
   }
 
   return (
-    <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+    <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1" data-testid="club-card">
       <CardHeader className="flex flex-row items-center space-y-0 pb-2">
         <Avatar className="h-12 w-12 mr-4">
           <AvatarImage src={club.logo_url || "/placeholder.svg"} alt={club.name} />

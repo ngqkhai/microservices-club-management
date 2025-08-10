@@ -156,6 +156,8 @@ const prepareHeaders = (options: RequestOptions = {}): HeadersInit => {
     }
   }
 
+  // Do not send internal gateway secrets from the browser
+
   return headers;
 };
 

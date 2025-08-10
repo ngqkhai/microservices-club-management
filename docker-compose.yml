@@ -25,7 +25,7 @@ services:
     depends_on:
       - kong
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -41,7 +41,7 @@ services:
     container_name: club_management_club
     environment:
       PORT: 3002
-      NODE_ENV: development
+      NODE_ENV: test
       MOCK_DB: false
       MONGODB_URI: ${CLUB_MONGODB_URI}
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
@@ -53,11 +53,11 @@ services:
     networks:
       - club_network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3002/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   # Event Service
@@ -80,11 +80,11 @@ services:
     networks:
       - club_network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3003/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   # Auth Service
@@ -112,6 +112,7 @@ services:
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
       FRONTEND_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-false}
     ports:
       - "3001:3001"
     volumes:
@@ -121,10 +122,10 @@ services:
       - club_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/api/auth/health"]
-      interval: 15s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/ || exit 1"]
+      interval: 30s
       timeout: 10s
-      retries: 10
+      retries: 5
       start_period: 60s
 
   # Kong API Gateway (DB-less)
@@ -197,6 +198,12 @@ services:
     networks:
       - club_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3005/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   kong_data:

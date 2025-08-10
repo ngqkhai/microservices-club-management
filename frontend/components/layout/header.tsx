@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,6 +23,7 @@ interface ClubRole {
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [hasToken, setHasToken] = useState(false)
   const { user, logout } = useAuthStore()
 
   const navigation = [
@@ -60,8 +61,29 @@ export function Header() {
       .slice(0, 2)
   }
 
+  useEffect(() => {
+    try {
+      const check = () => {
+        const token = localStorage.getItem('club_management_token')
+        setHasToken(!!token)
+      }
+      check()
+      window.addEventListener('storage', check)
+      return () => window.removeEventListener('storage', check)
+    } catch {}
+  }, [])
+
+  const isLoggedIn = (() => {
+    if (user) return true
+    try {
+      return !!localStorage.getItem('club_management_token') || hasToken
+    } catch {
+      return hasToken
+    }
+  })()
+
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <header className="bg-white shadow-sm border-b sticky top-0 z-50" data-testid="auth-state" data-state={isLoggedIn ? 'logged-in' : 'logged-out'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -112,7 +134,7 @@ export function Header() {
                 <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full" data-testid="user-menu-trigger">
                       <Avatar className="h-8 w-8">
                         <AvatarImage
                           src={user.profile_picture_url || "/placeholder.svg"}
@@ -124,7 +146,7 @@ export function Header() {
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
                     <div className="flex items-center justify-start gap-2 p-2">
                       <div className="flex flex-col space-y-1 leading-none">
                         <p className="font-medium">{user.full_name || user.email}</p>
@@ -133,7 +155,7 @@ export function Header() {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
+                      <Link href="/profile" data-testid="profile-link">
                         <User className="mr-2 h-4 w-4" />
                         Hồ sơ cá nhân
                       </Link>
@@ -145,7 +167,7 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
+                    <DropdownMenuItem onClick={logout} data-testid="logout-btn">
                       <LogOut className="mr-2 h-4 w-4" />
                       Đăng xuất
                     </DropdownMenuItem>

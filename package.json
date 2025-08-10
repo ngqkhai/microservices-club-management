@@ -1,134 +1,26 @@
 {
   "name": "club-management-system",
   "version": "1.0.0",
-  "description": "Club Management System - Comprehensive Testing Suite",
-  "main": "index.js",
+  "description": "Club Management System - Microservices Architecture",
   "scripts": {
-    "test": "node scripts/test-runner.js",
-    "test:individual": "node scripts/test-runner.js --individual",
-    "test:integration": "node scripts/test-runner.js --integration",
-    "test:gateway": "node scripts/test-runner.js --gateway",
-    "test:e2e": "node scripts/test-runner.js --e2e",
-    "test:auth": "node scripts/test-runner.js --services auth",
-    "test:club": "node scripts/test-runner.js --services club",
-    "test:event": "node scripts/test-runner.js --services event",
-    "test:services": "node scripts/test-runner.js --services auth,club,event",
-    "test:ci": "node scripts/test-runner.js --timeout 60000",
-    "test:quick": "npm run test:individual",
-    "test:full": "npm run test",
-    "setup:test-env": "node scripts/setup-test-environment.js",
-    "start:services": "docker-compose up -d",
-    "stop:services": "docker-compose down",
-    "logs:services": "docker-compose logs -f",
-    "install:all": "npm install && npm run install:services && npm run install:frontend",
-    "install:services": "cd services/auth && npm install && cd ../club && npm install && cd ../event && npm install && cd ../finance && npm install && cd ../notify && npm install && cd ../user && npm install",
-    "install:frontend": "cd new-frontend && npm install",
-    "install:auth": "cd services/auth && npm install",
-    "install:club": "cd services/club && npm install",
-    "install:event": "cd services/event && npm install",
-    "lint": "npm run lint:auth && npm run lint:club && npm run lint:event",
-    "lint:auth": "cd services/auth && npm run lint --if-present",
-    "lint:club": "cd services/club && npm run lint --if-present",
-    "lint:event": "cd services/event && npm run lint --if-present",
-    "build": "npm run build:auth && npm run build:club && npm run build:event",
-    "build:auth": "cd services/auth && npm run build --if-present",
-    "build:club": "cd services/club && npm run build --if-present",
-    "build:event": "cd services/event && npm run build --if-present",
-    "dev:docker": "docker-compose -f docker-compose.dev.yml up",
-    "prod:docker": "docker-compose -f docker-compose.prod.yml up -d",
-    "dev": "pm2 start ecosystem.config.js",
-    "dev:logs": "pm2 logs",
-    "dev:status": "pm2 status",
-    "dev:stop": "pm2 stop ecosystem.config.js",
-    "dev:restart": "pm2 restart ecosystem.config.js",
-    "dev:reload": "pm2 reload ecosystem.config.js",
-    "dev:delete": "pm2 delete ecosystem.config.js",
-    "dev:monit": "pm2 monit",
-    "start": "pm2 start ecosystem.config.js --env production",
-    "stop": "pm2 stop all",
-    "restart": "pm2 restart all",
-    "delete": "pm2 delete all",
-    "logs": "pm2 logs",
-    "monit": "pm2 monit",
-    "status": "pm2 status",
-    "health": "pm2 ping",
-    "health:check": "node scripts/health-check.js",
-    "health:watch": "node scripts/health-check.js --watch",
-    "setup": "npm run install:all && mkdir -p logs",
-    "reset": "pm2 delete all && pm2 kill"
+    "dev": "docker-compose up",
+    "build": "docker-compose build",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "npm run test:services",
+    "test:services": "cd services/auth && npm test && cd ../club && npm test && cd ../event && npm test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "install:e2e": "npx playwright install",
+    "install:all": "npm run install:services && npm run install:e2e",
+    "install:services": "cd services/auth && npm install && cd ../club && npm install && cd ../event && npm install && cd ../notify && npm install && cd ../../frontend && npm install"
   },
-  "keywords": [
-    "microservices",
-    "club-management",
-    "testing",
-    "integration",
-    "e2e",
-    "api-gateway",
-    "authentication"
-  ],
-  "author": "Club Management System Team",
-  "license": "MIT",
   "devDependencies": {
-    "@types/whatwg-url": "^13.0.0",
-    "axios": "^1.6.0",
-    "concurrently": "^8.2.0",
-    "cross-env": "^7.0.3",
-    "eslint": "^8.50.0",
-    "jest": "^29.7.0",
-    "mongodb-memory-server": "^9.1.0",
-    "nodemon": "^3.0.2",
-    "pm2": "^5.3.0",
-    "prettier": "^3.0.0",
-    "supertest": "^6.3.0",
-    "wait-on": "^7.2.0"
-  },
-  "dependencies": {
-    "dotenv": "^16.3.1"
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.0.0",
+    "dotenv": "^17.2.1"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-org/club-management-system.git"
-  },
-  "bugs": {
-    "url": "https://github.com/your-org/club-management-system/issues"
-  },
-  "homepage": "https://github.com/your-org/club-management-system#readme",
-  "workspaces": [
-    "services/*",
-    "shared",
-    "frontend"
-  ],
-  "jest": {
-    "projects": [
-      {
-        "displayName": "Integration Tests",
-        "testMatch": [
-          "<rootDir>/tests/integration/**/*.test.js"
-        ],
-        "testEnvironment": "node",
-        "setupFilesAfterEnv": [
-          "<rootDir>/tests/setup.js"
-        ],
-        "testTimeout": 60000
-      }
-    ]
-  },
-  "config": {
-    "test": {
-      "timeout": 30000,
-      "retries": 3,
-      "services": {
-        "auth": 3001,
-        "club": 3002,
-        "event": 3003,
-        "user": 3004,
-        "notify": 3005
-      },
-      "gateway": 8000
-    }
+    "node": ">=18.0.0"
   }
 }

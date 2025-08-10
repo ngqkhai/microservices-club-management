@@ -1,0 +1,141 @@
+{
+  "users": [
+    {
+      "email": "admin+e2e1754852112822@test.com",
+      "password": "AdminPassword123!",
+      "full_name": "Test Admin User",
+      "tokens": {
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6ImZiZDYwM2E0LWFmNGItNGE3ZS05MGJkLTc4ZmZmZDc2MmI4MiIsImVtYWlsIjoiYWRtaW4rZTJlMTc1NDg1MjExMjgyMkB0ZXN0LmNvbSIsInJvbGUiOiJhZG1pbiIsImZ1bGxfbmFtZSI6IlRlc3QgQWRtaW4gVXNlciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTIxMTYsImV4cCI6MTc1NDg1MzAxNiwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.iE_qFGUqZamU5M29D55jiZ8gjb52HJxFz0awHvLuusiDQ90sbyYYbHbKtmMWWTj67gdNktzpaQVEaPcQdz4LvDYD4MfE3Z31__kTiKKwSOUL2lx5H7nAjJvgnvSli7o3fHUA5JQMWcxDh6XQepljsjhQ0p9NwHltLiPfJmoeg4Pbf348tzKRD4zqCHQQL_IZPycdFNcrEjhzjaX8ZFjiduwXQw2-sOXY4WBBXDuyEL2oeKuIK2pGIuTB-4JAzuXEOMk_SnnOemUPuBIJQVEVAycvuREuykt9taoaWvK3lJW6a5EqaA4fe7TN1HoFyxNbFzXO8CGtz6ThRyF8F8-LCA",
+        "user": {
+          "id": "fbd603a4-af4b-4a7e-90bd-78fffd762b82",
+          "email": "admin+e2e1754852112822@test.com",
+          "full_name": "Test Admin User",
+          "role": "admin",
+          "email_verified": true,
+          "email_verified_at": "2025-08-10T18:55:14.766Z",
+          "phone": null,
+          "profile_picture_url": null,
+          "bio": null,
+          "date_of_birth": null,
+          "gender": null,
+          "address": null,
+          "social_links": {},
+          "createdAt": "2025-08-10T18:55:13.664Z",
+          "updatedAt": "2025-08-10T18:55:14.766Z",
+          "deletedAt": null
+        }
+      }
+    },
+    {
+      "email": "user1+e2e1754852112822@test.com",
+      "password": "UserPassword123!",
+      "full_name": "Test User One",
+      "tokens": {
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjE3ZDEzOTZhLWViYjQtNDFhOS04NzY4LTdkOTU4Zjc2NjY4YiIsImVtYWlsIjoidXNlcjErZTJlMTc1NDg1MjExMjgyMkB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIE9uZSIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTIxMTgsImV4cCI6MTc1NDg1MzAxOCwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.lohGqCuHBkUdkqFoGd5obCwFJZqgH6k-n3oLgWqxv6cR21B2jW6xf-wRVE0zdNsHuhDX2KxMqIkaDHEdLMn2eGmBMJTKN_teb7r9zg60HbFggIaMXYrJH9CDwZpVo_OyYZz-0D7uEt8pmPdzzPALqauC5wm3QoQaVluvg9oOpSSXrpciTNO-WwItE4yG-LSUZhJ3FeAArPd-nuSIUVaRSTXxOQOs0O_IaExXF1C3oBo7ab3-sUns8sFIygh88Q3_d9syQvw__cCjsw-z6C_aDbgU43yW9ptTdT9VOEvPXu8k64Bp4PXUNn5tcK08XAlSIIV2k676TaGko_hAmzCjjQ",
+        "user": {
+          "id": "17d1396a-ebb4-41a9-8768-7d958f76668b",
+          "email": "user1+e2e1754852112822@test.com",
+          "full_name": "Test User One",
+          "role": "user",
+          "email_verified": true,
+          "email_verified_at": "2025-08-10T18:55:17.406Z",
+          "phone": null,
+          "profile_picture_url": null,
+          "bio": null,
+          "date_of_birth": null,
+          "gender": null,
+          "address": null,
+          "social_links": {},
+          "createdAt": "2025-08-10T18:55:16.228Z",
+          "updatedAt": "2025-08-10T18:55:17.406Z",
+          "deletedAt": null
+        }
+      }
+    },
+    {
+      "email": "user2+e2e1754852112822@test.com",
+      "password": "UserPassword123!",
+      "full_name": "Test User Two",
+      "tokens": {
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6Ijg2MzM5YmFiLTQzYTMtNGU3Yy05ZDA4LTY0NGEyMWZmZWE2ZiIsImVtYWlsIjoidXNlcjIrZTJlMTc1NDg1MjExMjgyMkB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIFR3byIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTIxMjEsImV4cCI6MTc1NDg1MzAyMSwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.W3Chw-wIZpk3beHhCl5Q1m79hPjYMY770LCYmWLqjOtMh2DaUdWA9kRh8KP5Vwfq_MS5sQhQoq6EkEpCnW0Wrom7vEWRFzFfupl4CZMVdBNFTEpJzwicKsynOJZWF9soNe_KJGoAp3h43Jz3VlCo9RjqZfdmjT-HQw4Lt0lALpFc8y9kF6_9Ggvapfrse_bHgtVcyIaYeicilZ5U9KNR38LXAZK7e1GG92-YsEySCoYPt27TQeQ6FZ4QWrmUYqO2-7FO63hDIKCCr-Jaqdfqm3sYJU9dWpDJTSPs60jhCw58lFIcylkcwXSyiEMYkw7DkC5TWZqTxpjaK5cG1nLEww",
+        "user": {
+          "id": "86339bab-43a3-4e7c-9d08-644a21ffea6f",
+          "email": "user2+e2e1754852112822@test.com",
+          "full_name": "Test User Two",
+          "role": "user",
+          "email_verified": true,
+          "email_verified_at": "2025-08-10T18:55:20.392Z",
+          "phone": null,
+          "profile_picture_url": null,
+          "bio": null,
+          "date_of_birth": null,
+          "gender": null,
+          "address": null,
+          "social_links": {},
+          "createdAt": "2025-08-10T18:55:18.919Z",
+          "updatedAt": "2025-08-10T18:55:20.393Z",
+          "deletedAt": null
+        }
+      }
+    },
+    {
+      "email": "clubmanager+e2e1754852112822@test.com",
+      "password": "ManagerPassword123!",
+      "full_name": "Club Manager User",
+      "tokens": {
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6ImM1MjY4Y2Q4LWE2ODUtNDdiZC1hMjkzLTI4YmY2Y2IwMWU1YyIsImVtYWlsIjoiY2x1Ym1hbmFnZXIrZTJlMTc1NDg1MjExMjgyMkB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiQ2x1YiBNYW5hZ2VyIFVzZXIiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzU0ODUyMTI0LCJleHAiOjE3NTQ4NTMwMjQsImF1ZCI6ImNsdWItbWFuYWdlbWVudC1zeXN0ZW0iLCJpc3MiOiJhdXRoLXNlcnZpY2UifQ.xu7sPQ7UYbc-JZ3jb1f1Kzp6q5x56j4_dfVTQUb_K6i3hQVwPYBeD5axMaHPeZNcSmTaIUUYT9pWSKhGs_V8QGQxZfdtrdJZzn6e6rSgvpZAFg5YHqBUqdWpsH7rtTe8TcJnIf3hqWH6k0-GrzIh0NXrwrBDjXzZdihQW1hP9pAo82zqP3TVA9LYE37br1DHrDmYBWkvUwxvr2viQuSsHVQGKpSkDHKv8FTu7nC6RBNteq_vFZMw15PP5AEchRFhlITnC6JoVUdvoXBo4ATes4sRmJYPhCdJeO7gYycxS6FWV1U6rojT3HgQvLlwDlACRJLYk_qR-lbJKzOq9BLdAQ",
+        "user": {
+          "id": "c5268cd8-a685-47bd-a293-28bf6cb01e5c",
+          "email": "clubmanager+e2e1754852112822@test.com",
+          "full_name": "Club Manager User",
+          "role": "user",
+          "email_verified": true,
+          "email_verified_at": "2025-08-10T18:55:22.839Z",
+          "phone": null,
+          "profile_picture_url": null,
+          "bio": null,
+          "date_of_birth": null,
+          "gender": null,
+          "address": null,
+          "social_links": {},
+          "createdAt": "2025-08-10T18:55:21.737Z",
+          "updatedAt": "2025-08-10T18:55:22.839Z",
+          "deletedAt": null
+        }
+      }
+    }
+  ],
+  "clubs": [
+    {
+      "name": "E2E Test Tech Club 1754852124369",
+      "description": "A technology club for E2E testing",
+      "category": "Công nghệ",
+      "contact_email": "tech@test.com",
+      "manager_user_id": "fbd603a4-af4b-4a7e-90bd-78fffd762b82",
+      "manager_full_name": "Test Admin User",
+      "manager_email": "admin+e2e1754852112822@test.com",
+      "created_by": "fbd603a4-af4b-4a7e-90bd-78fffd762b82"
+    },
+    {
+      "name": "E2E Test Sports Club 1754852124369",
+      "description": "A sports club for E2E testing",
+      "category": "Thể thao",
+      "contact_email": "sports@test.com",
+      "manager_user_id": "fbd603a4-af4b-4a7e-90bd-78fffd762b82",
+      "manager_full_name": "Test Admin User",
+      "manager_email": "admin+e2e1754852112822@test.com",
+      "created_by": "fbd603a4-af4b-4a7e-90bd-78fffd762b82"
+    },
+    {
+      "name": "E2E Test Art Club 1754852124369",
+      "description": "An art club for E2E testing",
+      "category": "Nghệ thuật",
+      "contact_email": "art@test.com",
+      "manager_user_id": "fbd603a4-af4b-4a7e-90bd-78fffd762b82",
+      "manager_full_name": "Test Admin User",
+      "manager_email": "admin+e2e1754852112822@test.com",
+      "created_by": "fbd603a4-af4b-4a7e-90bd-78fffd762b82"
+    }
+  ],
+  "events": []
+}

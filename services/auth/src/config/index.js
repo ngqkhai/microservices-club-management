@@ -207,7 +207,11 @@ class ConfigManager {
         .default(false),
       
       ENABLE_REQUEST_LOGGING: Joi.boolean()
-        .default(true)
+        .default(true),
+
+      // Test-only toggle to auto verify emails during registration
+      AUTO_VERIFY_EMAILS: Joi.boolean()
+        .default(false)
     }).unknown(false); // Reject unknown environment variables
   }
 
@@ -285,7 +289,8 @@ class ConfigManager {
       
       // Debug
       DEBUG_SQL: process.env.DEBUG_SQL === 'true',
-      ENABLE_REQUEST_LOGGING: process.env.ENABLE_REQUEST_LOGGING !== 'false'
+      ENABLE_REQUEST_LOGGING: process.env.ENABLE_REQUEST_LOGGING !== 'false',
+      AUTO_VERIFY_EMAILS: process.env.AUTO_VERIFY_EMAILS === 'true'
     };
 
     // Validate configuration

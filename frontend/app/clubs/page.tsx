@@ -167,7 +167,7 @@ export default function ClubsPage() {
             </div>
             <div className="flex gap-2">
               <Select value={categoryInput} onValueChange={handleCategoryChange} disabled={categoriesLoading}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px]" data-testid="category-filter">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder={categoriesLoading ? "Đang tải..." : "Danh mục"} />
                 </SelectTrigger>
@@ -246,7 +246,7 @@ export default function ClubsPage() {
           </div>
         ) : transformedClubs.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" data-testid="clubs-grid">
               {transformedClubs.map((club) => (
                 <ClubCard key={club.club_id} club={club} />
               ))}

@@ -112,3 +112,44 @@ jobs:
 
       - name: Build Notify Service
         run: docker build -t club/notify-service:ci ./services/notify
+
+      # E2E Testing
+      - name: Install E2E dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start services for E2E tests
+        run: |
+          # Start services in background
+          docker-compose up -d
+          # Wait for services to be ready
+          sleep 30
+        env:
+          NODE_ENV: test
+          API_GATEWAY_SECRET: test-secret-e2e
+          MONGODB_URI: mongodb://localhost:27017/club_e2e_test
+          POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/auth_e2e_test
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:3000
+          API_GATEWAY_URL: http://localhost:8000
+          API_GATEWAY_SECRET: test-secret-e2e
+          CI: true
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+
+      - name: Stop services
+        if: always()
+        run: docker-compose down

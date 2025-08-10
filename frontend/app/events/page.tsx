@@ -384,9 +384,9 @@ export default function EventsPage() {
                 ))}
               </div>
             ) : currentEvents.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-4" data-testid="events-list">
                 {currentEvents.map((event) => (
-                  <Card key={event.event_id} className="hover:shadow-md transition-shadow">
+                  <Card key={event.event_id} className="hover:shadow-md transition-shadow" data-testid="event-card">
                     <CardContent className="p-6">
                       <div className="flex gap-4">
                         {/* Event Image Placeholder */}

@@ -1,0 +1,60 @@
+import { chromium, FullConfig } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+import { APIHelper } from './utils/api-helper';
+import { TestDataManager } from './utils/test-data-manager';
+
+async function globalSetup(config: FullConfig) {
+  console.log('🚀 Starting E2E Global Setup...');
+  
+  // Wait for services to be ready
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  
+  try {
+    // Generate a run id available to fixtures to align emails
+    (global as any).__E2E_RUN_ID__ = `+e2e${Date.now()}`;
+    // Wait for frontend to be accessible
+    console.log('⏳ Waiting for frontend to be ready...');
+    const apiHelper = new APIHelper();
+    await apiHelper.waitForDirectService('frontend', 'http://localhost:3000/', 60000);
+    console.log('✅ Frontend is ready');
+
+    // Check if API Gateway is ready
+    console.log('⏳ Checking API Gateway health...');
+    await apiHelper.waitForAPIGateway();
+    console.log('✅ API Gateway is ready');
+
+    // Check individual services directly
+    console.log('⏳ Checking microservices health...');
+    await apiHelper.waitForDirectService('auth', 'http://localhost:3001/', 30000);
+    await apiHelper.waitForDirectService('club', 'http://localhost:3002/health', 30000);
+    await apiHelper.waitForDirectService('event', 'http://localhost:3003/health', 30000);
+    console.log('✅ All microservices are ready');
+
+    // Setup test data once and persist to disk for all tests to consume
+    console.log('⏳ Setting up test data...');
+    const testDataManager = new TestDataManager(apiHelper);
+    await testDataManager.setupTestData();
+    const seeded = {
+      users: testDataManager.getTestUsers(),
+      clubs: testDataManager.getTestClubs(),
+      events: testDataManager.getTestEvents(),
+    };
+    const outDir = path.resolve(__dirname, './artifacts');
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'seed.json'), JSON.stringify(seeded, null, 2));
+    console.log('✅ Test data setup complete and saved to artifacts/seed.json');
+
+    console.log('🎉 E2E Global Setup Complete!');
+    
+  } catch (error) {
+    console.error('❌ Global Setup Failed:', error);
+    throw error;
+  } finally {
+    await browser.close();
+  }
+}
+
+export default globalSetup;
