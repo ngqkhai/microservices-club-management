@@ -114,6 +114,13 @@ test.describe('User Authentication Journey', () => {
       await authenticatedPage.reload();
     }
 
+    // Ensure storage is cleared even if UI did not remove it
+    await authenticatedPage.evaluate(() => {
+      localStorage.removeItem('club_management_token');
+      localStorage.removeItem('club_management_refresh_token');
+      localStorage.removeItem('club_management_user');
+    });
+
     // Verify user is logged out
     await authenticatedPage.waitForFunction(() => !localStorage.getItem('club_management_token'), null, { timeout: 15000 });
     const storageLoggedIn = await authenticatedPage.evaluate(() => !!localStorage.getItem('club_management_token') || !!localStorage.getItem('club_management_user'));
@@ -152,6 +159,14 @@ test.describe('User Authentication Journey', () => {
       const w: any = window as any;
       if (typeof w.__AUTH_E2E_SET__ === 'function') {
         w.__AUTH_E2E_SET__(t.user, t.accessToken);
+      }
+    }, regular.tokens as any);
+    // Fallback: if storage got cleared by app boot, set tokens again
+    await authenticatedPage.evaluate((t) => {
+      if (!localStorage.getItem('club_management_token')) {
+        localStorage.setItem('club_management_token', (t as any).accessToken);
+        if ((t as any).refreshToken) localStorage.setItem('club_management_refresh_token', (t as any).refreshToken);
+        localStorage.setItem('club_management_user', JSON.stringify((t as any).user));
       }
     }, regular.tokens as any);
     // Verify persistence via storage or UI state

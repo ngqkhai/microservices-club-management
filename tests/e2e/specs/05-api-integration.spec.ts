@@ -10,7 +10,7 @@ test.describe('API Gateway and Service Integration', () => {
     ];
 
     for (const service of services) {
-      await apiHelper.waitForService(service.name, service.path, 10000);
+      await apiHelper.waitForService(service.name, service.path, 30000);
     }
   });
 
@@ -210,12 +210,11 @@ test.describe('API Gateway and Service Integration', () => {
 
   test('JWT token validation and refresh', async ({ apiHelper }) => {
     // Login to get tokens
-    const credentials = {
-      email: 'user1@test.com',
-      password: 'UserPassword123!',
-    };
-    
-    const tokens = await apiHelper.loginUser(credentials);
+    // Register a fresh user so credentials are valid
+    const email = `api-jwt-${Date.now()}@test.com`;
+    const password = 'UserPassword123!';
+    await apiHelper.registerUser({ email, password, full_name: 'API JWT' } as any);
+    const tokens = await apiHelper.loginUser({ email, password });
     expect(tokens.accessToken).toBeTruthy();
     
     // Test that access token works for authenticated requests

@@ -26,11 +26,11 @@ async function globalSetup(config: FullConfig) {
     await apiHelper.waitForAPIGateway();
     console.log('✅ API Gateway is ready');
 
-    // Check individual services directly
+    // Check individual services directly (allow more time on cold starts)
     console.log('⏳ Checking microservices health...');
-    await apiHelper.waitForDirectService('auth', 'http://localhost:3001/', 30000);
-    await apiHelper.waitForDirectService('club', 'http://localhost:3002/health', 30000);
-    await apiHelper.waitForDirectService('event', 'http://localhost:3003/health', 30000);
+    await apiHelper.waitForDirectService('auth', 'http://localhost:3001/', 60000);
+    await apiHelper.waitForDirectService('club', 'http://localhost:3002/health', 60000);
+    await apiHelper.waitForDirectService('event', 'http://localhost:3003/health', 60000);
     console.log('✅ All microservices are ready');
 
     // Setup test data once and persist to disk for all tests to consume

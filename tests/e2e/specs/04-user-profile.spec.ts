@@ -136,12 +136,11 @@ test.describe('User Profile Management Journey', () => {
     
     try {
       // Login
-      const credentials = {
-        email: 'user1@test.com',
-        password: 'UserPassword123!',
-      };
-      
-      const tokens = await apiHelper.loginUser(credentials);
+      // Use a newly registered user to ensure credentials are valid
+      const email = `profile-pers-${Date.now()}@test.com`;
+      const password = 'UserPassword123!';
+      await apiHelper.registerUser({ email, password, full_name: 'Profile Persist' } as any);
+      const tokens = await apiHelper.loginUser({ email, password });
       
       // Set authentication tokens
       await page.goto('/');
@@ -165,7 +164,7 @@ test.describe('User Profile Management Journey', () => {
       const newPage = await newContext.newPage();
       
       // Login again
-      const newTokens = await apiHelper.loginUser(credentials);
+      const newTokens = await apiHelper.loginUser({ email, password });
       
       await newPage.goto('/');
       await newPage.evaluate((authTokens) => {

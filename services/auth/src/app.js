@@ -150,6 +150,13 @@ class Application {
         throw new Error('Database connection failed');
       }
 
+      // Auto-sync DB schema for E2E/dev if enabled
+      if (process.env.AUTO_MIGRATE === 'true' || process.env.AUTO_SYNC_DB === 'true') {
+        const { sequelize } = require('./models');
+        await sequelize.sync();
+        logger.info('Database schema synced successfully');
+      }
+
       // Initialize RabbitMQ connection (optional - service can run without it)
       try {
         const rabbitmqConfig = require('./config/rabbitmq');

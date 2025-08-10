@@ -1,3 +1,89 @@
+# GitHub Actions CI for Club Management System
+name: CI
+
+on:
+  push:
+    branches: [ khai-ngan ]
+  pull_request:
+    branches: [ khai-ngan ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Create .env for CI
+        run: |
+          cat > .env << 'EOF'
+          # Frontend env
+          NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000' }}
+          NEXT_PUBLIC_API_GATEWAY_SECRET=${{ secrets.NEXT_PUBLIC_API_GATEWAY_SECRET || 'c44d002c75b696ba2200d49c6fadb8f3' }}
+          # Services env
+          API_GATEWAY_SECRET=${{ secrets.API_GATEWAY_SECRET || 'c44d002c75b696ba2200d49c6fadb8f3' }}
+          AUTO_VERIFY_EMAILS=${{ vars.AUTO_VERIFY_EMAILS || 'true' }}
+          NODE_ENV=test
+          EOF
+
+      - name: Install root deps
+        run: npm install
+
+      - name: Install service deps and Playwright
+        run: |
+          npm run install:services
+          npx playwright install --with-deps
+
+      - name: Build and start services (Docker Compose + E2E override)
+        run: |
+          docker-compose --version
+          docker-compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+
+      - name: Show running containers
+        run: docker ps -a
+
+      - name: Run service unit/integration tests
+        run: npm run test:services
+
+      - name: Run Playwright E2E (Chromium)
+        env:
+          CI: true
+        run: npx playwright test --project=chromium --reporter=line
+
+      - name: Upload Playwright report (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+
+      - name: Upload test results (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+          if-no-files-found: ignore
+
+      - name: Teardown containers (always)
+        if: always()
+        run: docker-compose -f docker-compose.yml -f docker-compose.e2e.yml down -v
 name: CI (Docker build)
 
 on:

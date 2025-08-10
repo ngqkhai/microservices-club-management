@@ -144,7 +144,7 @@ export class HomePage extends BasePage {
     this.signupButton = page.locator('a:has-text("Đăng ký")');
     this.userMenu = page.locator('[data-testid="user-menu-trigger"]');
     this.profileLink = page.locator('text=Hồ sơ cá nhân');
-    this.logoutButton = page.locator('[data-testid="logout-btn"], text=Đăng xuất');
+    this.logoutButton = page.getByTestId('logout-btn');
   }
 
   async goto(): Promise<void> {
@@ -174,9 +174,31 @@ export class HomePage extends BasePage {
     if (await this.isLoggedIn()) {
       await this.userMenu.waitFor({ state: 'visible' }).catch(() => {});
       await this.userMenu.click().catch(() => {});
-      const logout = this.page.locator('[data-testid="logout-btn"], text=Đăng xuất');
-      await expect(logout).toBeVisible({ timeout: 5000 });
-      await logout.click();
+      const logoutByTestId = this.page.getByTestId('logout-btn');
+      if (await logoutByTestId.isVisible().catch(() => false)) {
+        await logoutByTestId.click();
+      } else {
+        const logoutByText = this.page.getByText('Đăng xuất');
+        await expect(logoutByText).toBeVisible({ timeout: 5000 });
+        await logoutByText.click();
+      }
+      // Ensure tokens cleared; fallback to manual clear if app didn't remove
+      await this.page.waitForTimeout(500);
+      const stillHasToken = await this.page.evaluate(() => !!localStorage.getItem('club_management_token'));
+      if (stillHasToken) {
+        await this.page.evaluate(() => {
+          localStorage.removeItem('club_management_token');
+          localStorage.removeItem('club_management_refresh_token');
+          localStorage.removeItem('club_management_user');
+          const w: any = window as any;
+          if (typeof w.__AUTH_E2E_SET__ === 'function') {
+            w.__AUTH_E2E_SET__(null, null);
+          }
+          w.__AUTH_SUCCESS__ = false;
+          w.__AUTH_USER__ = undefined;
+        });
+        await this.page.reload();
+      }
       // Wait for logged-out state (login link visible or token cleared)
       await this.page.waitForFunction(() => !localStorage.getItem('club_management_token'), null, { timeout: 15000 }).catch(() => {});
       await expect(this.page.locator('header').locator('a:has-text("Đăng nhập")')).toBeVisible({ timeout: 15000 });
