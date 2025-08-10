@@ -9,8 +9,9 @@ test.describe('API Gateway and Service Integration', () => {
       { name: 'event', path: '/health' },
     ];
 
+    const timeout = process.env.CI ? 120000 : 30000;
     for (const service of services) {
-      await apiHelper.waitForService(service.name, service.path, 30000);
+      await apiHelper.waitForService(service.name, service.path, timeout);
     }
   });
 
