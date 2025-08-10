@@ -420,7 +420,13 @@ export class ProfilePage extends BasePage {
   }
 
   async getUserName(): Promise<string> {
-    return await this.userNameDisplay.first().textContent() || '';
+    try {
+      const el = this.userNameDisplay.first();
+      await el.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+      return (await el.textContent()) || '';
+    } catch {
+      return '';
+    }
   }
 
   async getUserEmail(): Promise<string> {

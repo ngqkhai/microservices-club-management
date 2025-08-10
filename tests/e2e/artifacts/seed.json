@@ -1,18 +1,18 @@
 {
   "users": [
     {
-      "email": "admin+e2e1754858710981@test.com",
+      "email": "admin+e2e1754859528462@test.com",
       "password": "AdminPassword123!",
       "full_name": "Test Admin User",
       "tokens": {
-        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6ImFmNTk4ZWEyLWIwYTMtNDIzNi05NzkwLWJhMmVhMzIyNGI3YSIsImVtYWlsIjoiYWRtaW4rZTJlMTc1NDg1ODcxMDk4MUB0ZXN0LmNvbSIsInJvbGUiOiJhZG1pbiIsImZ1bGxfbmFtZSI6IlRlc3QgQWRtaW4gVXNlciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTg3MTUsImV4cCI6MTc1NDg1OTYxNSwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.exby50uhabMg70rzszIOs2URM88Q3w9ZWrp4TG1OU3S5tjPRhI7qvo2BUE-Mi8Nooc9LSUbOQQufNjYJeVcs4njHnDYA4ltLMMzHFmoXI_xCGvLVVFzokk0aMpYNbt9HUrrqwGftHKq3sKqwT1iG3NjZ_VqbDZqR2NBFhOE4BHol5g8jdm4q-NzxlvZ4c0u1BjGKciWLGzfLHoXl3rVhZ78M5EfKUkGhpml1uV5b433P1tl-uF567hrsEVt0x7xki2Czb6VOGa35CbHwjRbShj6tVIP01tm9vADP5isysEUI3BMluuhS75p7ruujp4WuMte81rKtNaX0tOk3ufDPSg",
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjRhYzEyMjkzLTk0ZWUtNDUzZS04MmI5LWExYTY1OWQxMTQ2NSIsImVtYWlsIjoiYWRtaW4rZTJlMTc1NDg1OTUyODQ2MkB0ZXN0LmNvbSIsInJvbGUiOiJhZG1pbiIsImZ1bGxfbmFtZSI6IlRlc3QgQWRtaW4gVXNlciIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTk1MjksImV4cCI6MTc1NDg2MDQyOSwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.rZlvur8Ff1YFSPjX-ycOVzh75vsk0-ssIFB0SGVWkq91ewApq19oXvzvZed67jAkWb5g7UtLLLDBvEAtCnD9Gb7I-lmP3QbbuAqDVULFI6Qr_VhCghXMj6la-u3cNkFr5g3roLfAHEUaFZr9c3DSlLndcI2Uc0oJePG4hNMrKqkMtZCJtdlqGFviSiPJzq8EQT8oLvrLz2WvahkRTm1X7QMXyU9hOWDJER4kZycYp1AjU30f464BuRWsy6JWW_uReUD4FQxiUm2HOglvy2_NeEeYgd3NtUrf5W1ezEu_Z8MuP-drlhX1yblR9K-ht1ZikUy4tTObmJC9fOhzPbCmnQ",
         "user": {
-          "id": "af598ea2-b0a3-4236-9790-ba2ea3224b7a",
-          "email": "admin+e2e1754858710981@test.com",
+          "id": "4ac12293-94ee-453e-82b9-a1a659d11465",
+          "email": "admin+e2e1754859528462@test.com",
           "full_name": "Test Admin User",
           "role": "admin",
           "email_verified": true,
-          "email_verified_at": "2025-08-10T20:45:14.255Z",
+          "email_verified_at": "2025-08-10T20:58:49.124Z",
           "phone": null,
           "profile_picture_url": null,
           "bio": null,
@@ -20,25 +20,25 @@
           "gender": null,
           "address": null,
           "social_links": {},
-          "createdAt": "2025-08-10T20:45:13.081Z",
-          "updatedAt": "2025-08-10T20:45:14.259Z",
+          "createdAt": "2025-08-10T20:58:48.560Z",
+          "updatedAt": "2025-08-10T20:58:49.124Z",
           "deletedAt": null
         }
       }
     },
     {
-      "email": "user1+e2e1754858710981@test.com",
+      "email": "user1+e2e1754859528462@test.com",
       "password": "UserPassword123!",
       "full_name": "Test User One",
       "tokens": {
-        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjUzNmMyNmM5LWE3YTktNDI5MS05ZmZmLWU3NjhmMjc5MDEzOSIsImVtYWlsIjoidXNlcjErZTJlMTc1NDg1ODcxMDk4MUB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIE9uZSIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTg3MTcsImV4cCI6MTc1NDg1OTYxNywiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.JvQUbBWWi3GFOY9iDOCyfmZn86pc2DiniJaqGgSXIjQbqoORTfrs8stsMISrnrwgbCYdjDJQxblScowY_sMjyVeMsNIN5CY_HVytQzv6_9OI-eyp8KO-MfwNmj6ufRAZJ4_5tm2ZSIpqnuoesTYGXzu96LhzitlKXpvar-zU6To-3P4fIPuEQ7NcfB7qTVLKO8B74dhnAgQ01DqzBHdvV7EDLjZQ0uFF6Ej7fVZfgKkyVFKdQVzVmfzsa3G_PspPNRKO6qbbv7id8XO4J0UpEm71U9h6Jpz7HIMAjivPdSXrnQOKope8FHul1diSe6CyLyKgRvN31FiYD53iRbJBWw",
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjllMjY2MTY0LTczODAtNGFhMS05N2EzLTI4YTRkNjU2NGRkMiIsImVtYWlsIjoidXNlcjErZTJlMTc1NDg1OTUyODQ2MkB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIE9uZSIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTk1MzEsImV4cCI6MTc1NDg2MDQzMSwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.QY8I5IRB79BS1oGqP9m1WxTuoga5j21JAqtvr_8ZJ5_LwPEoN8NIcq9tnTelsKs__6F_X3tHvvbNXncYpLZBAP1l2VnXxkIwbKASDsieG2BzzYorDblpUftRRumBPhXMhTPsJq3nOafz2yNvneZ1tpG9BvNI5m3LYESVw99vwqAuo6G0fJKF4oBrCgIKfXPaEX8oht4EpKKqeNWXh9eEvIK85e8afjsGweLj0DqbWUbZjVndNY3djugcGIUWqDINW93oITHpfPThBNBbz-tVu2cI8-jB7Zm3w16dFrj8OWJKmgarhwgq4-Y0Oefk6UfEiyxFZorqwcUEDYjg9iBgOA",
         "user": {
-          "id": "536c26c9-a7a9-4291-9fff-e768f2790139",
-          "email": "user1+e2e1754858710981@test.com",
+          "id": "9e266164-7380-4aa1-97a3-28a4d6564dd2",
+          "email": "user1+e2e1754859528462@test.com",
           "full_name": "Test User One",
           "role": "user",
           "email_verified": true,
-          "email_verified_at": "2025-08-10T20:45:16.831Z",
+          "email_verified_at": "2025-08-10T20:58:50.306Z",
           "phone": null,
           "profile_picture_url": null,
           "bio": null,
@@ -46,25 +46,25 @@
           "gender": null,
           "address": null,
           "social_links": {},
-          "createdAt": "2025-08-10T20:45:15.843Z",
-          "updatedAt": "2025-08-10T20:45:16.832Z",
+          "createdAt": "2025-08-10T20:58:49.813Z",
+          "updatedAt": "2025-08-10T20:58:50.306Z",
           "deletedAt": null
         }
       }
     },
     {
-      "email": "user2+e2e1754858710981@test.com",
+      "email": "user2+e2e1754859528462@test.com",
       "password": "UserPassword123!",
       "full_name": "Test User Two",
       "tokens": {
-        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjMwYzBkMDdhLTRlNmMtNDI1OS1iNTI4LTM5Zjg5MTUyNTEzYSIsImVtYWlsIjoidXNlcjIrZTJlMTc1NDg1ODcxMDk4MUB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIFR3byIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTg3MTksImV4cCI6MTc1NDg1OTYxOSwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.HGEQXORSyROO2lMqRji2OAPTcyVVDSTxO9fr4LCzvY0P4DKBhO6C8YRFSBeDxirsufh7sMA18zMOeicpplC2EAh_6YLiH-2FWCjYiOfQpP8fL8hj7QskYOl8IoNN2C70sg8MaUAtAPdbVUFDahAzl5cGu8AX4GREXDkGyF6EK4NKrrSWN-C3rA8_lop6aGIJlyio3rf2djBkRjDAQ9L_fQtbJ9gV1RxDgqxeACO2nkj_2G5OMhbQJ7Dr8TVfy76e3ukcSOfKf1M6-ciAH3Qour6MZr5j7ko9fdLn5V0E3x3V5QvLXFh_yS795s6aF6OUJxU4UPokx20lu4OvMnKRXg",
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjM5NzkxN2Q4LWIzNjYtNDE4Ni1iNWNiLTBmNWVkYzdmMjFhZSIsImVtYWlsIjoidXNlcjIrZTJlMTc1NDg1OTUyODQ2MkB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIFR3byIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTQ4NTk1MzIsImV4cCI6MTc1NDg2MDQzMiwiYXVkIjoiY2x1Yi1tYW5hZ2VtZW50LXN5c3RlbSIsImlzcyI6ImF1dGgtc2VydmljZSJ9.KqBeFYfn1Qsv5ZbTFIjjn65O1dhJNtvKHs32cU5z3E6bQWGSfxGEWjJI8UHjTTLqtghafVi0PLcTNeeDthjEkxPsQomI7WHKx-kWGt5l7kKv7JzPSlICEQkcJE7QLT0uJxBevPhRc7i1ZWeuAn_gtGntCMSfeB7TmifmJaJXwXs_-gQoyhfWnIv71iel12W-sVyhESSD_DyDiWRmmxtwkc1jiseM6FArPeQ8h_TPoqT6P9rIPDed1HMe6roQ4orn_53mHSSDWFEfV0aOjEMNDfKM2vqXAXbRjebJqdr3Mcyfo33kE_l2ZkZSNYPpBKdcp8TCGlhHLE9HgcAhhUFKzg",
         "user": {
-          "id": "30c0d07a-4e6c-4259-b528-39f89152513a",
-          "email": "user2+e2e1754858710981@test.com",
+          "id": "397917d8-b366-4186-b5cb-0f5edc7f21ae",
+          "email": "user2+e2e1754859528462@test.com",
           "full_name": "Test User Two",
           "role": "user",
           "email_verified": true,
-          "email_verified_at": "2025-08-10T20:45:18.581Z",
+          "email_verified_at": "2025-08-10T20:58:51.828Z",
           "phone": null,
           "profile_picture_url": null,
           "bio": null,
@@ -72,25 +72,25 @@
           "gender": null,
           "address": null,
           "social_links": {},
-          "createdAt": "2025-08-10T20:45:17.883Z",
-          "updatedAt": "2025-08-10T20:45:18.581Z",
+          "createdAt": "2025-08-10T20:58:51.329Z",
+          "updatedAt": "2025-08-10T20:58:51.828Z",
           "deletedAt": null
         }
       }
     },
     {
-      "email": "clubmanager+e2e1754858710981@test.com",
+      "email": "clubmanager+e2e1754859528462@test.com",
       "password": "ManagerPassword123!",
       "full_name": "Club Manager User",
       "tokens": {
-        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6ImIzY2JmZjQ3LTdhOTktNDFmYy04OTg0LTUyZDRjMjcxNjc1NyIsImVtYWlsIjoiY2x1Ym1hbmFnZXIrZTJlMTc1NDg1ODcxMDk4MUB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiQ2x1YiBNYW5hZ2VyIFVzZXIiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzU0ODU4NzIwLCJleHAiOjE3NTQ4NTk2MjAsImF1ZCI6ImNsdWItbWFuYWdlbWVudC1zeXN0ZW0iLCJpc3MiOiJhdXRoLXNlcnZpY2UifQ.ybH9sSpSr4XqP2b8hs8Mre2lw9egRNenTxewf82TNcDTSjJ2VLGyhRGByKxUmYW-6uFw0l--ZKD8ZwhchC3on1Hd4CvHkxp1uC6wpwMCR5uBx_zX5qdbrlW4UJHrbOYin12pEQXBHfQ5IwarwMVHeNXh3HyUucd_dqF92NuG8PNPq4acDJ8VtEAUalHTaKSGEqmJpvQ6C0Vhf2y-dzF8ZNxJDGqP_KGRdIaZ1gXqgfZlpS4I2KlI83JxdmG4hCuQUUHLOwfv9xl9Wx6xD80ia9wlbMGjJoQLfU5VoiBNUy12D5e_oRAmVGPxWBsksuD6PN5zHWzfyWw7z5Knvst8QQ",
+        "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGgtc2VydmljZS1rZXktMSJ9.eyJpZCI6IjQ0YzliODJiLWEzMDAtNDI3NC1hOWQ4LTQ1ZmY5OGI5NTNhNyIsImVtYWlsIjoiY2x1Ym1hbmFnZXIrZTJlMTc1NDg1OTUyODQ2MkB0ZXN0LmNvbSIsInJvbGUiOiJ1c2VyIiwiZnVsbF9uYW1lIjoiQ2x1YiBNYW5hZ2VyIFVzZXIiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzU0ODU5NTMzLCJleHAiOjE3NTQ4NjA0MzMsImF1ZCI6ImNsdWItbWFuYWdlbWVudC1zeXN0ZW0iLCJpc3MiOiJhdXRoLXNlcnZpY2UifQ.yTnCEM-MUQ3Wt5plnb6US6gBD5FyESxAEwfMvp8D9FEUoWTFjXX0FNhHh7ldmxYS_wOXPU4v0SQ6kuJyFUc9LYUttOJS_vO9WXH_4u_WXA0W3wTTnWkSU61h5nWE5vN71vJop83t228RuxPG1had1gkgdD3Wfpg7x48AEJ_qDG_k5kyXQ6t4rl6Vnp3O8H36epHzTh-1IGywusZN3S6iedyHTFIKhOMBtyMF-mub6XAklunSUEq0XUyZQVDzHV4CRhkll0gTCI61pIIvRqdrj4zLH3nqm2WANBNG5ik_Qm-aqte5SKLsRmbnxRqi_M3qrZUddjoIwRyLwcqnz8-kbQ",
         "user": {
-          "id": "b3cbff47-7a99-41fc-8984-52d4c2716757",
-          "email": "clubmanager+e2e1754858710981@test.com",
+          "id": "44c9b82b-a300-4274-a9d8-45ff98b953a7",
+          "email": "clubmanager+e2e1754859528462@test.com",
           "full_name": "Club Manager User",
           "role": "user",
           "email_verified": true,
-          "email_verified_at": "2025-08-10T20:45:19.854Z",
+          "email_verified_at": "2025-08-10T20:58:53.254Z",
           "phone": null,
           "profile_picture_url": null,
           "bio": null,
@@ -98,8 +98,8 @@
           "gender": null,
           "address": null,
           "social_links": {},
-          "createdAt": "2025-08-10T20:45:19.387Z",
-          "updatedAt": "2025-08-10T20:45:19.854Z",
+          "createdAt": "2025-08-10T20:58:52.543Z",
+          "updatedAt": "2025-08-10T20:58:53.255Z",
           "deletedAt": null
         }
       }
@@ -107,34 +107,34 @@
   ],
   "clubs": [
     {
-      "name": "E2E Test Tech Club 1754858720377",
+      "name": "E2E Test Tech Club 1754859534589",
       "description": "A technology club for E2E testing",
       "category": "Công nghệ",
       "contact_email": "tech@test.com",
-      "manager_user_id": "af598ea2-b0a3-4236-9790-ba2ea3224b7a",
+      "manager_user_id": "4ac12293-94ee-453e-82b9-a1a659d11465",
       "manager_full_name": "Test Admin User",
-      "manager_email": "admin+e2e1754858710981@test.com",
-      "created_by": "af598ea2-b0a3-4236-9790-ba2ea3224b7a"
+      "manager_email": "admin+e2e1754859528462@test.com",
+      "created_by": "4ac12293-94ee-453e-82b9-a1a659d11465"
     },
     {
-      "name": "E2E Test Sports Club 1754858720377",
+      "name": "E2E Test Sports Club 1754859534589",
       "description": "A sports club for E2E testing",
       "category": "Thể thao",
       "contact_email": "sports@test.com",
-      "manager_user_id": "af598ea2-b0a3-4236-9790-ba2ea3224b7a",
+      "manager_user_id": "4ac12293-94ee-453e-82b9-a1a659d11465",
       "manager_full_name": "Test Admin User",
-      "manager_email": "admin+e2e1754858710981@test.com",
-      "created_by": "af598ea2-b0a3-4236-9790-ba2ea3224b7a"
+      "manager_email": "admin+e2e1754859528462@test.com",
+      "created_by": "4ac12293-94ee-453e-82b9-a1a659d11465"
     },
     {
-      "name": "E2E Test Art Club 1754858720377",
+      "name": "E2E Test Art Club 1754859534589",
       "description": "An art club for E2E testing",
       "category": "Nghệ thuật",
       "contact_email": "art@test.com",
-      "manager_user_id": "af598ea2-b0a3-4236-9790-ba2ea3224b7a",
+      "manager_user_id": "4ac12293-94ee-453e-82b9-a1a659d11465",
       "manager_full_name": "Test Admin User",
-      "manager_email": "admin+e2e1754858710981@test.com",
-      "created_by": "af598ea2-b0a3-4236-9790-ba2ea3224b7a"
+      "manager_email": "admin+e2e1754859528462@test.com",
+      "created_by": "4ac12293-94ee-453e-82b9-a1a659d11465"
     }
   ],
   "events": []
