@@ -64,9 +64,9 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     date: dateStr,
     time: timeStr,
     location: locationText,
-    club: anyEvent.club?.name || "",
+    club: anyEvent.club?.name || anyEvent.club?.id || "",
     fee: anyEvent.participation_fee ?? anyEvent.fee ?? 0,
-    description: anyEvent.description,
+    description: anyEvent.description || anyEvent.short_description || "",
     category: anyEvent.category || "General",
   }
 }
@@ -78,7 +78,6 @@ const DEFAULT_CLUBS = ["All"]
 export default function EventsPage() {
   const router = useRouter()
   const [events, setEvents] = useState<UiEvent[]>([])
-  const [filteredEvents, setFilteredEvents] = useState<UiEvent[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedLocation, setSelectedLocation] = useState("All")
@@ -104,17 +103,18 @@ export default function EventsPage() {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
-  const eventsPerPage = 6
+  const [totalEvents, setTotalEvents] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const eventsPerPage = 3
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (page: number = 1) => {
     setIsLoading(true)
     try {
       const requestId = ++latestRequestIdRef.current
       const effectiveSearch = debouncedSearchTerm && debouncedSearchTerm.length >= 2 ? debouncedSearchTerm : undefined
       const response = await eventService.getEvents({
-        // Fetch a reasonable batch; local filters and pagination will apply
-        page: 1,
-        limit: 100,
+        page: page,
+        limit: eventsPerPage,
         search: effectiveSearch,
         start_from: selectedDate || undefined,
         category: selectedCategory !== 'All' ? selectedCategory : undefined,
@@ -129,20 +129,39 @@ export default function EventsPage() {
           const data = response.data.events || []
           const mapped = data.map(transformEventForUI)
           setEvents(mapped)
+          
+          // Extract pagination info from meta or pagination object
+          const meta = response.data.meta
+          const pagination = response.data.pagination
+          
+          if (meta) {
+            setTotalEvents(meta.total || 0)
+            setTotalPages(meta.total_pages || Math.ceil((meta.total || 0) / eventsPerPage))
+          } else if (pagination) {
+            setTotalEvents(pagination.total_items || 0)
+            setTotalPages(pagination.total_pages || Math.ceil((pagination.total_items || 0) / eventsPerPage))
+          } else {
+            setTotalEvents(0)
+            setTotalPages(0)
+          }
         } else {
           setEvents([])
+          setTotalEvents(0)
+          setTotalPages(0)
         }
       }
     } catch (e) {
       setEvents([])
+      setTotalEvents(0)
+      setTotalPages(0)
     } finally {
       setIsLoading(false)
     }
-  }, [debouncedSearchTerm, selectedDate, selectedCategory, selectedLocation, selectedClub])
+  }, [debouncedSearchTerm, selectedDate, selectedCategory, selectedLocation, selectedClub, eventsPerPage])
 
   useEffect(() => {
-    loadEvents()
-  }, [loadEvents])
+    loadEvents(currentPage)
+  }, [loadEvents, currentPage])
 
   // Load filter facets (categories, locations, clubs)
   useEffect(() => {
@@ -151,7 +170,7 @@ export default function EventsPage() {
         const [catRes, locRes, clubRes] = await Promise.all([
           eventService.getEventCategories(),
           eventService.getEventLocations(),
-          clubService.getClubs({ page: 1, limit: 100 })
+          clubService.getClubs({ page: 1, limit: 3 })
         ])
         if (catRes.success && Array.isArray(catRes.data)) {
           setCategories(["All", ...catRes.data])
@@ -171,35 +190,6 @@ export default function EventsPage() {
     })()
   }, [])
 
-  useEffect(() => {
-    filterEvents()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, selectedCategory, selectedLocation, selectedClub])
-
-  const filterEvents = () => {
-    setIsLoading(true)
-
-    // Simulate API call delay
-    setTimeout(() => {
-      // Server already applied category, location, club and date filters via loadEvents()
-      // Keep only client-side text search here to refine results locally.
-      let filtered = events
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase()
-        filtered = filtered.filter(
-          (event) =>
-            event.title.toLowerCase().includes(q) ||
-            event.description.toLowerCase().includes(q) ||
-            event.club.toLowerCase().includes(q),
-        )
-      }
-
-      setFilteredEvents(filtered)
-      setCurrentPage(1) // Reset to first page when filters change
-      setIsLoading(false)
-    }, 300)
-  }
-
   const clearFilters = () => {
     setSearchTerm("")
     setSelectedCategory("All")
@@ -216,12 +206,6 @@ export default function EventsPage() {
     searchTerm !== "",
   ].filter(Boolean).length
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage)
-  const startIndex = (currentPage - 1) * eventsPerPage
-  const endIndex = startIndex + eventsPerPage
-  const currentEvents = filteredEvents.slice(startIndex, endIndex)
-
   const goToPage = (page: number) => {
     setCurrentPage(page)
   }
@@ -237,6 +221,10 @@ export default function EventsPage() {
       setCurrentPage(currentPage + 1)
     }
   }
+
+  // Calculate display info
+  const startIndex = (currentPage - 1) * eventsPerPage
+  const endIndex = startIndex + events.length
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -345,7 +333,7 @@ export default function EventsPage() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <p className="text-gray-600">
-                  {isLoading ? "Searching..." : `Showing ${startIndex + 1}-${Math.min(endIndex, filteredEvents.length)} of ${filteredEvents.length} events`}
+                  {isLoading ? "Searching..." : `Showing ${startIndex + 1}-${endIndex} of ${totalEvents} events`}
                 </p>
                 {activeFiltersCount > 0 && (
                   <div className="flex items-center gap-2 mt-2">
@@ -383,9 +371,9 @@ export default function EventsPage() {
                   </Card>
                 ))}
               </div>
-            ) : currentEvents.length > 0 ? (
+            ) : events.length > 0 ? (
               <div className="space-y-4" data-testid="events-list">
-                {currentEvents.map((event) => (
+                {events.map((event) => (
                   <Card key={event.event_id} className="hover:shadow-md transition-shadow" data-testid="event-card">
                     <CardContent className="p-6">
                       <div className="flex gap-4">
@@ -471,7 +459,7 @@ export default function EventsPage() {
             )}
 
             {/* Pagination */}
-            {filteredEvents.length > 0 && !isLoading && totalPages > 1 && (
+            {totalEvents > 0 && !isLoading && totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-8">
                 <Button
                   variant="outline"
@@ -485,17 +473,62 @@ export default function EventsPage() {
                 </Button>
                 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => goToPage(page)}
-                      className="w-8 h-8 p-0"
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {(() => {
+                    const maxVisible = 5;
+                    const pages = [];
+                    
+                    if (totalPages <= maxVisible) {
+                      // Hiển thị tất cả trang nếu tổng số trang <= maxVisible
+                      for (let i = 1; i <= totalPages; i++) {
+                        pages.push(i);
+                      }
+                    } else {
+                      // Logic hiển thị 5 trang với ellipsis
+                      if (currentPage <= 3) {
+                        // Trang đầu: 1, 2, 3, 4, 5, ..., totalPages
+                        for (let i = 1; i <= 5; i++) {
+                          pages.push(i);
+                        }
+                        if (totalPages > 5) {
+                          pages.push('...');
+                          pages.push(totalPages);
+                        }
+                      } else if (currentPage >= totalPages - 2) {
+                        // Trang cuối: 1, ..., totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages
+                        pages.push(1);
+                        pages.push('...');
+                        for (let i = totalPages - 4; i <= totalPages; i++) {
+                          pages.push(i);
+                        }
+                      } else {
+                        // Trang giữa: 1, ..., currentPage-1, currentPage, currentPage+1, ..., totalPages
+                        pages.push(1);
+                        pages.push('...');
+                        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                          pages.push(i);
+                        }
+                        pages.push('...');
+                        pages.push(totalPages);
+                      }
+                    }
+                    
+                    return pages.map((page, index) => (
+                      <div key={index}>
+                        {page === '...' ? (
+                          <span className="px-2 text-gray-500">...</span>
+                        ) : (
+                          <Button
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => goToPage(page as number)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        )}
+                      </div>
+                    ));
+                  })()}
                 </div>
                 
                 <Button

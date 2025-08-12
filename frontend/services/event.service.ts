@@ -5,23 +5,78 @@ import config from '@/config';
  * Event interface
  */
 export interface Event {
-  id: string;
+  id?: string;
+  _id?: string;
   title: string;
   description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
+  short_description?: string;
+  startDate?: string;
+  start_date?: string;
+  endDate?: string;
+  end_date?: string;
+  location: string | {
+    location_type: string;
+    address?: string;
+    room?: string;
+    platform?: string;
+    meeting_url?: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
+  detailed_location?: string;
   maxParticipants?: number;
-  currentParticipants: number;
+  max_participants?: number;
+  currentParticipants?: number;
+  current_participants?: number;
+  participants_count?: number;
+  attended_count?: number;
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
-  isPublic: boolean;
-  clubId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  visibility?: 'public' | 'private' | 'club_members';
+  clubId?: string;
+  club_id?: string;
+  createdBy?: string;
+  created_by?: string;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
+  category?: string;
+  participation_fee?: number;
+  currency?: string;
+  registration_deadline?: string;
+  requirements?: string[];
+  tags?: string[];
+  images?: string[];
+  agenda?: Array<{
+    time: string;
+    activity: string;
+  }>;
+  contact_info?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+  };
+  social_links?: {
+    facebook?: string;
+    instagram?: string;
+    discord?: string;
+  };
+  organizers?: Array<{
+    user_id: string;
+    role: string;
+    joined_at: string;
+  }>;
+  statistics?: {
+    total_registrations: number;
+    total_interested: number;
+    total_attended: number;
+  };
+  user_status?: any;
   club?: {
     id: string;
-    name: string;
+    name?: string;
     logo?: string;
   };
 }
@@ -124,10 +179,22 @@ export interface EventListQuery {
  */
 export interface EventListResponse {
   events: Event[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    total_pages: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+  pagination?: {
+    current_page: number;
+    total_pages: number;
+    total_items: number;
+    items_per_page: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
 }
 
 /**

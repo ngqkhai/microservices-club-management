@@ -40,7 +40,9 @@ import {
   ImageIcon,
   Tag,
   CalendarDays,
-  QrCode
+  QrCode,
+  Facebook,
+  Instagram
 } from "lucide-react"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
@@ -61,20 +63,26 @@ type UiEvent = {
   category?: string
   event_type?: string
   club: { id: string; name: string; logo_url?: string }
-  organizer: { name: string; role?: string; email?: string; phone?: string; avatar_url?: string }
+  organizers: Array<{ name: string; role?: string; email?: string; phone?: string; avatar_url?: string }>
   fee: number
   max_participants: number
   current_participants: number
   registration_deadline?: string
   status?: string
   tags: string[]
-  image_url?: string
+  images: string[]
+  event_image_url?: string
   gallery: string[]
   attachments?: Array<{ id?: string; name: string; type: string; size?: string; url?: string; description?: string }>
   requirements?: string[]
   schedule: Array<{ time: string; activity: string }>
   contact_info?: { email?: string; phone?: string; website?: string }
   social_links?: { facebook?: string; instagram?: string; discord?: string }
+  statistics?: {
+    total_registrations: number
+    total_interested: number
+    total_attended: number
+  }
 }
 
 function toUiEvent(api: any): UiEvent {
@@ -89,20 +97,24 @@ function toUiEvent(api: any): UiEvent {
   if (typeof loc === "string" && loc.trim()) {
     locationText = loc
   } else if (loc && typeof loc === "object") {
-    const parts = [loc.address, loc.room, api.detailed_location].filter(Boolean)
-    locationText = parts.length ? parts.join(" - ") : (loc.virtual_link ? "Online" : "TBA")
+    const locationType = loc.location_type || loc.type
+    if (locationType === "online") {
+      locationText = loc.platform ? `${loc.platform} (Online)` : "Online"
+    } else {
+      const parts = [loc.address, loc.room, api.detailed_location].filter(Boolean)
+      locationText = parts.length ? parts.join(" - ") : "TBA"
+    }
   } else if (api.detailed_location) {
     locationText = api.detailed_location
   }
 
-  const club = api.club || api.club_id || {}
+  const club = api.club || {}
   const organizers = api.organizers || []
-  const organizer = organizers[0] || {}
 
   return {
     event_id: api.id || api._id,
     title: api.title,
-    description: api.description || "",
+    description: api.description || api.short_description || "",
     date: startDt ? startDt.toISOString().slice(0, 10) : "",
     start_time: startDt ? startDt.toISOString().slice(11, 16) : "",
     end_time: endDt ? endDt.toISOString().slice(11, 16) : undefined,
@@ -110,21 +122,26 @@ function toUiEvent(api: any): UiEvent {
     detailed_location: api.detailed_location,
     category: api.category,
     event_type: api.event_type,
-    club: { id: club._id || club.id || "", name: club.name || "", logo_url: club.logo_url },
-    organizer: {
-      name: organizer.name || "",
-      role: organizer.role,
+    club: { 
+      id: club.id || api.club_id || "", 
+      name: club.name || "", 
+      logo_url: club.logo_url || club.logo || ""
+    },
+    organizers: organizers.map((org: any) => ({
+      name: org.name || "Ban tổ chức",
+      role: org.role,
       email: api.contact_info?.email,
       phone: api.contact_info?.phone,
-      avatar_url: organizer.avatar_url,
-    },
+      avatar_url: org.avatar_url,
+    })),
     fee: api.participation_fee ?? api.fee ?? 0,
     max_participants: api.max_participants ?? api.max_attendees ?? 0,
-    current_participants: api.current_participants ?? 0,
+    current_participants: api.current_participants ?? api.participants_count ?? api.statistics?.total_registrations ?? 0,
     registration_deadline: api.registration_deadline,
     status: api.status,
     tags: Array.isArray(api.tags) ? api.tags : [],
-    image_url: Array.isArray(api.images) && api.images.length ? api.images[0] : undefined,
+    images: Array.isArray(api.images) ? api.images : [],
+    event_image_url: api.event_image_url || api.images[0],
     gallery: Array.isArray(api.images) ? api.images : [],
     attachments: Array.isArray(api.attachments) ? api.attachments : [],
     requirements: Array.isArray(api.requirements) ? api.requirements : [],
@@ -133,6 +150,7 @@ function toUiEvent(api: any): UiEvent {
       : [],
     contact_info: api.contact_info,
     social_links: api.social_links,
+    statistics: api.statistics,
   }
 }
 
@@ -192,31 +210,55 @@ export default function EventDetailPage() {
     }
   }, [eventId])
 
-  // Load related events by same club, fallback to same category
+  // Load related events: 2 by same category + 3 by same club
   useEffect(() => {
     let mounted = true
     ;(async () => {
       if (!event) return
       setIsRelatedLoading(true)
       try {
-        // Prefer related by same club
-        let items: any[] = []
+        const relatedEvents: any[] = []
+        
+        // Get 2 events by same category
+        if (event.category) {
+          const categoryRes = await eventService.getEvents({ 
+            page: 1, 
+            limit: 5, 
+            category: event.category, 
+            filter: 'all' 
+          })
+          if (categoryRes.success && categoryRes.data?.events) {
+            const categoryEvents = categoryRes.data.events
+              .map(toUiEvent)
+              .filter((e) => e.event_id !== event.event_id)
+              .slice(0, 2)
+            relatedEvents.push(...categoryEvents)
+          }
+        }
+
+        // Get 3 events by same club
         if (event.club?.id) {
-          const res = await eventService.getEvents({ page: 1, limit: 10, club_id: event.club.id, filter: 'all' })
-          if (res.success && res.data?.events) items = res.data.events
+          const clubRes = await eventService.getEvents({ 
+            page: 1, 
+            limit: 5, 
+            club_id: event.club.id, 
+            filter: 'all' 
+          })
+          if (clubRes.success && clubRes.data?.events) {
+            const clubEvents = clubRes.data.events
+              .map(toUiEvent)
+              .filter((e) => e.event_id !== event.event_id)
+              .slice(0, 3)
+            relatedEvents.push(...clubEvents)
+          }
         }
 
-        // Fallback to same category if none found
-        if ((!items || items.length === 0) && event.category) {
-          const res2 = await eventService.getEvents({ page: 1, limit: 10, category: event.category, filter: 'all' })
-          if (res2.success && res2.data?.events) items = res2.data.events
-        }
+        // Remove duplicates and limit to 5 total
+        const uniqueEvents = relatedEvents.filter((event, index, self) => 
+          index === self.findIndex(e => e.event_id === event.event_id)
+        ).slice(0, 5)
 
-        const mapped = (items || [])
-          .map(toUiEvent)
-          .filter((e) => e.event_id !== event.event_id)
-          .slice(0, 5)
-        if (mounted) setRelatedEvents(mapped)
+        if (mounted) setRelatedEvents(uniqueEvents)
       } catch (_) {
         if (mounted) setRelatedEvents([])
       } finally {
@@ -236,6 +278,24 @@ export default function EventDetailPage() {
         variant: "destructive",
       })
       router.push("/login")
+      return
+    }
+
+    if (isRegistrationExpired) {
+      toast({
+        title: "Không thể đăng ký",
+        description: "Thời gian đăng ký đã hết hạn.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (isEventFull) {
+      toast({
+        title: "Không thể đăng ký",
+        description: "Sự kiện đã đầy.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -353,9 +413,16 @@ export default function EventDetailPage() {
     }
   }
 
-  const isEventFull = event?.current_participants >= event?.max_participants
-  const spotsLeft = event ? event.max_participants - event.current_participants : 0
-  const registrationProgress = event ? (event.current_participants / event.max_participants) * 100 : 0
+  const totalRegistrations = event?.statistics?.total_registrations ?? event?.current_participants ?? 0
+  const isEventFull = totalRegistrations >= (event?.max_participants ?? 0)
+  const spotsLeft = event ? (event.max_participants ?? 0) - totalRegistrations : 0
+  const registrationProgress = event ? (totalRegistrations / (event.max_participants ?? 1)) * 100 : 0
+  
+  // Check if registration deadline has passed
+  const now = new Date()
+  const registrationDeadline = event?.registration_deadline ? new Date(event.registration_deadline) : null
+  const isRegistrationExpired = registrationDeadline ? now > registrationDeadline : false
+  const canRegister = !isEventFull && !isRegistrationExpired && !isRegistered
 
   if (isLoading) {
     return (
@@ -422,25 +489,32 @@ export default function EventDetailPage() {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
           {/* Event Image */}
           <div className="relative h-64 md:h-80">
-            <img src={event.image_url || "/placeholder.svg"} alt={event.title} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+            <img src={event.event_image_url || "/placeholder.svg"} alt={event.title} className="w-full h-full object-cover" />
+            {/* Enhanced overlay for better text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
             <div className="absolute bottom-6 left-6 right-6">
               <div className="flex flex-wrap gap-2 mb-4">
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                <Badge variant="secondary" className="bg-white/25 text-white border-white/40 backdrop-blur-sm shadow-lg">
                   <Tag className="h-3 w-3 mr-1" />
                   {event.category}
                 </Badge>
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                  {event.event_type}
-                </Badge>
+                {event.event_type && (
+                  <Badge variant="secondary" className="bg-white/25 text-white border-white/40 backdrop-blur-sm shadow-lg">
+                    {event.event_type}
+                  </Badge>
+                )}
                 {event.tags.slice(0, 3).map((tag: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="bg-white/20 text-white border-white/30">
+                  <Badge key={index} variant="secondary" className="bg-white/25 text-white border-white/40 backdrop-blur-sm shadow-lg">
                     {tag}
                   </Badge>
                 ))}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{event.title}</h1>
-              <p className="text-white/90 text-lg">Được tổ chức bởi {event.club.name}</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                {event.title}
+              </h1>
+              <p className="text-white text-lg drop-shadow-md">
+                Được tổ chức bởi {event.club.name || `Club ${event.club.id}`}
+              </p>
             </div>
           </div>
 
@@ -449,25 +523,28 @@ export default function EventDetailPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={event.club.logo_url || "/placeholder.svg"} alt={event.club.name} />
-                  <AvatarFallback>{event.club.name[0]}</AvatarFallback>
+                  <AvatarImage src={event.club.logo_url || "/placeholder.svg"} alt={event.club.name || `Club ${event.club.id}`} />
+                  <AvatarFallback>{(event.club.name || event.club.id)[0]}</AvatarFallback>
                 </Avatar>
                 <div>
                   <Link
                     href={`/clubs/${event.club.id}`}
                     className="font-medium text-blue-600 hover:text-blue-700 flex items-center"
                   >
-                    {event.club.name}
+                    {event.club.name || `Club ${event.club.id}`}
                     <ExternalLink className="h-4 w-4 ml-1" />
                   </Link>
-                  <p className="text-sm text-gray-500">Tổ chức bởi {event.organizer.name}</p>
+                  <p className="text-sm text-gray-500">
+                    Tổ chức bởi {event.organizers.slice(0, 3).map((org: any) => org.name).join(", ")}
+                    {event.organizers.length > 3 && ` và ${event.organizers.length - 3} người khác`}
+                  </p>
                 </div>
               </div>
 
               <div className="flex space-x-3 w-full sm:w-auto">
                 <Button
                   onClick={handleRegister}
-                  disabled={isEventFull || isRegistered}
+                  disabled={!canRegister}
                   className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700"
                 >
                   {isRegistered ? (
@@ -479,6 +556,11 @@ export default function EventDetailPage() {
                     <>
                       <AlertCircle className="h-4 w-4 mr-2" />
                       Đã đầy
+                    </>
+                  ) : isRegistrationExpired ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Hết hạn đăng ký
                     </>
                   ) : (
                     <>
@@ -557,7 +639,10 @@ export default function EventDetailPage() {
                 {event.requirements && event.requirements.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Yêu cầu tham gia</CardTitle>
+                      <CardTitle className="flex items-center">
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        Yêu cầu tham gia
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-2">
@@ -573,60 +658,84 @@ export default function EventDetailPage() {
                 )}
 
                 {/* Contact Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Thông tin liên hệ</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-3">
-                        <User className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium">{event.organizer.name}</p>
-                          <p className="text-sm text-gray-500">{event.organizer.role}</p>
-                        </div>
-                      </div>
+                {(event.contact_info?.email || event.contact_info?.phone || event.contact_info?.website) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <User className="h-5 w-5 mr-2" />
+                        Thông tin liên hệ
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Organizers info - display up to 3 organizers */}
+                        {event.organizers.slice(0, 3).map((organizer: any, index: number) => (
+                          <div key={index} className="flex items-center space-x-3">
+                            <User className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="font-medium">{organizer.name}</p>
+                              <p className="text-sm text-gray-500">{organizer.role}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {event.organizers.length > 3 && (
+                          <div className="flex items-center space-x-3">
+                            <User className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="font-medium text-gray-500">
+                                và {event.organizers.length - 3} người tổ chức khác
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
-                      <div className="flex items-center space-x-3">
-                        <Mail className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium">Email</p>
-                          <a
-                            href={`mailto:${event.contact_info.email}`}
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            {event.contact_info.email}
-                          </a>
-                        </div>
-                      </div>
+                        {event.contact_info?.email && (
+                          <div className="flex items-center space-x-3">
+                            <Mail className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="font-medium">Email</p>
+                              <a
+                                href={`mailto:${event.contact_info.email}`}
+                                className="text-sm text-blue-600 hover:underline"
+                              >
+                                {event.contact_info.email}
+                              </a>
+                            </div>
+                          </div>
+                        )}
 
-                      <div className="flex items-center space-x-3">
-                        <Phone className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium">Điện thoại</p>
-                          <a href={`tel:${event.contact_info.phone}`} className="text-sm text-blue-600 hover:underline">
-                            {event.contact_info.phone}
-                          </a>
-                        </div>
-                      </div>
+                        {event.contact_info?.phone && (
+                          <div className="flex items-center space-x-3">
+                            <Phone className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="font-medium">Điện thoại</p>
+                              <a href={`tel:${event.contact_info.phone}`} className="text-sm text-blue-600 hover:underline">
+                                {event.contact_info.phone}
+                              </a>
+                            </div>
+                          </div>
+                        )}
 
-                      <div className="flex items-center space-x-3">
-                        <Globe className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium">Website</p>
-                          <a
-                            href={event.contact_info.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            {event.contact_info.website}
-                          </a>
-                        </div>
+                        {event.contact_info?.website && (
+                          <div className="flex items-center space-x-3">
+                            <Globe className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="font-medium">Website</p>
+                              <a
+                                href={event.contact_info.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline"
+                              >
+                                {event.contact_info.website}
+                              </a>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="schedule">
@@ -780,7 +889,7 @@ export default function EventDetailPage() {
                   <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="font-medium">{formatDate(event.date)}</p>
-                    <div className="text-sm text-gray-500 space-y-1">
+                    {/* <div className="text-sm text-gray-500 space-y-1">
                       <p className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
                         Bắt đầu: {formatTime(event.start_time)}
@@ -789,7 +898,7 @@ export default function EventDetailPage() {
                         <Clock className="h-3 w-3 mr-1" />
                         Kết thúc: {event.end_time ? formatTime(event.end_time) : "Chưa xác định"}
                       </p>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
 
@@ -818,7 +927,7 @@ export default function EventDetailPage() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Đăng ký</span>
                     <span className="text-sm text-gray-500">
-                      {event.current_participants}/{event.max_participants}
+                      {totalRegistrations}/{event.max_participants}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -828,19 +937,36 @@ export default function EventDetailPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {isEventFull ? "Sự kiện đã đầy" : `Còn ${spotsLeft} chỗ trống`}
+                    {isEventFull ? "Sự kiện đã đầy" : isRegistrationExpired ? "Đã hết hạn đăng ký" : `Còn ${spotsLeft} chỗ trống`}
                   </p>
                 </div>
 
                 {/* Registration Deadline */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className={`rounded-lg p-3 border ${
+                  isRegistrationExpired 
+                    ? "bg-red-50 border-red-200" 
+                    : "bg-yellow-50 border-yellow-200"
+                }`}>
                   <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-yellow-600 mr-2" />
+                    <Clock className={`h-4 w-4 mr-2 ${
+                      isRegistrationExpired ? "text-red-600" : "text-yellow-600"
+                    }`} />
                     <div>
-                      <p className="text-sm font-medium text-yellow-800">Hạn đăng ký</p>
-                      <p className="text-sm text-yellow-700">
+                      <p className={`text-sm font-medium ${
+                        isRegistrationExpired ? "text-red-800" : "text-yellow-800"
+                      }`}>
+                        {isRegistrationExpired ? "Đã hết hạn đăng ký" : "Hạn đăng ký"}
+                      </p>
+                      <p className={`text-sm ${
+                        isRegistrationExpired ? "text-red-700" : "text-yellow-700"
+                      }`}>
                         {new Date(event.registration_deadline).toLocaleDateString("vi-VN")}
                       </p>
+                      {isRegistrationExpired && (
+                        <p className="text-xs text-red-600 mt-1">
+                          Không thể đăng ký sau thời gian này
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -860,11 +986,14 @@ export default function EventDetailPage() {
                         href={event.social_links.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+                        className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
                       >
-                        <span>📘</span>
-                        <span>Facebook</span>
-                        <ExternalLink className="h-3 w-3" />
+                        <Facebook className="h-4 w-4" />
+                        <span className="text-sm">
+                          {event.social_links.facebook.includes('facebook.com/') 
+                            ? event.social_links.facebook.split('facebook.com/')[1]?.split('/')[0] || event.social_links.facebook
+                            : event.social_links.facebook}
+                        </span>
                       </a>
                     )}
                     {event.social_links.instagram && (
@@ -872,11 +1001,14 @@ export default function EventDetailPage() {
                         href={event.social_links.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center space-x-2 text-pink-600 hover:text-pink-700"
+                        className="flex items-center space-x-2 text-pink-600 hover:text-pink-800"
                       >
-                        <span>📷</span>
-                        <span>Instagram</span>
-                        <ExternalLink className="h-3 w-3" />
+                        <Instagram className="h-4 w-4" />
+                        <span className="text-sm">
+                          {event.social_links.instagram.includes('instagram.com/') 
+                            ? event.social_links.instagram.split('instagram.com/')[1]?.split('/')[0] || event.social_links.instagram
+                            : event.social_links.instagram}
+                        </span>
                       </a>
                     )}
                     {event.social_links.discord && (
@@ -887,8 +1019,11 @@ export default function EventDetailPage() {
                         className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700"
                       >
                         <span>💬</span>
-                        <span>Discord</span>
-                        <ExternalLink className="h-3 w-3" />
+                        <span className="text-sm">
+                          {event.social_links.discord.includes('discord.gg/') 
+                            ? event.social_links.discord.split('discord.gg/')[1] || event.social_links.discord
+                            : event.social_links.discord}
+                        </span>
                       </a>
                     )}
                   </div>
@@ -915,7 +1050,7 @@ export default function EventDetailPage() {
                   <div className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                           <h4 className="font-medium text-sm truncate">{re.title}</h4>
                           <p className="text-xs text-gray-500 truncate">
-                            {re.club?.name || 'Câu lạc bộ'} • {re.date}
+                            {re.club?.name || `Club ${re.club?.id}` || 'Câu lạc bộ'} • {re.date}
                           </p>
                   </div>
                       </Link>
