@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,10 @@ import {
   FileText,
   Save,
   X,
+  Upload,
+  Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { eventService, CreateEventRequest } from "@/services/event.service"
@@ -41,12 +45,13 @@ export default function CreateEventPage() {
   const clubId = params.club_id as string
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [categories, setCategories] = useState<string[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     short_description: "",
     category: "",
-    event_type: "",
     start_date: "",
     start_time: "",
     end_date: "",
@@ -61,6 +66,12 @@ export default function CreateEventPage() {
     is_public: true,
     allow_registration: true,
     registration_deadline: "",
+    status: "draft" as 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled',
+    visibility: "public" as 'public' | 'club_members',
+    organizers: [{ name: "", role: "" }] as Array<{ name: string; role: string }>,
+    logo: null as File | null,
+    images: [] as File[],
+    attachments: [] as File[],
   })
 
   const handleInputChange = (field: string, value: any) => {
@@ -79,10 +90,26 @@ export default function CreateEventPage() {
     }))
   }
 
+  const handleOrganizerChange = (index: number, field: 'name' | 'role', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      organizers: prev.organizers.map((organizer, i) =>
+        i === index ? { ...organizer, [field]: value } : organizer
+      ),
+    }))
+  }
+
   const addArrayItem = (field: 'requirements' | 'tags') => {
     setFormData((prev) => ({
       ...prev,
       [field]: [...prev[field], ""],
+    }))
+  }
+
+  const addOrganizer = () => {
+    setFormData((prev) => ({
+      ...prev,
+      organizers: [...prev.organizers, { name: "", role: "" }],
     }))
   }
 
@@ -92,6 +119,71 @@ export default function CreateEventPage() {
       [field]: prev[field].filter((_: string, i: number) => i !== index),
     }))
   }
+
+  const removeOrganizer = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      organizers: prev.organizers.filter((_, i) => i !== index),
+    }))
+  }
+
+  const handleFileUpload = (field: 'images' | 'attachments', files: FileList | null) => {
+    if (!files) return
+
+    const fileArray = Array.from(files)
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...prev[field], ...fileArray],
+    }))
+  }
+
+  const handleLogoUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    
+    const file = files[0]
+    setFormData((prev) => ({
+      ...prev,
+      logo: file,
+    }))
+  }
+
+  const removeLogo = () => {
+    setFormData((prev) => ({
+      ...prev,
+      logo: null,
+    }))
+  }
+
+  const removeFile = (field: 'images' | 'attachments', index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].filter((_: File, i: number) => i !== index),
+    }))
+  }
+
+  // Load categories from API
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setIsLoadingCategories(true)
+        const response = await eventService.getEventCategories()
+        
+        if (response.success && Array.isArray(response.data)) {
+          setCategories(response.data)
+        } else {
+          console.error('Failed to load categories:', response.message)
+          setCategories([])
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error)
+        setCategories([])
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,7 +238,6 @@ export default function CreateEventPage() {
         description: formData.description.trim(),
         short_description: formData.short_description?.trim() || undefined,
         category: formData.category || undefined,
-        event_type: formData.event_type || undefined,
         start_date: formData.start_date,
         start_time: formData.start_time || undefined,
         end_date: formData.end_date || undefined,
@@ -159,9 +250,12 @@ export default function CreateEventPage() {
         registration_deadline: formData.registration_deadline || undefined,
         requirements: formData.requirements.filter(req => req.trim() !== ""),
         tags: formData.tags.filter(tag => tag.trim() !== ""),
-        visibility: formData.is_public ? 'public' : 'club_members',
+        visibility: formData.visibility as 'public' | 'club_members',
         allow_registration: formData.allow_registration,
+        status: formData.status as 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled',
+        organizers: formData.organizers.filter(org => org.name.trim() !== "" && org.role.trim() !== ""),
         club_id: clubId,
+        // Note: Logo and files will be handled separately via file upload endpoints
       }
 
       console.log('Creating event with data:', eventData)
@@ -206,27 +300,19 @@ export default function CreateEventPage() {
     }
   }
 
-  const categories = [
-    "Workshop",
-    "Seminar",
-    "Competition",
-    "Social",
-    "Fundraiser",
-    "Meeting",
-    "Other",
+
+
+  const statusOptions = [
+    { value: "draft", label: "Bản nháp" },
+    { value: "published", label: "Đã xuất bản" },
+    { value: "ongoing", label: "Đang diễn ra" },
+    { value: "completed", label: "Đã hoàn thành" },
+    { value: "cancelled", label: "Đã hủy" },
   ]
 
-  const eventTypes = [
-    "Workshop",
-    "Seminar",
-    "Conference",
-    "Concert",
-    "Exhibition",
-    "Competition",
-    "Tournament",
-    "Meeting",
-    "Social Event",
-    "Other",
+  const visibilityOptions = [
+    { value: "public", label: "Công khai" },
+    { value: "club_members", label: "Thành viên câu lạc bộ" },
   ]
 
   return (
@@ -317,17 +403,54 @@ export default function CreateEventPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="category">Danh mục</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn danh mục" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
+              <div>
+                <Label htmlFor="category">Danh mục</Label>
+                <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)} disabled={isLoadingCategories}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingCategories ? "Đang tải..." : "Chọn danh mục"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingCategories ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        Đang tải danh mục...
+                      </div>
+                    ) : categories.length > 0 ? (
+                      categories.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        Không có danh mục
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status & Visibility */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Eye className="h-5 w-5 mr-2" />
+                Trạng thái và hiển thị
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Trạng thái</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -335,15 +458,15 @@ export default function CreateEventPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="event_type">Loại sự kiện</Label>
-                  <Select value={formData.event_type} onValueChange={(value) => handleInputChange("event_type", value)}>
+                  <Label htmlFor="visibility">Hiển thị</Label>
+                  <Select value={formData.visibility} onValueChange={(value) => handleInputChange("visibility", value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn loại sự kiện" />
+                      <SelectValue placeholder="Chọn mức độ hiển thị" />
                     </SelectTrigger>
                     <SelectContent>
-                      {eventTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                      {visibilityOptions.map((visibility) => (
+                        <SelectItem key={visibility.value} value={visibility.value}>
+                          {visibility.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -495,16 +618,213 @@ export default function CreateEventPage() {
                   />
                   <Label htmlFor="allow_registration">Cho phép đăng ký tham gia</Label>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="is_public"
-                    checked={formData.is_public}
-                    onCheckedChange={(checked) => handleInputChange("is_public", checked)}
-                  />
-                  <Label htmlFor="is_public">Sự kiện công khai</Label>
+          {/* Organizers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Ban tổ chức
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Ban tổ chức sự kiện</Label>
+                <div className="space-y-2">
+                  {formData.organizers.map((organizer, index) => (
+                    <div key={index} className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={organizer.name}
+                        onChange={(e) => handleOrganizerChange(index, "name", e.target.value)}
+                        placeholder="Tên ban tổ chức"
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          value={organizer.role}
+                          onChange={(e) => handleOrganizerChange(index, "role", e.target.value)}
+                          placeholder="Vai trò"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeOrganizer(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addOrganizer}
+                  >
+                    + Thêm ban tổ chức
+                  </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Event Logo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ImageIcon className="h-5 w-5 mr-2" />
+                Logo sự kiện
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="logo">Tải lên logo sự kiện</Label>
+                <div className="mt-2">
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleLogoUpload(e.target.files)}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Logo sẽ được hiển thị như hình ảnh chính của sự kiện (JPG, PNG, GIF)
+                  </p>
+                </div>
+              </div>
+
+              {formData.logo && (
+                <div className="space-y-2">
+                  <Label>Logo đã chọn:</Label>
+                  <div className="relative inline-block">
+                    <img
+                      src={URL.createObjectURL(formData.logo)}
+                      alt="Event logo preview"
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity"
+                      onClick={removeLogo}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Images */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ImageIcon className="h-5 w-5 mr-2" />
+                Hình ảnh các sự kiện trước
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="images">Tải lên hình ảnh</Label>
+                <div className="mt-2">
+                  <Input
+                    id="images"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload("images", e.target.files)}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Chọn nhiều hình ảnh (JPG, PNG, GIF)
+                  </p>
+                </div>
+              </div>
+
+              {formData.images.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Hình ảnh đã chọn:</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {formData.images.map((file, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-24 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeFile("images", index)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Attachments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="h-5 w-5 mr-2" />
+                Tài liệu đính kèm
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="attachments">Tải lên tài liệu</Label>
+                <div className="mt-2">
+                  <Input
+                    id="attachments"
+                    type="file"
+                    multiple
+                    onChange={(e) => handleFileUpload("attachments", e.target.files)}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Chọn nhiều tài liệu (PDF, DOC, DOCX, XLS, XLSX)
+                  </p>
+                </div>
+              </div>
+
+              {formData.attachments.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Tài liệu đã chọn:</Label>
+                  <div className="space-y-2">
+                    {formData.attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 border rounded">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">{file.name}</span>
+                          <span className="text-xs text-gray-500">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeFile("attachments", index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

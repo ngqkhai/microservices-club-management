@@ -70,12 +70,20 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<any>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [editForm, setEditForm] = useState<any>({})
+  const [editForm, setEditForm] = useState<any>({
+    name: '',
+    phone: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
   const [eventParticipation, setEventParticipation] = useState<any[]>([])
   const [joinedClubs, setJoinedClubs] = useState<any[]>([])
   const [applications, setApplications] = useState<any[]>([])
   const [favoriteEvents, setFavoriteEvents] = useState<any[]>([])
   const [pageLoading, setPageLoading] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isPageLoading, setIsPageLoading] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -88,6 +96,9 @@ export default function ProfilePage() {
       router.push("/login")
       return
     }
+
+    // Set page loading to false once user data is loaded
+    setIsPageLoading(false)
 
     // Initialize profile data when user is loaded
     setProfileData({
@@ -105,6 +116,15 @@ export default function ProfilePage() {
         events_participated: 0,
         upcoming_rsvps: 0
       }
+    })
+
+    // Initialize editForm with user data
+    setEditForm({
+      name: user.full_name || '',
+      phone: user.phone || '',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
     })
 
     // Load joined clubs and my events
@@ -156,29 +176,19 @@ export default function ProfilePage() {
           })
           setFavoriteEvents(favItems)
         }
-      } catch {
-        // noop
-      }
-    })()
-  }, [user, isInitialized, router])
+              } catch {
+          // noop
+        } finally {
+          // Đảm bảo page loading được set thành false sau khi load xong
+          setIsPageLoading(false)
+        }
+      })()
+    }, [user, isInitialized, router])
 
-  // Show loading spinner while auth state is being initialized
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    setPageLoading(true)
     
     const updateData: Partial<any> = {}
     
@@ -195,23 +205,57 @@ export default function ProfilePage() {
     }
     
     if (Object.keys(updateData).length > 0) {
+      setIsSavingProfile(true)
+      
+      // Optimistic update - cập nhật UI ngay lập tức
+      const originalUserData = { ...userData }
+      setUserData((prev: any) => ({ ...prev, ...updateData }))
+      
+      // Hiển thị toast thành công ngay lập tức
+      toast({
+        title: "Đang cập nhật...",
+        description: "Thông tin của bạn đang được cập nhật.",
+      })
+      
+      // Gọi API trong background
       try {
         const success = await updateProfile(updateData)
         if (success) {
-          setUserData((prev: any) => ({ ...prev, ...updateData }))
+          // Cập nhật user data với dữ liệu mới từ store
+          const updatedUser = useAuthStore.getState().user
+          if (updatedUser) {
+            setUserData((prev: any) => ({ ...prev, ...updatedUser }))
+          }
+          // Reset password fields after successful update
+          setEditForm((prev: any) => ({
+            ...prev,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }))
           toast({
             title: "Cập nhật thành công",
             description: "Thông tin của bạn đã được cập nhật.",
           })
+        } else {
+          // Rollback nếu thất bại
+          setUserData(originalUserData)
+          toast({
+            title: "Lỗi",
+            description: "Không thể cập nhật thông tin.",
+            variant: "destructive",
+          })
         }
-        setPageLoading(false)
-      } catch (error) {
-        setPageLoading(false)
+      } catch (error: any) {
+        // Rollback nếu có lỗi
+        setUserData(originalUserData)
         toast({
           title: "Lỗi",
-          description: "Không thể cập nhật thông tin.",
+          description: error.message || "Không thể cập nhật thông tin.",
           variant: "destructive",
         })
+      } finally {
+        setIsSavingProfile(false)
       }
     }
 
@@ -222,21 +266,39 @@ export default function ProfilePage() {
       editForm.newPassword === editForm.confirmPassword
     ) {
       try {
-        // Call password change API here
-        toast({
-          title: "Mật khẩu đã được thay đổi",
-          description: "Mật khẩu của bạn đã được cập nhật thành công.",
+        // Sử dụng authService.changePassword
+        const passwordResponse = await authService.changePassword({
+          currentPassword: editForm.currentPassword,
+          newPassword: editForm.newPassword
         })
-      } catch (error) {
+        
+        if (passwordResponse.success) {
+          toast({
+            title: "Mật khẩu đã được thay đổi",
+            description: "Mật khẩu của bạn đã được cập nhật thành công.",
+          })
+          // Reset password fields
+          setEditForm((prev: any) => ({
+            ...prev,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }))
+        } else {
+          toast({
+            title: "Lỗi",
+            description: passwordResponse.message || "Không thể thay đổi mật khẩu.",
+            variant: "destructive",
+          })
+        }
+      } catch (error: any) {
         toast({
           title: "Lỗi",
-          description: "Không thể thay đổi mật khẩu.",
+          description: error.message || "Không thể thay đổi mật khẩu.",
           variant: "destructive",
         })
       }
     }
-
-    setPageLoading(false)
   }
 
   const handleUpdateProfile = handleSubmit
@@ -346,7 +408,8 @@ export default function ProfilePage() {
   const managerClubs = (joinedClubs || []).filter((c: any) => c.role === 'club_manager')
   const memberClubs = (joinedClubs || []).filter((c: any) => c.role !== 'club_manager')
 
-  if (isLoading) {
+  // Chỉ hiển thị loading khi đang khởi tạo auth state hoặc đang load trang
+  if (!isInitialized || isPageLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -767,18 +830,18 @@ export default function ProfilePage() {
                           <Label htmlFor="name">Họ và tên</Label>
                           <Input
                             id="name"
-                            value={editForm.name}
+                            value={editForm.name || ''}
                             onChange={(e) => setEditForm((prev: any) => ({ ...prev, name: e.target.value }))}
-                            disabled={!isEditing}
+                            disabled={!isEditing || isSavingProfile}
                           />
                         </div>
                         <div>
                           <Label htmlFor="phone">Số điện thoại</Label>
                           <Input
                             id="phone"
-                            value={editForm.phone}
+                            value={editForm.phone || ''}
                             onChange={(e) => setEditForm((prev: any) => ({ ...prev, phone: e.target.value }))}
-                            disabled={!isEditing}
+                            disabled={!isEditing || isSavingProfile}
                           />
                         </div>
                       </div>
@@ -799,8 +862,9 @@ export default function ProfilePage() {
                               <Input
                                 id="currentPassword"
                                 type="password"
-                                value={editForm.currentPassword}
+                                value={editForm.currentPassword || ''}
                                 onChange={(e) => setEditForm((prev: any) => ({ ...prev, currentPassword: e.target.value }))}
+                                disabled={isSavingProfile}
                               />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -809,8 +873,9 @@ export default function ProfilePage() {
                                 <Input
                                   id="newPassword"
                                   type="password"
-                                  value={editForm.newPassword}
+                                  value={editForm.newPassword || ''}
                                   onChange={(e) => setEditForm((prev: any) => ({ ...prev, newPassword: e.target.value }))}
+                                  disabled={isSavingProfile}
                                 />
                               </div>
                               <div>
@@ -818,10 +883,11 @@ export default function ProfilePage() {
                                 <Input
                                   id="confirmPassword"
                                   type="password"
-                                  value={editForm.confirmPassword}
+                                  value={editForm.confirmPassword || ''}
                                   onChange={(e) =>
                                     setEditForm((prev: any) => ({ ...prev, confirmPassword: e.target.value }))
                                   }
+                                  disabled={isSavingProfile}
                                 />
                               </div>
                             </div>
@@ -833,15 +899,35 @@ export default function ProfilePage() {
                         <div>
                           {isEditing ? (
                             <div className="space-x-2">
-                              <Button onClick={handleUpdateProfile} disabled={isLoading}>
-                                {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
-                              </Button>
-                              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isLoading}>
+                                                          <Button onClick={handleUpdateProfile} disabled={isSavingProfile}>
+                              {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
+                            </Button>
+                              <Button variant="outline" onClick={() => {
+                                setIsEditing(false)
+                                // Reset form to original values
+                                setEditForm({
+                                  name: userData?.full_name || '',
+                                  phone: userData?.phone || '',
+                                  currentPassword: '',
+                                  newPassword: '',
+                                  confirmPassword: ''
+                                })
+                              }} disabled={isSavingProfile}>
                                 Hủy
                               </Button>
                             </div>
                           ) : (
-                            <Button onClick={() => setIsEditing(true)}>
+                            <Button onClick={() => {
+                              setIsEditing(true)
+                              // Initialize form with current user data
+                              setEditForm({
+                                name: userData?.full_name || '',
+                                phone: userData?.phone || '',
+                                currentPassword: '',
+                                newPassword: '',
+                                confirmPassword: ''
+                              })
+                            }} disabled={isSavingProfile}>
                               <Edit className="h-4 w-4 mr-2" />
                               Chỉnh sửa
                             </Button>
