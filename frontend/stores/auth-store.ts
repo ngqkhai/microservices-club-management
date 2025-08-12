@@ -149,21 +149,33 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
 
         try {
-          // Note: You may need to implement updateProfile in authService
-          // For now, we'll just update local state
-          const currentUser = get().user
-          if (currentUser) {
-            const updatedUser = { ...currentUser, ...data }
-            set({
-              user: updatedUser,
-              isLoading: false,
-            })
-            return true
+          // Sử dụng authService.updateProfile để gọi API
+          const response = await authService.updateProfile(data)
+          
+          if (response.success) {
+            // Cập nhật user state với dữ liệu mới từ server
+            const currentUser = get().user
+            if (currentUser) {
+              const updatedUser = { ...currentUser, ...response.data }
+              set({
+                user: updatedUser,
+                isLoading: false,
+                error: null,
+              })
+              return true
+            } else {
+              // Nếu không có currentUser, vẫn reset loading
+              set({
+                isLoading: false,
+                error: "No user to update",
+              })
+              return false
+            }
           }
 
           set({
             isLoading: false,
-            error: "No user to update",
+            error: response.message || "Update failed",
           })
           return false
         } catch (error: any) {

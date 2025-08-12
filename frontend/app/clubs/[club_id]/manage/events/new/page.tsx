@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,6 +45,8 @@ export default function CreateEventPage() {
   const clubId = params.club_id as string
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [categories, setCategories] = useState<string[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -67,6 +69,7 @@ export default function CreateEventPage() {
     status: "draft" as 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled',
     visibility: "public" as 'public' | 'club_members',
     organizers: [{ name: "", role: "" }] as Array<{ name: string; role: string }>,
+    logo: null as File | null,
     images: [] as File[],
     attachments: [] as File[],
   })
@@ -134,12 +137,53 @@ export default function CreateEventPage() {
     }))
   }
 
+  const handleLogoUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    
+    const file = files[0]
+    setFormData((prev) => ({
+      ...prev,
+      logo: file,
+    }))
+  }
+
+  const removeLogo = () => {
+    setFormData((prev) => ({
+      ...prev,
+      logo: null,
+    }))
+  }
+
   const removeFile = (field: 'images' | 'attachments', index: number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: prev[field].filter((_: File, i: number) => i !== index),
     }))
   }
+
+  // Load categories from API
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setIsLoadingCategories(true)
+        const response = await eventService.getEventCategories()
+        
+        if (response.success && Array.isArray(response.data)) {
+          setCategories(response.data)
+        } else {
+          console.error('Failed to load categories:', response.message)
+          setCategories([])
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error)
+        setCategories([])
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -211,6 +255,7 @@ export default function CreateEventPage() {
         status: formData.status as 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled',
         organizers: formData.organizers.filter(org => org.name.trim() !== "" && org.role.trim() !== ""),
         club_id: clubId,
+        // Note: Logo and files will be handled separately via file upload endpoints
       }
 
       console.log('Creating event with data:', eventData)
@@ -255,15 +300,7 @@ export default function CreateEventPage() {
     }
   }
 
-  const categories = [
-    "Workshop",
-    "Seminar",
-    "Competition",
-    "Social",
-    "Fundraiser",
-    "Meeting",
-    "Other",
-  ]
+
 
   const statusOptions = [
     { value: "draft", label: "Bản nháp" },
@@ -368,16 +405,26 @@ export default function CreateEventPage() {
 
               <div>
                 <Label htmlFor="category">Danh mục</Label>
-                <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)} disabled={isLoadingCategories}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn danh mục" />
+                    <SelectValue placeholder={isLoadingCategories ? "Đang tải..." : "Chọn danh mục"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
+                    {isLoadingCategories ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        Đang tải danh mục...
+                      </div>
+                    ) : categories.length > 0 ? (
+                      categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        Không có danh mục
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -624,12 +671,61 @@ export default function CreateEventPage() {
             </CardContent>
           </Card>
 
+          {/* Event Logo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ImageIcon className="h-5 w-5 mr-2" />
+                Logo sự kiện
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="logo">Tải lên logo sự kiện</Label>
+                <div className="mt-2">
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleLogoUpload(e.target.files)}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Logo sẽ được hiển thị như hình ảnh chính của sự kiện (JPG, PNG, GIF)
+                  </p>
+                </div>
+              </div>
+
+              {formData.logo && (
+                <div className="space-y-2">
+                  <Label>Logo đã chọn:</Label>
+                  <div className="relative inline-block">
+                    <img
+                      src={URL.createObjectURL(formData.logo)}
+                      alt="Event logo preview"
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity"
+                      onClick={removeLogo}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Images */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <ImageIcon className="h-5 w-5 mr-2" />
-                Hình ảnh sự kiện
+                Hình ảnh các sự kiện trước
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

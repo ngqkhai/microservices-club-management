@@ -48,7 +48,7 @@ export default function EditEventPage() {
     description: "",
     short_description: "",
     category: "",
-    event_type: "",
+
     start_date: "",
     start_time: "",
     end_date: "",
@@ -87,7 +87,6 @@ export default function EditEventPage() {
           description: e.description || "",
           short_description: e.short_description || "",
           category: e.category || "",
-          event_type: e.event_type || "",
           start_date: toDateInput(start),
           start_time: toTimeInput(start),
           end_date: toDateInput(end),
@@ -122,26 +121,26 @@ export default function EditEventPage() {
     }))
   }
 
-  const handleArrayChange = (field: string, index: number, value: string) => {
+  const handleArrayChange = (field: 'requirements' | 'tags', index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev].map((item: string, i: number) =>
+      [field]: prev[field].map((item: string, i: number) =>
         i === index ? value : item
       ),
     }))
   }
 
-  const addArrayItem = (field: string) => {
+  const addArrayItem = (field: 'requirements' | 'tags') => {
     setFormData((prev) => ({
       ...prev,
-      [field]: [...prev[field as keyof typeof prev], ""],
+      [field]: [...prev[field], ""],
     }))
   }
 
-  const removeArrayItem = (field: string, index: number) => {
+  const removeArrayItem = (field: 'requirements' | 'tags', index: number) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field as keyof typeof prev].filter((_: string, i: number) => i !== index),
+      [field]: prev[field].filter((_: string, i: number) => i !== index),
     }))
   }
 
@@ -166,7 +165,6 @@ export default function EditEventPage() {
         description: formData.description,
         short_description: formData.short_description,
         category: formData.category,
-        event_type: formData.event_type,
         start_date: formData.start_date,
         start_time: formData.start_time,
         end_date: formData.end_date,
@@ -216,18 +214,7 @@ export default function EditEventPage() {
     "Other",
   ]
 
-  const eventTypes = [
-    "Workshop",
-    "Seminar",
-    "Conference",
-    "Concert",
-    "Exhibition",
-    "Competition",
-    "Tournament",
-    "Meeting",
-    "Social Event",
-    "Other",
-  ]
+
 
   if (isLoading) {
     return (
@@ -335,38 +322,20 @@ export default function EditEventPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="category">Danh mục</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn danh mục" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="event_type">Loại sự kiện</Label>
-                  <Select value={formData.event_type} onValueChange={(value) => handleInputChange("event_type", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn loại sự kiện" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {eventTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label htmlFor="category">Danh mục</Label>
+                <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn danh mục" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

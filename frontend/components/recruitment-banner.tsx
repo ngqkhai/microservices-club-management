@@ -76,7 +76,7 @@ export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps
           <Users className="h-6 w-6 mr-2 text-blue-600" />
           Tuyển thành viên
         </h2>
-        <Badge variant="secondary" className="bg-red-100 text-red-800">
+        <Badge variant="secondary" className="bg-green-100 text-green-800">
           Đang mở
         </Badge>
       </div>
@@ -96,9 +96,9 @@ export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-1 text-red-500" />
+                      <Clock className="h-4 w-4 mr-1 text-blue-500" />
                       <span
-                        className={`font-medium ${timeLeft[campaign.id] === "Đã hết hạn" ? "text-red-600" : "text-red-500"}`}
+                        className={`font-medium ${timeLeft[campaign.id] === "Đã hết hạn" ? "text-blue-600" : "text-blue-500"}`}
                       >
                         {isClient ? (timeLeft[campaign.id] || "Đang tính...") : "Đang tính..."}
                       </span>
