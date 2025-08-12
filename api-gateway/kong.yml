@@ -39,6 +39,15 @@ services:
       - name: api-gateway-secret
         config:
           secret_value: ${API_GATEWAY_SECRET}
+    
+  # Image Service
+  - name: image-service
+    url: ${IMAGE_SERVICE_URL}
+    tags: [club-management-system, image]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: ${API_GATEWAY_SECRET}
 
 routes:
   # Auth Service Public Routes (no JWT required)
@@ -232,6 +241,102 @@ routes:
             - role
             - full_name
           header_prefix: "x-user-"
+    
+  # Image Service Routes (Protected - requires JWT)
+  - name: image-upload-routes
+    service: image-service
+    paths:
+      - /api/images/upload
+      - /api/images/upload/bulk
+    methods: [POST, OPTIONS]
+    strip_path: false
+    tags: [image, protected, upload]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+    
+  # Image Service Delete Routes (Protected - requires JWT)
+  - name: image-delete-routes
+    service: image-service
+    paths:
+      - ~/api/images/[^/]+$
+    methods: [DELETE, OPTIONS]
+    strip_path: false
+    tags: [image, protected, delete]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+    
+  # Image Service Info Routes (Protected - requires JWT)
+  - name: image-info-routes
+    service: image-service
+    paths:
+      - ~/api/images/[^/]+$
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [image, protected, info]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+    
+  # Image Service Health (Public)
+  - name: image-health-route
+    service: image-service
+    paths:
+      - /api/images/health
+    methods: [GET, OPTIONS]
+    strip_path: false
+    preserve_host: false
+    tags: [image, public, health]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
     
   # Event Service - Get Events (Public)
   - name: event-list-public

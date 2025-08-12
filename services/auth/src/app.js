@@ -162,8 +162,13 @@ class Application {
         const rabbitmqConfig = require('./config/rabbitmq');
         await rabbitmqConfig.connect();
         logger.info('RabbitMQ connected successfully');
+        
+        // Initialize image event consumer
+        const imageEventConsumer = require('./services/imageEventConsumer');
+        await imageEventConsumer.connect();
+        logger.info('Image event consumer initialized successfully');
       } catch (error) {
-        logger.warn('RabbitMQ connection failed, continuing without event publishing:', error.message);
+        logger.warn('RabbitMQ/Image consumer connection failed, continuing without event processing:', error.message);
       }
 
       logger.info('Application initialized successfully', {
