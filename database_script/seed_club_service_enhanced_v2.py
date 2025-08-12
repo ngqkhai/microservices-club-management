@@ -1,31 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced Club Service Database Seeding Script
-Generates comprehensive club data with realistic diversity
+Enhanced Club Service Database Seeding Script - Version 2
+✅ Uses thematic image generation for realistic, category-appropriate images
+✅ Environment-based configuration
+✅ Improved club-category matching
 """
 
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, BulkWriteError
 from bson import ObjectId
 import random
 
-# Configuration
-from pymongo import MongoClient
-from bson import ObjectId
+# Add utils to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+
+from database_config import db_config
+from thematic_image_generator import generate_thematic_club_logo_url, generate_thematic_club_cover_url
 import psycopg2
 
-# Database configuration
-MONGODB_URI = "mongodb+srv://ngqkhai:byNceAIfBWS8xDvT@club-management-cluster.jgzkju5.mongodb.net/club_service_db?retryWrites=true&w=majority"
-SUPABASE_DB_URL = "postgresql://postgres.rkzyqtmqflkuxbcghkmy:tDUBMmQzQ5ilqlgU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+# Logging setup
+logging.basicConfig(
+    level=getattr(logging, db_config.seeding_config['log_level']),
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 def get_existing_users():
     """Fetch existing user IDs from PostgreSQL auth service"""
     try:
-        conn = psycopg2.connect(SUPABASE_DB_URL)
+        conn = psycopg2.connect(db_config.supabase_url)
         cursor = conn.cursor()
         cursor.execute("""
             SELECT id, email,
@@ -46,21 +53,15 @@ def get_existing_users():
         cursor.close()
         conn.close()
         
-        logging.info(f"[SUCCESS] Retrieved {len(users)} users from PostgreSQL")
+        logging.info(f"✅ Retrieved {len(users)} users from PostgreSQL")
         return users
         
     except Exception as e:
-        logging.error(f"Error fetching users from PostgreSQL: {e}")
+        logging.error(f"❌ Error fetching users from PostgreSQL: {e}")
         return []
 
-# Logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
 def generate_clubs_data():
-    """Generate comprehensive club data"""
+    """Generate comprehensive club data with thematic images"""
     
     # Technology clubs
     tech_clubs = [
@@ -323,12 +324,10 @@ def generate_clubs_data():
     # Combine all clubs
     all_clubs = tech_clubs + sports_clubs + cultural_clubs + academic_clubs + volunteer_clubs + business_clubs
     
-    # Generate ObjectIds and additional data for each club
-    
     # Get actual users from auth service
     users = get_existing_users()
     if not users:
-        logging.error("No users found in auth service. Please seed users first.")
+        logging.error("❌ No users found in auth service. Please seed users first.")
         return []
     
     # Select admin/manager users to create clubs
@@ -337,7 +336,7 @@ def generate_clubs_data():
         # If no admin users, use first few regular users as club creators
         admin_users = users[:10]  # First 10 users can create clubs
     
-    logging.info(f"Using {len(admin_users)} users as club creators")
+    logging.info(f"👥 Using {len(admin_users)} users as club creators")
     
     clubs_data = []
     for club in all_clubs:
@@ -348,15 +347,23 @@ def generate_clubs_data():
         founding_month = random.randint(1, 12)
         founding_day = random.randint(1, 28)
         
+        # Generate club ID for image generation
+        club_id = str(ObjectId())
+        
+        # Generate thematic images based on club category
+        logo_url = generate_thematic_club_logo_url(club_id, club['name'], club['category'])
+        cover_url = generate_thematic_club_cover_url(club_id, club['name'], club['category'])
+        
         club_data = {
+            '_id': ObjectId(club_id),  # Use the same ID for consistency
             'name': club['name'],
             'description': club['description'],
             'category': club['category'],
             'location': club['location'],
             'contact_email': club['contact_email'],
             'contact_phone': club['contact_phone'],
-            'logo_url': f"https://example.com/logos/{club['name'].lower().replace(' ', '-')}.png",
-            'cover_url': f"https://example.com/covers/{club['name'].lower().replace(' ', '-')}-cover.jpg",
+            'logo_url': logo_url,
+            'cover_url': cover_url,
             'website_url': f"https://{club['contact_email'].split('@')[0]}.bkhn.edu.vn",
             'social_links': {
                 'facebook': f"https://facebook.com/{club['contact_email'].split('@')[0]}.bkhn",
@@ -375,14 +382,14 @@ def generate_clubs_data():
     return clubs_data
 
 def seed_clubs():
-    """Seed clubs collection with enhanced data"""
+    """Seed clubs collection with enhanced thematic data"""
     
-    logging.info("Starting Enhanced Club Service Database Seeding...")
-    logging.info("Target: MongoDB Atlas Database")
+    print("🏛️ Starting Enhanced Club Service Database Seeding v2...")
+    print("🎨 Features: Thematic images, category-appropriate visuals")
     
     try:
         # Connect to MongoDB
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        client = MongoClient(db_config.club_db_uri, serverSelectionTimeoutMS=5000)
         db = client.club_service_db
         
         # Test connection
@@ -390,37 +397,46 @@ def seed_clubs():
         if db is None:
             raise ConnectionFailure("Failed to connect to database")
         
-        logging.info(f"Connected to MongoDB: {client.admin.command('hello')['hosts']}")
+        logging.info("✅ Connected to MongoDB Club Database")
         
         # Generate club data
         clubs_data = generate_clubs_data()
-        logging.info(f"Generated {len(clubs_data)} clubs")
+        if not clubs_data:
+            logging.error("❌ No club data generated")
+            return False
+            
+        logging.info(f"📝 Generated {len(clubs_data)} clubs with thematic images")
         
         # Clear existing data
-        logging.info("Clearing existing clubs...")
+        logging.info("🧹 Clearing existing clubs...")
         db.clubs.delete_many({})
         
         # Insert clubs
-        logging.info("Seeding clubs...")
+        logging.info("💾 Seeding clubs...")
         result = db.clubs.insert_many(clubs_data)
         
         if result.acknowledged:
-            logging.info(f"Clubs seeded successfully - {len(result.inserted_ids)} clubs inserted")
+            logging.info(f"✅ Clubs seeded successfully - {len(result.inserted_ids)} clubs inserted")
             
             # Verify data
             total_clubs = db.clubs.count_documents({})
-            logging.info(f"Total clubs in database: {total_clubs}")
+            logging.info(f"📊 Total clubs in database: {total_clubs}")
             
-            # Show clubs by category
+            # Show clubs by category with image info
             categories = db.clubs.distinct("category")
-            logging.info("Clubs by category:")
+            logging.info("🏷️ Clubs by category (with thematic images):")
             for category in categories:
                 count = db.clubs.count_documents({"category": category})
+                # Get sample image URL
+                sample_club = db.clubs.find_one({"category": category}, {"name": 1, "logo_url": 1})
                 logging.info(f"   - {category}: {count} clubs")
+                if sample_club:
+                    logging.info(f"     Sample: {sample_club['name']}")
+                    logging.info(f"     Logo: {sample_club['logo_url']}")
             
             # Show clubs by status
             statuses = db.clubs.distinct("status")
-            logging.info("Clubs by status:")
+            logging.info("📈 Clubs by status:")
             for status in statuses:
                 count = db.clubs.count_documents({"status": status})
                 logging.info(f"   - {status}: {count} clubs")
@@ -436,29 +452,29 @@ def seed_clubs():
                 }}
             ]
             stats = list(db.clubs.aggregate(pipeline))[0]
-            logging.info("Member statistics:")
+            logging.info("👥 Member statistics:")
             logging.info(f"   - Total members across all clubs: {stats['total_members']}")
             logging.info(f"   - Average members per club: {stats['avg_members']:.1f}")
             logging.info(f"   - Largest club: {stats['max_members']} members")
             logging.info(f"   - Smallest club: {stats['min_members']} members")
             
         else:
-            logging.error("Failed to insert clubs")
+            logging.error("❌ Failed to insert clubs")
             return False
             
     except ConnectionFailure as e:
-        logging.error(f"Database connection failed: {e}")
+        logging.error(f"❌ Database connection failed: {e}")
         return False
     except BulkWriteError as e:
-        logging.error(f"Bulk write error: {e.details}")
+        logging.error(f"❌ Bulk write error: {e.details}")
         return False
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
+        logging.error(f"❌ Unexpected error: {e}")
         return False
     finally:
         try:
             client.close()
-            logging.info("Database connection closed")
+            logging.info("🔌 Database connection closed")
         except:
             pass
     
@@ -467,6 +483,13 @@ def seed_clubs():
 if __name__ == "__main__":
     success = seed_clubs()
     if success:
-        print("SUCCESS: Enhanced club service completed successfully")
+        print("\n🎉 SUCCESS: Enhanced club service v2 completed successfully")
+        print("✅ Features:")
+        print("   🎨 Thematic images based on club categories")
+        print("   🖼️ Category-appropriate logos and covers")
+        print("   🔧 Environment-based configuration")
+        print("   📊 Comprehensive club data with realistic relationships")
     else:
-        print("ERROR: Enhanced club service seeding failed")
+        print("\n❌ ERROR: Enhanced club service v2 seeding failed")
+        print("💡 Check your database connectivity and user data")
+

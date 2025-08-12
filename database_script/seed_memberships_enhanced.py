@@ -87,7 +87,7 @@ def get_existing_campaigns():
         client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
         db = client.club_service_db
 
-        campaigns = list(db.recruitment_campaigns.find(
+        campaigns = list(db.recruitmentcampaigns.find(
             {},  # Get all campaigns regardless of status
             {'_id': 1, 'club_id': 1, 'title': 1}
         ))
