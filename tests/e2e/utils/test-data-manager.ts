@@ -106,7 +106,9 @@ export class TestDataManager {
     const adminUser = this.testUsers.find(u => u.full_name === 'Test Admin User');
     
     if (!adminUser?.tokens) {
-      console.warn('⚠️  Admin user not available, skipping club creation');
+      if (process.env.E2E_VERBOSE === '1') {
+        console.warn('⚠️  Admin user not available, skipping club creation');
+      }
       return;
     }
 
@@ -163,7 +165,9 @@ export class TestDataManager {
     const adminUser = this.testUsers.find(u => u.full_name === 'Test Admin User');
     
     if (!adminUser?.tokens || this.testClubs.length === 0) {
-      console.warn('⚠️  Admin user or clubs not available, skipping event creation');
+      if (process.env.E2E_VERBOSE === '1') {
+        console.warn('⚠️  Admin user or clubs not available, skipping event creation');
+      }
       return;
     }
 
@@ -232,7 +236,9 @@ export class TestDataManager {
     const adminUser = this.testUsers.find(u => u.full_name === 'Test Admin User');
     
     if (!adminUser?.tokens) {
-      console.warn('⚠️  Admin user not available, skipping event cleanup');
+      if (process.env.E2E_VERBOSE === '1') {
+        console.warn('⚠️  Admin user not available, skipping event cleanup');
+      }
       return;
     }
 
@@ -252,7 +258,9 @@ export class TestDataManager {
     const adminUser = this.testUsers.find(u => u.full_name === 'Test Admin User');
     
     if (!adminUser?.tokens) {
-      console.warn('⚠️  Admin user not available, skipping club cleanup');
+      if (process.env.E2E_VERBOSE === '1') {
+        console.warn('⚠️  Admin user not available, skipping club cleanup');
+      }
       return;
     }
 

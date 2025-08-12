@@ -29,6 +29,8 @@ test.describe('User Authentication Journey', () => {
 
     const tokens = regular.tokens;
     await homePage.page.goto('/');
+    // Perform a clean reload first, then inject tokens to avoid app boot clearing storage
+    await homePage.page.reload();
     await homePage.page.evaluate((t) => {
       localStorage.setItem('club_management_token', t.accessToken);
       if (t.refreshToken) {
@@ -36,19 +38,28 @@ test.describe('User Authentication Journey', () => {
       }
       localStorage.setItem('club_management_user', JSON.stringify(t.user));
       const w: any = window as any;
-      if (w.__AUTH_E2E_SET__) {
+      if (typeof w.__AUTH_E2E_SET__ === 'function') {
         w.__AUTH_E2E_SET__(t.user, t.accessToken);
       }
     }, tokens);
-
+    // Ensure any lazy auth bootstrapping runs
     await homePage.page.evaluate(async () => {
       const w: any = window as any;
-      if (w.__AUTH_E2E_LOAD__) {
+      if (typeof w.__AUTH_E2E_LOAD__ === 'function') {
         await w.__AUTH_E2E_LOAD__();
       }
     });
-    await homePage.page.reload();
-    await homePage.page.waitForFunction(() => !!localStorage.getItem('club_management_token'), null, { timeout: 15000 });
+    // If storage was cleared by app effects, re-apply
+    await homePage.page.evaluate((t) => {
+      if (!localStorage.getItem('club_management_token')) {
+        localStorage.setItem('club_management_token', t.accessToken);
+        if (t.refreshToken) {
+          localStorage.setItem('club_management_refresh_token', t.refreshToken);
+        }
+        localStorage.setItem('club_management_user', JSON.stringify(t.user));
+      }
+    }, tokens);
+    await homePage.page.waitForFunction(() => !!localStorage.getItem('club_management_token'), null, { timeout: 20000 });
   });
 
   test('User login with invalid credentials', async ({ loginPage }) => {

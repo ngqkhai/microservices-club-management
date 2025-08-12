@@ -20,7 +20,10 @@ export class APIHelper {
 
   constructor() {
     this.baseURL = process.env.API_GATEWAY_URL || 'http://localhost:8000';
-    this.gatewaySecret = process.env.API_GATEWAY_SECRET || 'c44d002c75b696ba2200d49c6fadb8f3';
+    // Prefer Playwright-provided secret in CI, fall back to repo .env, then compose default
+    this.gatewaySecret = process.env.API_GATEWAY_SECRET
+      || process.env.NEXT_PUBLIC_API_GATEWAY_SECRET
+      || 'test-secret-e2e';
   }
 
   async getAPIContext(): Promise<APIRequestContext> {
@@ -62,8 +65,15 @@ export class APIHelper {
     while (Date.now() - startTime < timeout) {
       try {
         const response = await api.get(healthPath);
+        // Consider 200, 204 OK; treat 401/403 as misconfiguration instead of retrying forever
         if (response.ok()) {
           return;
+        } else if ([401, 403].includes(response.status())) {
+          const details = await response.text().catch(() => '');
+          throw new Error(`${serviceName} health unauthorized/forbidden via gateway (check API_GATEWAY_SECRET). Status=${response.status()} Body=${details}`);
+        } else if (response.status() === 404) {
+          // Likely wrong path mapping
+          throw new Error(`${serviceName} health path not found at ${healthPath} (check kong.yml routes)`);
         }
       } catch (error) {
         // Continue trying

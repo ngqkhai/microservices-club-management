@@ -37,16 +37,32 @@ services:
       - club_network
 
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3-management
     container_name: club_management_rabbitmq_e2e
     ports:
       - "5672:5672"
-      - "15672:15672"
+      - "15672:15672"  # Management UI (for debugging)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+    user: "rabbitmq:rabbitmq"
+    volumes:
+      - rabbitmq_e2e_data:/var/lib/rabbitmq
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
     healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || rabbitmqctl status"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - club_network
 
@@ -63,6 +79,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      # Use basic status endpoint that doesn't require authentication
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   club-service:
     environment:
@@ -70,6 +95,13 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      # Club exposes /health at root
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   event-service:
     environment:
@@ -77,6 +109,29 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      # Event exposes /health at root
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  frontend:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
 
   kong:
     environment:
@@ -88,5 +143,8 @@ services:
 networks:
   club_network:
     driver: bridge
+
+volumes:
+  rabbitmq_e2e_data:
 
 

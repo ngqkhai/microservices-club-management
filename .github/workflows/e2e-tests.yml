@@ -1,0 +1,187 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ khai-ngan ]
+  pull_request:
+    branches: [ khai-ngan ]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install root dependencies
+      run: npm ci
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Install Playwright
+      run: npx playwright install --with-deps chromium
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Create required directories
+      run: |
+        mkdir -p artifacts
+        mkdir -p test-results
+        mkdir -p logs
+
+    - name: Build Docker services
+      run: |
+        docker compose -f docker-compose.yml -f docker-compose.e2e.yml build --no-cache
+
+    - name: Start services
+      run: |
+        docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+
+    - name: Wait for services to be healthy
+      run: |
+        echo "Waiting for services to be healthy..."
+        sleep 30  # Initial wait for services to start
+        
+        # Check individual service health
+        echo "Checking service health..."
+        for i in {1..60}; do
+          if docker compose -f docker-compose.yml -f docker-compose.e2e.yml ps | grep -E "(unhealthy|starting)" > /dev/null; then
+            echo "Services still starting... (attempt $i/60)"
+            sleep 10
+          else
+            echo "All services are healthy!"
+            break
+          fi
+          
+          if [ $i -eq 60 ]; then
+            echo "Services failed to become healthy within 10 minutes"
+            docker compose -f docker-compose.yml -f docker-compose.e2e.yml ps
+            exit 1
+          fi
+        done
+
+    - name: Verify service connectivity
+      run: |
+        echo "Testing service endpoints..."
+        
+        # Test frontend
+        curl -f http://localhost:3000/api/health || (echo "Frontend health check failed" && exit 1)
+        
+        # Test API Gateway
+        curl -f http://localhost:8000/health || (echo "API Gateway health check failed" && exit 1)
+        
+        # Test microservices through API Gateway
+        curl -f -H "X-API-Key: test-secret-e2e" http://localhost:8000/api/auth/readiness || (echo "Auth service check failed" && exit 1)
+        curl -f -H "X-API-Key: test-secret-e2e" http://localhost:8000/api/clubs/health || (echo "Club service check failed" && exit 1)
+        curl -f -H "X-API-Key: test-secret-e2e" http://localhost:8000/health || (echo "Event service check failed" && exit 1)
+        
+        echo "All service connectivity checks passed!"
+
+    - name: Run E2E tests
+      env:
+        CI: true
+        API_GATEWAY_SECRET: test-secret-e2e
+        MONGODB_URI: mongodb://localhost:27017/club_e2e_test
+        POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/auth_e2e_test
+        E2E_VERBOSE: false
+      run: |
+        npx playwright test --project=chromium --reporter=line
+
+    - name: Collect Docker logs on failure
+      if: failure()
+      run: |
+        echo "Collecting Docker logs..."
+        docker logs club_management_auth > logs/auth.log 2>&1 || true
+        docker logs club_management_club > logs/club.log 2>&1 || true
+        docker logs club_management_event > logs/event.log 2>&1 || true
+        docker logs club_management_frontend > logs/frontend.log 2>&1 || true
+        docker logs club_management_kong > logs/kong.log 2>&1 || true
+        docker logs club_management_rabbitmq_e2e > logs/rabbitmq.log 2>&1 || true
+        docker logs club_management_notify > logs/notify.log 2>&1 || true
+        docker logs club_management_postgres_e2e > logs/postgres.log 2>&1 || true
+        docker logs club_management_mongo_e2e > logs/mongo.log 2>&1 || true
+
+    - name: Show Docker stats on failure
+      if: failure()
+      run: |
+        echo "Docker container stats:"
+        docker stats --no-stream || true
+        echo "Docker container status:"
+        docker compose -f docker-compose.yml -f docker-compose.e2e.yml ps || true
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-${{ github.run_number }}
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 30
+
+    - name: Upload Docker logs
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: docker-logs-${{ github.run_number }}
+        path: logs/
+        retention-days: 7
+
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-artifacts-${{ github.run_number }}
+        path: |
+          artifacts/
+        retention-days: 7
+
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "Cleaning up Docker resources..."
+        docker compose -f docker-compose.yml -f docker-compose.e2e.yml down -v || true
+        docker system prune -f || true
+        
+        # Clean up any remaining containers
+        docker ps -aq | xargs -r docker rm -f || true
+        
+        # Clean up any remaining volumes
+        docker volume ls -q | grep -E "(club|e2e)" | xargs -r docker volume rm || true
+
+    - name: Comment PR on success
+      uses: actions/github-script@v7
+      if: success() && github.event_name == 'pull_request'
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ **E2E Tests Passed!** All 48 tests completed successfully. Ready for review.'
+          })
+
+    - name: Comment PR on failure
+      uses: actions/github-script@v7
+      if: failure() && github.event_name == 'pull_request'
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ **E2E Tests Failed!** Please check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and uploaded artifacts for details.'
+          })

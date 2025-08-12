@@ -43,30 +43,22 @@ export const test = base.extend<TestFixtures>({
   // Test Data Manager fixture (worker-scoped) – read seeded data from global setup
   testDataManager: [async ({ apiHelper }, use) => {
     const testDataManager = new TestDataManager(apiHelper);
-    // Load from artifacts written by global-setup
+    // Load deterministically from artifacts written by global-setup
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const data = require('../../artifacts/seed.json');
+      const data = require('../artifacts/seed.json');
       (testDataManager as any).testUsers = data.users || [];
-      // Normalize club ids for direct navigation
       const clubs = (data.clubs || []).map((c: any) => ({ ...c, id: c.id || c._id }));
       (testDataManager as any).testClubs = clubs;
       (testDataManager as any).testEvents = data.events || [];
-      console.log('🔄 Loaded seeded data from artifacts/seed.json');
-    } catch (e) {
-      console.warn('⚠️ Could not load seeded data from root artifacts, trying tests/e2e/artifacts...');
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const data = require('../artifacts/seed.json');
-        (testDataManager as any).testUsers = data.users || [];
-        const clubs = (data.clubs || []).map((c: any) => ({ ...c, id: c.id || c._id }));
-        (testDataManager as any).testClubs = clubs;
-        (testDataManager as any).testEvents = data.events || [];
+      if (process.env.E2E_VERBOSE === '1') {
         console.log('🔄 Loaded seeded data from tests/e2e/artifacts/seed.json');
-      } catch (e2) {
-        console.warn('⚠️ Could not load seeded data, falling back to on-the-fly seeding');
-      await testDataManager.setupTestData();
       }
+    } catch (e2) {
+      if (process.env.E2E_VERBOSE === '1') {
+        console.warn('⚠️ Could not load seeded data, falling back to on-the-fly seeding');
+      }
+      await testDataManager.setupTestData();
     }
     await use(testDataManager);
   }, { scope: 'worker' }],

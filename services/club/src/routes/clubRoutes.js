@@ -22,6 +22,15 @@ router.options('/clubs*', (req, res) => {
 });
 
 /**
+ * @route GET /api/clubs/health
+ * @desc Health check endpoint for API Gateway
+ * @access Public
+ */
+router.get('/clubs/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'club-service' });
+});
+
+/**
  * @route GET /api/clubs/categories
  * @desc Get available club categories for filtering
  * @access Public

@@ -33,6 +33,16 @@ async function globalSetup(config: FullConfig) {
     await apiHelper.waitForDirectService('event', 'http://localhost:3003/health', 60000);
     console.log('✅ All microservices are ready');
 
+    // Sanity-check gateway service routes (ensures Kong loaded declarative config)
+    try {
+      await apiHelper.waitForService('auth', '/api/auth/health', 60000);
+      await apiHelper.waitForService('club', '/api/clubs/health', 60000);
+      await apiHelper.waitForService('event', '/health', 60000);
+    } catch (e) {
+      console.error('❌ API Gateway route check failed:', e);
+      throw e;
+    }
+
     // Setup test data once and persist to disk for all tests to consume
     console.log('⏳ Setting up test data...');
     const testDataManager = new TestDataManager(apiHelper);
@@ -44,7 +54,12 @@ async function globalSetup(config: FullConfig) {
     };
     const outDir = path.resolve(__dirname, './artifacts');
     fs.mkdirSync(outDir, { recursive: true });
-    fs.writeFileSync(path.join(outDir, 'seed.json'), JSON.stringify(seeded, null, 2));
+    const seedPath = path.join(outDir, 'seed.json');
+    fs.writeFileSync(seedPath, JSON.stringify(seeded, null, 2));
+    // Also write a copy at repository root `artifacts/seed.json` for consumers expecting the root path
+    const rootArtifactsDir = path.resolve(__dirname, '../..', 'artifacts');
+    fs.mkdirSync(rootArtifactsDir, { recursive: true });
+    fs.writeFileSync(path.join(rootArtifactsDir, 'seed.json'), JSON.stringify(seeded, null, 2));
     console.log('✅ Test data setup complete and saved to artifacts/seed.json');
 
     console.log('🎉 E2E Global Setup Complete!');

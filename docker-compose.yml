@@ -44,7 +44,7 @@ services:
       NODE_ENV: test
       MOCK_DB: false
       MONGODB_URI: ${CLUB_MONGODB_URI}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
     ports:
       - "3002:3002"
     volumes:
@@ -71,7 +71,7 @@ services:
       PORT: 3003
       NODE_ENV: development
       MONGODB_URI: ${EVENT_MONGODB_URI}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
     ports:
       - "3003:3003"
     volumes:
@@ -111,7 +111,7 @@ services:
       RATE_LIMIT_MAX_REQUESTS: 0
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
       FRONTEND_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
       AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-false}
     ports:
       - "3001:3001"
@@ -122,6 +122,7 @@ services:
       - club_network
     restart: unless-stopped
     healthcheck:
+      # Use basic status endpoint that doesn't require authentication
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/ || exit 1"]
       interval: 30s
       timeout: 10s
@@ -148,7 +149,7 @@ services:
       CLUB_SERVICE_URL: ${CLUB_SERVICE_URL:-http://club-service:3002}
       EVENT_SERVICE_URL: ${EVENT_SERVICE_URL:-http://event-service:3003}
       NOTIFY_SERVICE_URL: ${NOTIFY_SERVICE_URL:-http://notify-service:3005}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
       # CORS Configuration
       KONG_CORS_ORIGINS: '["http://localhost:3000", "https://club-frontend-hq5d.onrender.com"]'
       # JWT Public Key
@@ -186,9 +187,10 @@ services:
     env_file:
       - ./services/notify/.env
     environment:
-      RABBITMQ_URL: ${NOTIFY_RABBITMQ_URL}
+      # Keep notify-service using default guest creds unless overridden
+      RABBITMQ_URL: ${NOTIFY_RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}
       PORT: 3005
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-club-mgmt-internal-secret-2024}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
     ports:
       - "3005:3005"
     volumes:

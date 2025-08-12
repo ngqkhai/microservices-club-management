@@ -125,8 +125,10 @@ test.describe('Event Management Journey', () => {
       let clubs = testDataManager.getTestClubs();
       if (!clubs.length || !clubs[0].id) {
         if (!admin?.tokens) throw new Error('Admin tokens not available to create club');
+        // Use a unique suffix to avoid name collisions between tests
+        const uniqueName = `E2E Auto Club ${Date.now()}-${Math.floor(Math.random()*1000)}`;
         const createdClub = await apiHelper.createClub({
-          name: `E2E Auto Club ${Date.now()}`,
+          name: uniqueName,
           description: 'Auto-created for event tests',
           category: 'Công nghệ',
           contact_email: 'autoclub@example.com',
@@ -137,7 +139,7 @@ test.describe('Event Management Journey', () => {
       const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString();
       const created = await apiHelper.createEvent({
         club_id: clubs[0].id!,
-        title: `E2E Details Event ${Date.now()}`,
+        title: `E2E Details Event ${Date.now()}-${Math.floor(Math.random()*1000)}`,
         description: 'Event for verifying details page',
         category: 'Workshop',
         start_date: start,
@@ -196,8 +198,9 @@ test.describe('Event Management Journey', () => {
       let clubs = testDataManager.getTestClubs();
       if (!clubs.length || !clubs[0].id) {
         if (!admin?.tokens) throw new Error('Admin tokens not available to create club');
+        const uniqueName = `E2E Auto Club ${Date.now()}-${Math.floor(Math.random()*1000)}`;
         const createdClub = await apiHelper.createClub({
-          name: `E2E Auto Club ${Date.now()}`,
+          name: uniqueName,
           description: 'Auto-created for event tests',
           category: 'Công nghệ',
           contact_email: 'autoclub@example.com',
@@ -208,7 +211,7 @@ test.describe('Event Management Journey', () => {
       const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString();
       const created = await apiHelper.createEvent({
         club_id: clubs[0].id!,
-        title: `E2E Capacity Event ${Date.now()}`,
+        title: `E2E Capacity Event ${Date.now()}-${Math.floor(Math.random()*1000)}`,
         description: 'Event for capacity check',
         category: 'Workshop',
         start_date: start,

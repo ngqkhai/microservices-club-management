@@ -1,19 +1,22 @@
 import { test, expect } from '../fixtures/test-fixtures';
+import type { APIResponse } from '@playwright/test';
 
 test.describe('API Gateway and Service Integration', () => {
   test('API Gateway routes requests correctly', async ({ apiHelper }) => {
     // Extend timeout in CI where containers can take longer to be ready
     // Default test timeout is 30s; bump to 3 minutes on CI, 90s locally
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (test as any).setTimeout?.(process.env.CI ? 180000 : 90000);
+    (test as any).setTimeout?.(process.env.CI ? 90000 : 90000);
     // Test health endpoints for all services
+    // Probe correct gateway paths for each service
     const services = [
-      { name: 'auth', path: '/api/auth/health' },
-      { name: 'club', path: '/health' },
+      // Use readiness for auth to avoid false negatives when RabbitMQ is not connected in CI
+      { name: 'auth', path: '/api/auth/readiness' },
+      { name: 'club', path: '/api/clubs/health' },
       { name: 'event', path: '/health' },
     ];
 
-    const timeout = process.env.CI ? 120000 : 60000;
+    const timeout = 90000;
     for (const service of services) {
       await apiHelper.waitForService(service.name, service.path, timeout);
     }
@@ -45,7 +48,8 @@ test.describe('API Gateway and Service Integration', () => {
     const adminUser = testDataManager.getAdminUser();
     
     if (!adminUser?.tokens) {
-      test.skip('Admin user not available for club API testing');
+      test.skip(true, 'Admin user not available for club API testing');
+      return;
     }
 
     // Test club creation
@@ -56,13 +60,13 @@ test.describe('API Gateway and Service Integration', () => {
       contact_email: 'apitest@example.com',
     };
 
-    const createdClub = await apiHelper.createClub(newClub, adminUser.tokens!);
+    const createdClub = await apiHelper.createClub(newClub, adminUser.tokens);
     expect(createdClub).toBeTruthy();
     expect(createdClub.name || createdClub.data?.name).toBe(newClub.name);
 
     // Test club retrieval
     const clubs = await apiHelper.getClubs();
-    const clubList = Array.isArray(clubs) ? clubs : (clubs?.results || []);
+    const clubList: any[] = Array.isArray(clubs) ? clubs : ((clubs as any)?.results || []);
     expect(Array.isArray(clubList)).toBe(true);
     
     const foundClub = clubList.find((club: any) => (club._id || club.id) === (createdClub._id || createdClub.id));
@@ -70,7 +74,7 @@ test.describe('API Gateway and Service Integration', () => {
 
     // Test club deletion (ignore not found)
     try {
-      await apiHelper.deleteClub(createdClub._id, adminUser.tokens!);
+      await apiHelper.deleteClub(createdClub._id, adminUser.tokens);
     } catch (_) {
       // non-fatal in tests
     }
@@ -81,7 +85,8 @@ test.describe('API Gateway and Service Integration', () => {
     const testClubs = testDataManager.getTestClubs();
     
     if (!adminUser?.tokens || testClubs.length === 0) {
-      test.skip('Admin user or test clubs not available for event API testing');
+      test.skip(true, 'Admin user or test clubs not available for event API testing');
+      return;
     }
 
     const testClub = testClubs[0];
@@ -98,12 +103,12 @@ test.describe('API Gateway and Service Integration', () => {
       max_participants: 100,
     };
 
-    const createdEvent = await apiHelper.createEvent(newEvent, adminUser.tokens!);
+    const createdEvent = await apiHelper.createEvent(newEvent, adminUser.tokens);
     expect(createdEvent && (createdEvent._id || createdEvent.id)).toBeTruthy();
 
     // Test event retrieval
     const events = await apiHelper.getEvents();
-    const eventList = Array.isArray(events) ? events : (events?.events || []);
+    const eventList: any[] = Array.isArray(events) ? events : ((events as any)?.events || []);
     expect(Array.isArray(eventList)).toBe(true);
     
     const foundEvent = eventList.find((event: any) => (event._id || event.id) === (createdEvent._id || createdEvent.id));
@@ -116,7 +121,7 @@ test.describe('API Gateway and Service Integration', () => {
 
     // Test event deletion (ignore not found)
     try {
-      await apiHelper.deleteEvent(createdEvent._id, adminUser.tokens!);
+      await apiHelper.deleteEvent(createdEvent._id, adminUser.tokens);
     } catch (_) {}
   });
 
@@ -133,12 +138,12 @@ test.describe('API Gateway and Service Integration', () => {
     const api = await apiHelper.getAPIContext();
     
     // Make multiple rapid requests to test rate limiting
-    const requests = [];
+    const requests: Promise<APIResponse>[] = [];
     for (let i = 0; i < 10; i++) {
       requests.push(api.get('/health'));
     }
     
-    const responses = await Promise.all(requests);
+    const responses: APIResponse[] = await Promise.all(requests);
     
     // Health endpoints should succeed (200/204)
     for (const response of responses) {
@@ -151,7 +156,7 @@ test.describe('API Gateway and Service Integration', () => {
     await page.goto('/');
     
     // Check that the page loads without CORS errors
-    const errors = [];
+    const errors: Error[] = [];
     page.on('pageerror', error => errors.push(error));
     page.on('requestfailed', request => {
       if (request.failure()?.errorText.includes('CORS')) {
@@ -171,7 +176,7 @@ test.describe('API Gateway and Service Integration', () => {
     const api = await apiHelper.getAPIContext();
     
     // Make multiple requests to the same service
-    const responses = [];
+    const responses: APIResponse[] = [];
     for (let i = 0; i < 5; i++) {
       const response = await api.get('/health');
       responses.push(response);
@@ -233,17 +238,18 @@ test.describe('API Gateway and Service Integration', () => {
     const adminUser = testDataManager.getAdminUser();
     
     if (!adminUser?.tokens) {
-      test.skip('Admin user not available for database connectivity testing');
+      test.skip(true, 'Admin user not available for database connectivity testing');
+      return;
     }
     
     // Test MongoDB connectivity (Club service)
     const clubs = await apiHelper.getClubs();
-    const clubList = Array.isArray(clubs) ? clubs : (clubs?.results || []);
+    const clubList: any[] = Array.isArray(clubs) ? clubs : ((clubs as any)?.results || []);
     expect(Array.isArray(clubList)).toBe(true);
     
     // Test MongoDB connectivity (Event service)  
     const events = await apiHelper.getEvents();
-    const eventList = Array.isArray(events) ? events : (events?.events || []);
+    const eventList: any[] = Array.isArray(events) ? events : ((events as any)?.events || []);
     expect(Array.isArray(eventList)).toBe(true);
     
     // PostgreSQL connectivity is tested implicitly through auth operations

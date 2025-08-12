@@ -73,7 +73,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: process.env.CI ? undefined : {
-    command: 'docker-compose up --build',
+    command: 'docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // 2 minutes for services to start
@@ -85,9 +85,9 @@ export default defineConfig({
     },
   },
 
-  /* Timeout settings */
-  timeout: 30000,
+  /* Timeout settings - increased for CI stability */
+  timeout: process.env.CI ? 60000 : 30000,
   expect: {
-    timeout: 10000,
+    timeout: process.env.CI ? 20000 : 10000,
   },
 });

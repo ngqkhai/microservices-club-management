@@ -35,7 +35,7 @@ export class LoginPage extends BasePage {
   }
 
   async login(email: string, password: string): Promise<void> {
-    await this.goto('/login');
+    await this.goto();
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.loginButton.click();
@@ -98,7 +98,7 @@ export class SignupPage extends BasePage {
     password: string;
     confirmPassword?: string;
   }): Promise<void> {
-    await this.goto('/signup');
+    await this.goto();
     await this.fullNameInput.fill(userData.full_name);
     await this.emailInput.fill(userData.email);
     await this.passwordInput.fill(userData.password);
@@ -182,9 +182,21 @@ export class HomePage extends BasePage {
         await expect(logoutByText).toBeVisible({ timeout: 5000 });
         await logoutByText.click();
       }
+      // Ensure any navigation completes before interacting with the execution context
+      await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+      // Small grace period for stores/effects to run
+      await this.page.waitForTimeout(300);
       // Ensure tokens cleared; fallback to manual clear if app didn't remove
-      await this.page.waitForTimeout(500);
-      const stillHasToken = await this.page.evaluate(() => !!localStorage.getItem('club_management_token'));
+      let stillHasToken = false;
+      try {
+        stillHasToken = await this.page.evaluate(() => !!localStorage.getItem('club_management_token'));
+      } catch {
+        // If navigation destroyed the context, wait and retry once
+        await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+        stillHasToken = await this.page
+          .evaluate(() => !!localStorage.getItem('club_management_token'))
+          .catch(() => false);
+      }
       if (stillHasToken) {
         await this.page.evaluate(() => {
           localStorage.removeItem('club_management_token');
@@ -200,7 +212,9 @@ export class HomePage extends BasePage {
         await this.page.reload();
       }
       // Wait for logged-out state (login link visible or token cleared)
-      await this.page.waitForFunction(() => !localStorage.getItem('club_management_token'), null, { timeout: 15000 }).catch(() => {});
+      await this.page
+        .waitForFunction(() => !localStorage.getItem('club_management_token'), null, { timeout: 15000 })
+        .catch(() => {});
       await expect(this.page.locator('header').locator('a:has-text("Đăng nhập")')).toBeVisible({ timeout: 15000 });
     }
   }
