@@ -106,7 +106,6 @@ export interface CreateEventRequest {
   description: string;
   short_description?: string;
   category?: string;
-  event_type?: string;
   start_date: string;
   start_time?: string;
   end_date?: string;
@@ -121,6 +120,11 @@ export interface CreateEventRequest {
   tags?: string[];
   visibility?: 'public' | 'club_members';
   allow_registration?: boolean;
+  status?: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
+  organizers?: Array<{
+    name: string;
+    role: string;
+  }>;
   club_id: string;
   // Additional fields
   agenda?: Array<{

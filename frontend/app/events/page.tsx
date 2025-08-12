@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 import { eventService, type Event as ApiEvent } from "@/services/event.service"
@@ -26,7 +26,11 @@ type UiEvent = {
   date: string
   time: string
   location: string
-  club: string
+  club: {
+    id: string
+    name: string
+    logo?: string
+  }
   fee: number
   description: string
   category: string
@@ -64,7 +68,11 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     date: dateStr,
     time: timeStr,
     location: locationText,
-    club: anyEvent.club?.name || anyEvent.club?.id || "",
+    club: {
+      id: anyEvent.club?.id || "",
+      name: anyEvent.club?.name || "Câu lạc bộ",
+      logo: anyEvent.club?.logo || anyEvent.club?.logo_url || "",
+    },
     fee: anyEvent.participation_fee ?? anyEvent.fee ?? 0,
     description: anyEvent.description || anyEvent.short_description || "",
     category: anyEvent.category || "General",
@@ -378,8 +386,20 @@ export default function EventsPage() {
                     <CardContent className="p-6">
                       <div className="flex gap-4">
                         {/* Event Image Placeholder */}
-                        <div className="w-32 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
-                          <Calendar className="h-8 w-8 text-gray-400" />
+                        <div 
+                          className="w-32 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => router.push(`/clubs/${event.club.id}`)}
+                          title={`Xem thông tin ${event.club.name}`}
+                        >
+                          {event.club.logo ? (
+                            <img 
+                              src={event.club.logo} 
+                              alt={event.club.name}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <Calendar className="h-8 w-8 text-gray-400" />
+                          )}
                         </div>
                         
                         {/* Event Details */}
@@ -396,19 +416,22 @@ export default function EventsPage() {
                           </div>
                           
                           {/* Event Info */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4" />
+                              <span className="truncate">{event.club.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
                               <span>{event.date}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
                               <span className="font-medium">{event.time}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-4 w-4" />
                               <span className="truncate">{event.location}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <span className="truncate">{event.club}</span>
                             </div>
                           </div>
                           
