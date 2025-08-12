@@ -341,4 +341,18 @@ async function isServiceReady() {
   }
 }
 
+/**
+ * Version endpoint for deployment verification
+ */
+router.get('/version', (req, res) => {
+  res.json({
+    service: 'notify-service',
+    version: '1.0.1',
+    deployedAt: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    gitCommit: process.env.GIT_COMMIT || 'local-development',
+    buildNumber: process.env.BUILD_NUMBER || Date.now().toString()
+  });
+});
+
 module.exports = router; 

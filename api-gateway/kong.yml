@@ -1,4 +1,7 @@
 _format_version: "3.0"
+# Deployment Info: Updated for CI/CD verification
+# Last Deploy: ${BUILD_TIME:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}
+# Build Number: ${BUILD_NUMBER:-local}
 
 services:
   # Auth Service
