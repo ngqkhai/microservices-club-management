@@ -43,8 +43,16 @@ jobs:
         mkdir -p logs
 
     - name: Build Docker services
+      env:
+        GIT_COMMIT: ${{ github.sha }}
+        BUILD_NUMBER: ${{ github.run_number }}
+        BUILD_TIME: ${{ steps.date.outputs.date }}
       run: |
-        docker compose -f docker-compose.yml -f docker-compose.e2e.yml build --no-cache
+        echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+        docker compose -f docker-compose.yml -f docker-compose.e2e.yml build --no-cache \
+          --build-arg GIT_COMMIT=${{ github.sha }} \
+          --build-arg BUILD_NUMBER=${{ github.run_number }} \
+          --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
     - name: Start services
       run: |

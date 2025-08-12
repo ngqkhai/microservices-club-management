@@ -103,4 +103,16 @@ eventRoutes.delete('/api/events/:id/leave', authMiddleware, requireUser, leaveEv
 eventRoutes.get('/api/events/:id/ticket', authMiddleware, requireUser, getEventTicket);
 eventRoutes.post('/api/events/:id/check-in', authMiddleware, requireClubManagerOrOrganizer, checkInEvent);
 
+// Version endpoint for deployment verification
+eventRoutes.get('/version', (req, res) => {
+  res.json({
+    service: 'event-service',
+    version: '1.0.1',
+    deployedAt: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    gitCommit: process.env.GIT_COMMIT || 'local-development',
+    buildNumber: process.env.BUILD_NUMBER || Date.now().toString()
+  });
+});
+
 export { eventRoutes };

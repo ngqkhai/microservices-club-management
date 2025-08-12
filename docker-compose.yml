@@ -6,6 +6,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        - GIT_COMMIT=${GIT_COMMIT:-local}
+        - BUILD_NUMBER=${BUILD_NUMBER:-0}
+        - BUILD_TIME=${BUILD_TIME:-}
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
         - NEXT_PUBLIC_API_TIMEOUT=${NEXT_PUBLIC_API_TIMEOUT:-10000}
         - NEXT_PUBLIC_ENV=${NEXT_PUBLIC_ENV:-development}
@@ -37,6 +40,10 @@ services:
     build:
       context: ./services/club
       dockerfile: Dockerfile
+      args:
+        - GIT_COMMIT=${GIT_COMMIT:-local}
+        - BUILD_NUMBER=${BUILD_NUMBER:-0}
+        - BUILD_TIME=${BUILD_TIME:-}
       target: development
     container_name: club_management_club
     environment:
@@ -65,6 +72,10 @@ services:
     build:
       context: ./services/event
       dockerfile: Dockerfile
+      args:
+        - GIT_COMMIT=${GIT_COMMIT:-local}
+        - BUILD_NUMBER=${BUILD_NUMBER:-0}
+        - BUILD_TIME=${BUILD_TIME:-}
       target: development
     container_name: club_management_event
     environment:
@@ -92,6 +103,10 @@ services:
     build:
       context: ./services/auth
       dockerfile: Dockerfile
+      args:
+        - GIT_COMMIT=${GIT_COMMIT:-local}
+        - BUILD_NUMBER=${BUILD_NUMBER:-0}
+        - BUILD_TIME=${BUILD_TIME:-}
     container_name: club_management_auth
     environment:
       DATABASE_URL: ${AUTH_DATABASE_URL}

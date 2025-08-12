@@ -1210,4 +1210,38 @@ router.get('/.well-known/jwks.json', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /version:
+ *   get:
+ *     summary: Get service version and deployment info
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Service version information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 service:
+ *                   type: string
+ *                 version:
+ *                   type: string
+ *                 deployedAt:
+ *                   type: string
+ *                 environment:
+ *                   type: string
+ */
+router.get('/version', (req, res) => {
+  res.json({
+    service: 'auth-service',
+    version: '1.0.1',
+    deployedAt: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    gitCommit: process.env.GIT_COMMIT || 'local-development',
+    buildNumber: process.env.BUILD_NUMBER || Date.now().toString()
+  });
+});
+
 module.exports = router;
