@@ -30,9 +30,15 @@ import {
   FileText,
   Save,
   X,
+  Upload,
+  Trash2,
+  Eye,
+  EyeOff,
+  Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { eventService, type UpdateEventRequest } from "@/services/event.service"
+import { imageService } from "@/services/image.service"
 
 export default function EditEventPage() {
   const params = useParams()
@@ -43,12 +49,12 @@ export default function EditEventPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     short_description: "",
     category: "",
-
     start_date: "",
     start_time: "",
     end_date: "",
@@ -58,11 +64,30 @@ export default function EditEventPage() {
     max_participants: "",
     participation_fee: "",
     currency: "VND",
-    requirements: [""],
-    tags: [""],
+    requirements: [""] as string[],
+    tags: [""] as string[],
+    organizers: [{ id: "", name: "", role: "organizer" }] as Array<{ id: string; name: string; role: string }>,
+    agenda: [{ time: "", activity: "" }] as Array<{ time: string; activity: string }>,
+    contact_info: { email: "", phone: "", website: "" },
+    social_links: { facebook: "", instagram: "", discord: "" },
     is_public: true,
     allow_registration: true,
     registration_deadline: "",
+    status: "draft" as 'draft' | 'published' | 'cancelled' | 'completed',
+    visibility: "public" as 'public' | 'club_members',
+    location_type: "physical" as 'physical' | 'virtual' | 'hybrid',
+    virtual_link: "",
+    platform: "",
+    // File handling
+    event_logo: null as File | null,
+    event_image: null as File | null,
+    images: [] as File[],
+    attachments: [] as File[],
+    // URLs from uploaded files
+    event_logo_url: "",
+    event_image_url: "",
+    image_urls: [] as string[],
+    attachment_data: [] as Array<{ name: string; url: string; type: string; size: number }>,
   })
 
   useEffect(() => {
@@ -91,16 +116,43 @@ export default function EditEventPage() {
           start_time: toTimeInput(start),
           end_date: toDateInput(end),
           end_time: toTimeInput(end),
-          location: typeof e.location === 'string' ? e.location : (e.location?.address || ''),
-          detailed_location: e.detailed_location || e.location?.room || "",
+          // Xử lý location dựa trên location_type
+          location: e.location?.location_type === 'virtual' ? e.location?.virtual_link || '' :
+                   e.location?.location_type === 'hybrid' ? e.location?.address || '' :
+                   typeof e.location === 'string' ? e.location : (e.location?.address || ''),
+          detailed_location: e.location?.room || e.detailed_location || "",
           max_participants: String(e.max_participants ?? e.max_attendees ?? ""),
           participation_fee: String(e.participation_fee ?? e.fee ?? ""),
           currency: e.currency || "VND",
           requirements: Array.isArray(e.requirements) && e.requirements.length ? e.requirements : [""],
           tags: Array.isArray(e.tags) && e.tags.length ? e.tags : [""],
+          organizers: Array.isArray(e.organizers) && e.organizers.length ? 
+            e.organizers.map((org: any) => ({ 
+              id: org.user_id || org.id || "", 
+              name: org.user_full_name || org.name || "", 
+              role: org.role || "organizer" 
+            })) : [{ id: "", name: "", role: "organizer" }],
+          agenda: Array.isArray(e.agenda) && e.agenda.length ? e.agenda : [{ time: "", activity: "" }],
+          contact_info: e.contact_info || { email: "", phone: "", website: "" },
+          social_links: e.social_links || { facebook: "", instagram: "", discord: "" },
           is_public: e.visibility ? e.visibility === 'public' : true,
           allow_registration: e.allow_registration ?? true,
           registration_deadline: e.registration_deadline ? new Date(e.registration_deadline).toISOString().slice(0,16) : "",
+          status: e.status || "draft",
+          visibility: e.visibility || "public",
+          location_type: e.location?.location_type || "physical",
+          virtual_link: e.location?.location_type === 'hybrid' ? e.location?.virtual_link || "" : "",
+          platform: e.location?.platform || "",
+          // File handling
+          event_logo: null,
+          event_image: null,
+          images: [],
+          attachments: [],
+          // URLs from uploaded files
+          event_logo_url: e.event_logo_url || "",
+          event_image_url: e.event_image_url || "",
+          image_urls: Array.isArray(e.images) ? e.images : [],
+          attachment_data: Array.isArray(e.attachments) ? e.attachments : [],
         })
       }
     } catch (error) {
@@ -130,17 +182,116 @@ export default function EditEventPage() {
     }))
   }
 
-  const addArrayItem = (field: 'requirements' | 'tags') => {
+  const addArrayItem = (field: 'requirements' | 'tags' | 'organizers' | 'agenda') => {
+    setFormData((prev) => {
+      if (field === 'organizers') {
+        return {
+          ...prev,
+          organizers: [...prev.organizers, { id: "", name: "", role: "organizer" }],
+        }
+      } else if (field === 'agenda') {
+        return {
+          ...prev,
+          agenda: [...prev.agenda, { time: "", activity: "" }],
+        }
+      } else {
+        return {
+          ...prev,
+          [field]: [...prev[field], ""],
+        }
+      }
+    })
+  }
+
+  const removeArrayItem = (field: 'requirements' | 'tags' | 'organizers' | 'agenda', index: number) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: [...prev[field], ""],
+      [field]: prev[field].filter((_: any, i: number) => i !== index),
     }))
   }
 
-  const removeArrayItem = (field: 'requirements' | 'tags', index: number) => {
+  const handleOrganizerChange = (index: number, field: 'id' | 'name' | 'role', value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].filter((_: string, i: number) => i !== index),
+      organizers: prev.organizers.map((organizer, i) =>
+        i === index ? { ...organizer, [field]: value } : organizer
+      ),
+    }))
+  }
+
+  const handleAgendaChange = (index: number, field: 'time' | 'activity', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      agenda: prev.agenda.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      ),
+    }))
+  }
+
+  const handleContactInfoChange = (field: 'email' | 'phone' | 'website', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      contact_info: { ...prev.contact_info, [field]: value },
+    }))
+  }
+
+  const handleSocialLinksChange = (field: 'facebook' | 'instagram' | 'discord', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      social_links: { ...prev.social_links, [field]: value },
+    }))
+  }
+
+  const handleFileUpload = (field: 'images' | 'attachments', files: FileList | null) => {
+    if (!files) return
+
+    const fileArray = Array.from(files)
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...prev[field], ...fileArray],
+    }))
+  }
+
+  const handleEventImageUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    
+    const file = files[0]
+    setFormData((prev) => ({
+      ...prev,
+      event_image: file,
+    }))
+  }
+
+  const handleEventLogoUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    
+    const file = files[0]
+    setFormData((prev) => ({
+      ...prev,
+      event_logo: file,
+    }))
+  }
+
+  const removeEventImage = () => {
+    setFormData((prev) => ({
+      ...prev,
+      event_image: null,
+      event_image_url: "",
+    }))
+  }
+
+  const removeEventLogo = () => {
+    setFormData((prev) => ({
+      ...prev,
+      event_logo: null,
+      event_logo_url: "",
+    }))
+  }
+
+  const removeFile = (field: 'images' | 'attachments', index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].filter((_: File, i: number) => i !== index),
     }))
   }
 
@@ -148,10 +299,35 @@ export default function EditEventPage() {
     e.preventDefault()
 
     // Validation
-    if (!formData.title || !formData.description || !formData.start_date || !formData.location) {
+    const requiredFields: Record<string, string> = {
+      title: "Tên sự kiện",
+      description: "Mô tả",
+      start_date: "Ngày bắt đầu"
+    }
+
+    // Bắt buộc location cho physical events
+    if (formData.location_type === 'physical' && !formData.location) {
+      requiredFields.location = "Địa điểm"
+    }
+
+    // Bắt buộc location cho virtual events
+    if (formData.location_type === 'virtual' && !formData.location) {
+      requiredFields.location = "Link trực tuyến"
+    }
+
+    // Bắt buộc location cho hybrid events
+    if (formData.location_type === 'hybrid' && !formData.location) {
+      requiredFields.location = "Địa điểm chính"
+    }
+
+    const missingFields = Object.entries(requiredFields).filter(
+      ([field, _]) => !formData[field as keyof typeof formData]
+    )
+
+    if (missingFields.length > 0) {
       toast({
         title: "Thông tin chưa đầy đủ",
-        description: "Vui lòng điền đầy đủ thông tin bắt buộc",
+        description: `Vui lòng điền: ${missingFields.map(([_, label]) => label).join(", ")}`,
         variant: "destructive",
       })
       return
@@ -160,25 +336,84 @@ export default function EditEventPage() {
     setIsSubmitting(true)
 
     try {
+      // Upload images if any
+      let eventImageUrl = formData.event_image_url
+      let eventLogoUrl = formData.event_logo_url
+
+      if (formData.event_image) {
+        setIsUploadingImages(true)
+        try {
+          const uploadRes = await imageService.uploadSingleImage({
+            imageFile: formData.event_image,
+            type: 'event_image',
+            entityId: eventId,
+            entityType: 'event',
+            folder: 'club_management/events'
+          })
+          if (uploadRes.success) {
+            eventImageUrl = uploadRes.data.url
+          }
+        } catch (error) {
+          console.error('Failed to upload event image:', error)
+        }
+        setIsUploadingImages(false)
+      }
+
+      if (formData.event_logo) {
+        setIsUploadingImages(true)
+        try {
+          const uploadRes = await imageService.uploadSingleImage({
+            imageFile: formData.event_logo,
+            type: 'event_logo',
+            entityId: eventId,
+            entityType: 'event',
+            folder: 'club_management/events'
+          })
+          if (uploadRes.success) {
+            eventLogoUrl = uploadRes.data.url
+          }
+        } catch (error) {
+          console.error('Failed to upload event logo:', error)
+        }
+        setIsUploadingImages(false)
+      }
+
       const payload: UpdateEventRequest = {
         title: formData.title,
         description: formData.description,
         short_description: formData.short_description,
         category: formData.category,
         start_date: formData.start_date,
-        start_time: formData.start_time,
         end_date: formData.end_date,
-        end_time: formData.end_time,
-        location: formData.location,
-        detailed_location: formData.detailed_location,
+        location: {
+          location_type: formData.location_type,
+          address: formData.location_type === 'physical' || formData.location_type === 'hybrid' ? formData.location : undefined,
+          room: formData.detailed_location || undefined,
+          virtual_link: formData.location_type === 'virtual' ? formData.location : 
+                       formData.location_type === 'hybrid' ? formData.virtual_link : undefined,
+          platform: formData.location_type === 'virtual' ? formData.platform : undefined,
+        },
         max_participants: Number(formData.max_participants) || undefined,
         participation_fee: Number(formData.participation_fee) || 0,
         currency: formData.currency,
         requirements: formData.requirements.filter(Boolean),
         tags: formData.tags.filter(Boolean),
-        allow_registration: formData.allow_registration,
+        organizers: formData.organizers.filter(org => org.name.trim() || org.id.trim()).map(org => ({
+          user_id: org.id || "", // Use id from form if available
+          user_full_name: org.name,
+          role: org.role,
+          joined_at: new Date().toISOString()
+        })),
+        agenda: formData.agenda.filter(item => item.time.trim() && item.activity.trim()),
+        contact_info: formData.contact_info,
+        social_links: formData.social_links,
         visibility: formData.is_public ? 'public' : 'club_members',
+        status: formData.status,
         registration_deadline: formData.registration_deadline || undefined,
+        event_image_url: eventImageUrl,
+        event_logo_url: eventLogoUrl,
+        images: formData.image_urls,
+        attachments: formData.attachment_data,
       }
 
       const res = await eventService.updateEvent(eventId, payload)
@@ -204,14 +439,45 @@ export default function EditEventPage() {
   }
 
   const categories = [
-    "Arts & Culture",
-    "Technology",
-    "Sports",
-    "Academic",
+    "Workshop",
+    "Seminar", 
+    "Competition",
     "Social",
-    "Business",
-    "Health & Wellness",
+    "Fundraiser",
+    "Meeting",
     "Other",
+  ]
+
+  const statusOptions = [
+    { value: "draft", label: "Bản nháp" },
+    { value: "published", label: "Đã xuất bản" },
+    { value: "cancelled", label: "Đã hủy" },
+    { value: "completed", label: "Đã hoàn thành" },
+  ]
+
+  const visibilityOptions = [
+    { value: "public", label: "Công khai" },
+    { value: "club_members", label: "Chỉ thành viên câu lạc bộ" },
+  ]
+
+  const locationTypeOptions = [
+    { value: "physical", label: "Tại địa điểm" },
+    { value: "virtual", label: "Trực tuyến" },
+    { value: "hybrid", label: "Kết hợp" },
+  ]
+
+  const currencyOptions = [
+    { value: "VND", label: "VND" },
+    { value: "USD", label: "USD" },
+    { value: "EUR", label: "EUR" },
+    { value: "JPY", label: "JPY" },
+    { value: "KRW", label: "KRW" },
+    { value: "CNY", label: "CNY" },
+  ]
+
+  const organizerOptions = [
+    { value: "organizer", label: "Người tổ chức" },
+    { value: "lead_organizer", label: "Trưởng ban tổ chức" },
   ]
 
 
@@ -340,6 +606,51 @@ export default function EditEventPage() {
             </CardContent>
           </Card>
 
+          {/* Status & Visibility */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Eye className="h-5 w-5 mr-2" />
+                Trạng thái và hiển thị
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Trạng thái</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="visibility">Hiển thị sự kiện</Label>
+                  <Select value={formData.visibility} onValueChange={(value) => handleInputChange("visibility", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn mức độ hiển thị" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {visibilityOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Time & Location */}
           <Card>
             <CardHeader>
@@ -393,24 +704,92 @@ export default function EditEventPage() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="location">Địa điểm *</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => handleInputChange("location", e.target.value)}
-                  placeholder="Ví dụ: Hội trường lớn, Tòa nhà A"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="location_type">Loại địa điểm</Label>
+                  <Select value={formData.location_type} onValueChange={(value) => handleInputChange("location_type", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn loại địa điểm" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locationTypeOptions.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="location">
+                    {formData.location_type === 'virtual' ? 'Link/Platform' : 
+                     formData.location_type === 'hybrid' ? 'Địa điểm chính' : 'Địa điểm'}
+                    {formData.location_type === 'physical' ? ' *' : ''}
+                  </Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    placeholder={
+                      formData.location_type === 'virtual' 
+                        ? "Ví dụ: https://zoom.us/j/123456789"
+                        : formData.location_type === 'hybrid'
+                        ? "Ví dụ: Hội trường lớn, Tòa nhà A"
+                        : "Ví dụ: Hội trường lớn, Tòa nhà A"
+                    }
+                    required={formData.location_type === 'physical'}
+                  />
+                </div>
               </div>
 
+              {formData.location_type === 'virtual' && (
+                <div>
+                  <Label htmlFor="platform">Nền tảng</Label>
+                  <Select value={formData.platform} onValueChange={(value) => handleInputChange("platform", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn nền tảng" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Zoom">Zoom</SelectItem>
+                      <SelectItem value="Google Meet">Google Meet</SelectItem>
+                      <SelectItem value="Microsoft Teams">Microsoft Teams</SelectItem>
+                      <SelectItem value="Discord">Discord</SelectItem>
+                      <SelectItem value="Skype">Skype</SelectItem>
+                      <SelectItem value="Other">Khác</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.location_type === 'hybrid' && (
+                <div>
+                  <Label htmlFor="virtual_link">Link trực tuyến</Label>
+                  <Input
+                    id="virtual_link"
+                    value={formData.virtual_link || ""}
+                    onChange={(e) => handleInputChange("virtual_link", e.target.value)}
+                    placeholder="https://zoom.us/j/123456789"
+                  />
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="detailed_location">Địa chỉ chi tiết</Label>
+                <Label htmlFor="detailed_location">
+                  {formData.location_type === 'virtual' ? 'Hướng dẫn tham gia' : 
+                   formData.location_type === 'hybrid' ? 'Thông tin bổ sung' : 'Địa chỉ chi tiết'}
+                </Label>
                 <Textarea
                   id="detailed_location"
                   value={formData.detailed_location}
                   onChange={(e) => handleInputChange("detailed_location", e.target.value)}
-                  placeholder="Địa chỉ chi tiết, hướng dẫn đường đi..."
+                  placeholder={
+                    formData.location_type === 'virtual'
+                      ? "Meeting ID, password, hướng dẫn tham gia trực tuyến..."
+                      : formData.location_type === 'hybrid'
+                      ? "Địa chỉ chi tiết, hướng dẫn tham gia, thông tin bổ sung..."
+                      : "Địa chỉ chi tiết, hướng dẫn đường đi, phòng số..."
+                  }
                   rows={2}
                 />
               </div>
@@ -455,8 +834,11 @@ export default function EditEventPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="VND">VND</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
+                        {currencyOptions.map((currency) => (
+                          <SelectItem key={currency.value} value={currency.value}>
+                            {currency.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -563,6 +945,446 @@ export default function EditEventPage() {
                   >
                     + Thêm thẻ
                   </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Organizers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Organizers
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Organizers</Label>
+                <div className="space-y-2">
+                  {formData.organizers.map((organizer, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={organizer.id}
+                        onChange={(e) => handleOrganizerChange(index, 'id', e.target.value)}
+                        placeholder="User ID"
+                        className="w-32"
+                      />
+                      <Input
+                        value={organizer.name}
+                        onChange={(e) => handleOrganizerChange(index, 'name', e.target.value)}
+                        placeholder="Organizer Name"
+                      />
+                      <Select value={organizer.role} onValueChange={(value) => handleOrganizerChange(index, 'role', value)}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizerOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeArrayItem("organizers", index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addArrayItem("organizers")}
+                  >
+                    + Add Organizer
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Agenda */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="h-5 w-5 mr-2" />
+                Agenda
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Agenda</Label>
+                <div className="space-y-2">
+                  {formData.agenda.map((item, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={item.time}
+                        onChange={(e) => handleAgendaChange(index, 'time', e.target.value)}
+                        placeholder="Time (e.g., 10:00 AM)"
+                      />
+                      <Input
+                        value={item.activity}
+                        onChange={(e) => handleAgendaChange(index, 'activity', e.target.value)}
+                        placeholder="Activity"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeArrayItem("agenda", index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addArrayItem("agenda")}
+                  >
+                    + Add Agenda Item
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Contact Info
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={formData.contact_info.email}
+                  onChange={(e) => handleContactInfoChange("email", e.target.value)}
+                  placeholder="Email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={formData.contact_info.phone}
+                  onChange={(e) => handleContactInfoChange("phone", e.target.value)}
+                  placeholder="Phone"
+                />
+              </div>
+              <div>
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  value={formData.contact_info.website}
+                  onChange={(e) => handleContactInfoChange("website", e.target.value)}
+                  placeholder="Website"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Social Links */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Social Links
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="facebook">Facebook</Label>
+                <Input
+                  id="facebook"
+                  value={formData.social_links.facebook}
+                  onChange={(e) => handleSocialLinksChange("facebook", e.target.value)}
+                  placeholder="Facebook URL"
+                />
+              </div>
+              <div>
+                <Label htmlFor="instagram">Instagram</Label>
+                <Input
+                  id="instagram"
+                  value={formData.social_links.instagram}
+                  onChange={(e) => handleSocialLinksChange("instagram", e.target.value)}
+                  placeholder="Instagram URL"
+                />
+              </div>
+              <div>
+                <Label htmlFor="discord">Discord</Label>
+                <Input
+                  id="discord"
+                  value={formData.social_links.discord}
+                  onChange={(e) => handleSocialLinksChange("discord", e.target.value)}
+                  placeholder="Discord URL"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* File Handling */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ImageIcon className="h-5 w-5 mr-2" />
+                Files
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="event_logo">Event Logo</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="event_logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleEventLogoUpload(e.target.files)}
+                    disabled={isUploadingImages}
+                  />
+                  {formData.event_logo && (
+                    <div className="flex items-center">
+                      <Eye className="h-5 w-5 mr-2 text-green-500" />
+                      <span className="text-sm text-gray-700">{formData.event_logo.name}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={removeEventLogo}
+                        className="ml-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Hiển thị logo hiện tại nếu có */}
+                {formData.event_logo_url && !formData.event_logo && (
+                  <div className="mt-2">
+                    <Label>Logo hiện tại:</Label>
+                    <div className="relative inline-block mt-1">
+                      <img
+                        src={formData.event_logo_url}
+                        alt="Current event logo"
+                        className="w-32 h-32 object-cover rounded-lg border"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-logo.png'
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInputChange("event_logo_url", "")}
+                        className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="event_image">Event Image</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="event_image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleEventImageUpload(e.target.files)}
+                    disabled={isUploadingImages}
+                  />
+                  {formData.event_image && (
+                    <div className="flex items-center">
+                      <Eye className="h-5 w-5 mr-2 text-green-500" />
+                      <span className="text-sm text-gray-700">{formData.event_image.name}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={removeEventImage}
+                        className="ml-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Hiển thị ảnh chính hiện tại nếu có */}
+                {formData.event_image_url && !formData.event_image && (
+                  <div className="mt-2">
+                    <Label>Ảnh chính hiện tại:</Label>
+                    <div className="relative inline-block mt-1">
+                      <img
+                        src={formData.event_image_url}
+                        alt="Current event image"
+                        className="w-48 h-32 object-cover rounded-lg border"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-logo.png'
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInputChange("event_image_url", "")}
+                        className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label>Gallery Images</Label>
+                <div className="space-y-2">
+                  {/* Hiển thị gallery images hiện tại */}
+                  {formData.image_urls.length > 0 && (
+                    <div className="mt-2">
+                      <Label>Ảnh gallery hiện tại ({formData.image_urls.length}):</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-1">
+                        {formData.image_urls.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={url}
+                              alt={`Gallery ${index + 1}`}
+                              className="w-full h-24 object-cover rounded border"
+                              onError={(e) => {
+                                e.currentTarget.src = '/placeholder-logo.png'
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newUrls = formData.image_urls.filter((_, i) => i !== index)
+                                handleInputChange("image_urls", newUrls)
+                              }}
+                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                            <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                              {index + 1}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Upload gallery images mới */}
+                  <Input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload("images", e.target.files)}
+                    disabled={isUploadingImages}
+                  />
+                  
+                  {/* Hiển thị files mới được chọn */}
+                  {formData.images.length > 0 && (
+                    <div className="mt-2">
+                      <Label>Ảnh mới được chọn ({formData.images.length}):</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-1">
+                        {formData.images.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`New ${index + 1}`}
+                              className="w-full h-24 object-cover rounded border"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeFile("images", index)}
+                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                            <div className="absolute bottom-1 left-1 bg-green-600 bg-opacity-50 text-white text-xs px-1 rounded">
+                              New
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label>Attachments</Label>
+                <div className="space-y-2">
+                  {/* Hiển thị attachments hiện tại */}
+                  {formData.attachment_data.length > 0 && (
+                    <div className="mt-2">
+                      <Label>Tài liệu hiện tại ({formData.attachment_data.length}):</Label>
+                      <div className="space-y-2">
+                        {formData.attachment_data.map((attachment, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded">
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm">{attachment.name}</span>
+                              <span className="text-xs text-gray-500">
+                                ({(attachment.size / 1024 / 1024).toFixed(2)} MB)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newAttachments = formData.attachment_data.filter((_, i) => i !== index)
+                                handleInputChange("attachment_data", newAttachments)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Upload attachments mới */}
+                  {formData.attachments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">{file.name}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeFile("attachments", index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Input
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z"
+                    onChange={(e) => handleFileUpload("attachments", e.target.files)}
+                    disabled={isUploadingImages}
+                  />
                 </div>
               </div>
             </CardContent>

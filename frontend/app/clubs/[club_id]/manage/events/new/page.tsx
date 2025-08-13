@@ -66,7 +66,7 @@ export default function CreateEventPage() {
     currency: "VND",
     requirements: [""] as string[],
     tags: [""] as string[],
-    organizers: [{ name: "", role: "organizer" }] as Array<{ name: string; role: string }>,
+    organizers: [{ id: "", name: "", role: "organizer" }] as Array<{ id: string; name: string; role: string }>,
     agenda: [{ time: "", activity: "" }] as Array<{ time: string; activity: string }>,
     contact_info: { email: "", phone: "", website: "" },
     social_links: { facebook: "", instagram: "", discord: "" },
@@ -76,6 +76,8 @@ export default function CreateEventPage() {
     status: "draft" as 'draft' | 'published' | 'cancelled' | 'completed',
     visibility: "public" as 'public' | 'club_members',
     location_type: "physical" as 'physical' | 'virtual' | 'hybrid',
+    virtual_link: "",
+    platform: "",
     // File handling
     event_logo: null as File | null,
     event_image: null as File | null,
@@ -109,7 +111,7 @@ export default function CreateEventPage() {
       if (field === 'organizers') {
         return {
           ...prev,
-          organizers: [...prev.organizers, { name: "", role: "organizer" }],
+          organizers: [...prev.organizers, { id: "", name: "", role: "organizer" }],
         }
       } else if (field === 'agenda') {
         return {
@@ -132,28 +134,7 @@ export default function CreateEventPage() {
     }))
   }
 
-  const handleOrganizerChange = (index: number, field: 'name' | 'role', value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      organizers: prev.organizers.map((organizer, i) =>
-        i === index ? { ...organizer, [field]: value } : organizer
-      ),
-    }))
-  }
 
-  const addOrganizer = () => {
-    setFormData((prev) => ({
-      ...prev,
-      organizers: [...prev.organizers, { name: "", role: "" }],
-    }))
-  }
-
-  const removeOrganizer = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      organizers: prev.organizers.filter((_, i) => i !== index),
-    }))
-  }
 
   const handleAgendaChange = (index: number, field: 'time' | 'activity', value: string) => {
     setFormData((prev) => ({
@@ -189,6 +170,15 @@ export default function CreateEventPage() {
     setFormData((prev) => ({
       ...prev,
       social_links: { ...prev.social_links, [field]: value },
+    }))
+  }
+
+  const handleOrganizerChange = (index: number, field: 'id' | 'name' | 'role', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      organizers: prev.organizers.map((organizer, i) =>
+        i === index ? { ...organizer, [field]: value } : organizer
+      ),
     }))
   }
 
@@ -346,11 +336,25 @@ export default function CreateEventPage() {
     e.preventDefault()
 
     // Enhanced validation
-    const requiredFields = {
+    const requiredFields: Record<string, string> = {
       title: "Tên sự kiện",
       description: "Mô tả",
-      start_date: "Ngày bắt đầu",
-      location: "Địa điểm"
+      start_date: "Ngày bắt đầu"
+    }
+
+    // Bắt buộc location cho physical events
+    if (formData.location_type === 'physical' && !formData.location) {
+      requiredFields.location = "Địa điểm"
+    }
+
+    // Bắt buộc location cho virtual events
+    if (formData.location_type === 'virtual' && !formData.location) {
+      requiredFields.location = "Link trực tuyến"
+    }
+
+    // Bắt buộc location cho hybrid events
+    if (formData.location_type === 'hybrid' && !formData.location) {
+      requiredFields.location = "Địa điểm chính"
     }
 
     const missingFields = Object.entries(requiredFields).filter(
@@ -424,8 +428,11 @@ export default function CreateEventPage() {
         // Location object according to API spec
         location: {
           location_type: formData.location_type,
-          address: formData.location.trim(),
+          address: formData.location_type === 'physical' || formData.location_type === 'hybrid' ? formData.location.trim() : undefined,
           room: formData.detailed_location?.trim() || undefined,
+          virtual_link: formData.location_type === 'virtual' ? formData.location.trim() : 
+                       formData.location_type === 'hybrid' ? formData.virtual_link?.trim() : undefined,
+          platform: formData.location_type === 'virtual' ? formData.platform : undefined,
         },
         start_date: formData.start_date,
         end_date: formData.end_date || undefined,
@@ -436,9 +443,9 @@ export default function CreateEventPage() {
         requirements: formData.requirements.filter(req => req.trim() !== ""),
         tags: formData.tags.filter(tag => tag.trim() !== ""),
         organizers: formData.organizers
-          .filter(org => org.name.trim() !== "")
+          .filter(org => org.name.trim() !== "" || org.id.trim() !== "")
           .map((org, index) => ({
-            user_id: index === 0 ? (user?.id || 'unknown') : `${user?.id || 'unknown'}_${index}`, // Người đầu tiên là user hiện tại
+            user_id: org.id || (index === 0 ? (user?.id || 'unknown') : `${user?.id || 'unknown'}_${index}`), // Use id from form if available
             user_full_name: org.name.trim(),
             role: org.role || 'organizer',
             joined_at: new Date().toISOString()
@@ -745,7 +752,9 @@ export default function CreateEventPage() {
 
                 <div>
                   <Label htmlFor="location">
-                    {formData.location_type === 'virtual' ? 'Link/Platform' : 'Địa điểm'} *
+                    {formData.location_type === 'virtual' ? 'Link/Platform' : 
+                     formData.location_type === 'hybrid' ? 'Địa điểm chính' : 'Địa điểm'}
+                    {formData.location_type === 'physical' ? ' *' : ''}
                   </Label>
                   <Input
                     id="location"
@@ -753,17 +762,51 @@ export default function CreateEventPage() {
                     onChange={(e) => handleInputChange("location", e.target.value)}
                     placeholder={
                       formData.location_type === 'virtual' 
-                        ? "Ví dụ: Zoom, Google Meet, ..."
+                        ? "Ví dụ: https://zoom.us/j/123456789"
+                        : formData.location_type === 'hybrid'
+                        ? "Ví dụ: Hội trường lớn, Tòa nhà A"
                         : "Ví dụ: Hội trường lớn, Tòa nhà A"
                     }
-                    required
+                    required={formData.location_type === 'physical'}
                   />
                 </div>
               </div>
 
+              {formData.location_type === 'virtual' && (
+                <div>
+                  <Label htmlFor="platform">Nền tảng</Label>
+                  <Select value={formData.platform} onValueChange={(value) => handleInputChange("platform", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn nền tảng" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Zoom">Zoom</SelectItem>
+                      <SelectItem value="Google Meet">Google Meet</SelectItem>
+                      <SelectItem value="Microsoft Teams">Microsoft Teams</SelectItem>
+                      <SelectItem value="Discord">Discord</SelectItem>
+                      <SelectItem value="Skype">Skype</SelectItem>
+                      <SelectItem value="Other">Khác</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.location_type === 'hybrid' && (
+                <div>
+                  <Label htmlFor="virtual_link">Link trực tuyến</Label>
+                  <Input
+                    id="virtual_link"
+                    value={formData.virtual_link}
+                    onChange={(e) => handleInputChange("virtual_link", e.target.value)}
+                    placeholder="https://zoom.us/j/123456789"
+                  />
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="detailed_location">
-                  {formData.location_type === 'virtual' ? 'Hướng dẫn tham gia' : 'Địa chỉ chi tiết'}
+                  {formData.location_type === 'virtual' ? 'Hướng dẫn tham gia' : 
+                   formData.location_type === 'hybrid' ? 'Thông tin bổ sung' : 'Địa chỉ chi tiết'}
                 </Label>
                 <Textarea
                   id="detailed_location"
@@ -771,8 +814,10 @@ export default function CreateEventPage() {
                   onChange={(e) => handleInputChange("detailed_location", e.target.value)}
                   placeholder={
                     formData.location_type === 'virtual'
-                      ? "Hướng dẫn tham gia, meeting ID, password..."
-                      : "Địa chỉ chi tiết, hướng dẫn đường đi..."
+                      ? "Meeting ID, password, hướng dẫn tham gia trực tuyến..."
+                      : formData.location_type === 'hybrid'
+                      ? "Địa chỉ chi tiết, hướng dẫn tham gia, thông tin bổ sung..."
+                      : "Địa chỉ chi tiết, hướng dẫn đường đi, phòng số..."
                   }
                   rows={2}
                 />
@@ -1296,6 +1341,66 @@ export default function CreateEventPage() {
                   onChange={(e) => handleContactInfoChange("website", e.target.value)}
                   placeholder="https://website.com"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Organizers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Organizers
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Organizers</Label>
+                <div className="space-y-2">
+                  {formData.organizers.map((organizer, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={organizer.id}
+                        onChange={(e) => handleOrganizerChange(index, 'id', e.target.value)}
+                        placeholder="User ID"
+                        className="w-32"
+                      />
+                      <Input
+                        value={organizer.name}
+                        onChange={(e) => handleOrganizerChange(index, 'name', e.target.value)}
+                        placeholder="Organizer Name"
+                      />
+                      <Select value={organizer.role} onValueChange={(value) => handleOrganizerChange(index, 'role', value)}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizerOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeArrayItem("organizers", index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addArrayItem("organizers")}
+                  >
+                    + Add Organizer
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

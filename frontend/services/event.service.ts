@@ -112,6 +112,7 @@ export interface CreateEventRequest {
     address?: string;
     room?: string;
     virtual_link?: string;
+    platform?: string;
     coordinates?: {
       lat: number;
       lng: number;
