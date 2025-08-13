@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
@@ -42,19 +42,15 @@ export default function ClubsPage() {
   const [recruitmentPage, setRecruitmentPage] = useState(1);
 
   // Use campaigns hook for recruitment data
-  const { campaigns: activeRecruitments, loading: recruitmentsLoading, error: recruitmentsError, loadPublishedCampaigns } = useCampaigns();
+  const { campaigns: activeRecruitments, pagination: recruitmentPagination, loading: recruitmentsLoading, error: recruitmentsError, loadPublishedCampaigns } = useCampaigns();
 
-  const campaignsPerPage = 3;
-  const totalRecruitmentPages = Math.ceil(activeRecruitments.length / campaignsPerPage);
-  const pagedRecruitments = useMemo(() => {
-    const start = (recruitmentPage - 1) * campaignsPerPage;
-    return activeRecruitments.slice(start, start + campaignsPerPage);
-  }, [activeRecruitments, recruitmentPage]);
-
-  // Load campaigns on mount
+  // Load campaigns on mount with pagination
   useEffect(() => {
-    loadPublishedCampaigns({ limit: 5 }); // Load 5 campaigns for the banner
-  }, [loadPublishedCampaigns]);
+    loadPublishedCampaigns({ 
+      page: recruitmentPage, 
+      limit: 3 
+    });
+  }, [loadPublishedCampaigns, recruitmentPage]);
 
   // Load clubs on component mount hoặc khi filter/page đổi
   useEffect(() => {
@@ -142,12 +138,12 @@ export default function ClubsPage() {
         </div>
 
         {/* Active Recruitment Banner */}
-        <RecruitmentBanner campaigns={pagedRecruitments} />
-        {totalRecruitmentPages > 1 && (
+        <RecruitmentBanner campaigns={activeRecruitments} />
+        {recruitmentPagination && recruitmentPagination.total_pages > 1 && (
           <div className="flex justify-center mt-2 mb-6">
             <Pagination
-              currentPage={recruitmentPage}
-              totalPages={totalRecruitmentPages}
+              currentPage={recruitmentsLoading ? recruitmentPage : recruitmentPagination.current_page}
+              totalPages={recruitmentPagination.total_pages}
               onPageChange={setRecruitmentPage}
             />
           </div>

@@ -8,6 +8,7 @@ export interface ApiResponse<T = any> {
   message?: string;
   success: boolean;
   status: number;
+  pagination?: any;
 }
 
 /**
@@ -180,6 +181,7 @@ const handleResponse = async <T>(response: Response): Promise<ApiResponse<T>> =>
     message: data?.message,
     success: response.ok,
     status: response.status,
+    pagination: data?.pagination,
   };
 
   if (!response.ok) {
