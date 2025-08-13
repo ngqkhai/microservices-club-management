@@ -94,13 +94,32 @@ function toUiEvent(api: any): UiEvent {
   // Normalize location
   const loc = api.location
   let locationText = "TBA"
+  let detailedLocation = ""
+  
   if (typeof loc === "string" && loc.trim()) {
     locationText = loc
   } else if (loc && typeof loc === "object") {
     const locationType = loc.location_type || loc.type
-    if (locationType === "online") {
-      locationText = loc.platform ? `${loc.platform} (Online)` : "Online"
+    if (locationType === "virtual" || locationType === "online") {
+      // Online event
+      if (loc.platform && loc.virtual_link) {
+        locationText = `${loc.platform} (Online)`
+        detailedLocation = loc.virtual_link
+      } else if (loc.platform) {
+        locationText = `${loc.platform} (Online)`
+      } else if (loc.virtual_link) {
+        locationText = "Online"
+        detailedLocation = loc.virtual_link
+      } else {
+        locationText = "Online"
+      }
+    } else if (locationType === "physical" || locationType === "offline") {
+      // Offline event
+      const parts = [loc.room, loc.address].filter(Boolean)
+      locationText = parts.length ? parts.join(" - ") : "TBA"
+      detailedLocation = api.detailed_location || ""
     } else {
+      // Fallback for other location types
       const parts = [loc.address, loc.room, api.detailed_location].filter(Boolean)
       locationText = parts.length ? parts.join(" - ") : "TBA"
     }
@@ -119,7 +138,7 @@ function toUiEvent(api: any): UiEvent {
     start_time: startDt ? startDt.toISOString().slice(11, 16) : "",
     end_time: endDt ? endDt.toISOString().slice(11, 16) : undefined,
     location: locationText,
-    detailed_location: api.detailed_location,
+    detailed_location: detailedLocation,
     category: api.category,
     event_type: api.event_type,
     club: { 
@@ -906,7 +925,22 @@ export default function EventDetailPage() {
                   <MapPin className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="font-medium">{event.location}</p>
-                    <p className="text-sm text-gray-500">{event.detailed_location}</p>
+                    {event.detailed_location && (
+                      <p className="text-sm text-gray-500">
+                        {event.detailed_location.startsWith('http') ? (
+                          <a 
+                            href={event.detailed_location} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {event.detailed_location}
+                          </a>
+                        ) : (
+                          event.detailed_location
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
 

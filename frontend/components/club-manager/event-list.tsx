@@ -718,25 +718,23 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
           <DialogHeader>
             <DialogTitle>Xác nhận xóa sự kiện</DialogTitle>
             <DialogDescription>
-              <div className="space-y-4">
-                <p>
-                  Bạn có chắc chắn muốn xóa sự kiện "{pendingDeleteEvent?.title}"? 
-                  Hành động này không thể hoàn tác.
-                </p>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Nhập "delete" để xác nhận xóa:
-                  </label>
-                  <Input
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder="delete"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
+              Bạn có chắc chắn muốn xóa sự kiện "{pendingDeleteEvent?.title}"? 
+              Hành động này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                Nhập "delete" để xác nhận xóa:
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="delete"
+                className="mt-1"
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isLoading}>
               Hủy
