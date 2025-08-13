@@ -6,6 +6,28 @@ const eventSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  club: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: false
+    },
+    name: {
+      type: String,
+      maxLength: 200,
+      required: false
+    },
+    logo_url: {
+      type: String,
+      maxLength: 500,
+      required: false,
+      validate: {
+        validator: function(v) {
+          return !v || /^https?:\/\/.+/.test(v);
+        },
+        message: 'Club logo URL must be a valid HTTP/HTTPS URL'
+      }
+    }
+  },
   title: {
     type: String,
     required: true,
