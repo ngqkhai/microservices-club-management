@@ -17,6 +17,7 @@ export { eventService, type Event, type EventParticipant, type CreateEventReques
 export { notificationService, type Notification, type NotificationListQuery, type NotificationListResponse } from './notification.service';
 export { campaignService, type Campaign, type CampaignApplication } from './campaign.service';
 export { applicationService, type Application, type ApplicationsResponse, type ApplicationDetailResponse } from './application.service';
+export { imageService, type ImageUploadResponse, type ImageType, type EntityType } from './image.service';
 
 // Re-export API utilities
 export { api, getToken, setToken, removeToken, getRefreshToken, setRefreshToken, type ApiResponse, type ApiError } from '@/lib/api';

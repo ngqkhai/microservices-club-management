@@ -232,6 +232,11 @@ const eventSchema = new mongoose.Schema({
       type: String, // UUID from Auth Service
       required: true
     },
+    user_full_name: {
+      type: String,
+      maxLength: 200,
+      required: true
+    },
     role: {
       type: String,
       enum: ['organizer', 'lead_organizer'],
