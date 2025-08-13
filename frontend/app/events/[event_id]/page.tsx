@@ -42,7 +42,9 @@ import {
   CalendarDays,
   QrCode,
   Facebook,
-  Instagram
+  Instagram,
+  Euro,
+  Banknote
 } from "lucide-react"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
@@ -147,8 +149,8 @@ function toUiEvent(api: any): UiEvent {
       logo_url: club.logo_url || club.logo || ""
     },
     organizers: organizers.map((org: any) => ({
-      name: org.name || "Ban tổ chức",
-      role: org.role,
+      name: org.user_full_name || "Ban tổ chức",
+      role: org.role.split("_").map((r: string) => r.charAt(0).toUpperCase() + r.slice(1)).join(" "),
       email: api.contact_info?.email,
       phone: api.contact_info?.phone,
       avatar_url: org.avatar_url,
@@ -190,6 +192,11 @@ export default function EventDetailPage() {
   const [relatedEvents, setRelatedEvents] = useState<UiEvent[]>([])
   const [isRelatedLoading, setIsRelatedLoading] = useState(false)
   const [showQr, setShowQr] = useState(false)
+
+  // Function to get appropriate currency icon
+  const getCurrencyIcon = (currency?: string) => {
+    return <Banknote className="h-5 w-5 text-green-600" />
+  }
 
   useEffect(() => {
     let mounted = true
@@ -894,7 +901,7 @@ export default function EventDetailPage() {
               <CardContent className="space-y-4">
                 {/* Event Category & Type */}
                 <div className="flex items-center space-x-3">
-                  <Tag className="h-5 w-5 text-gray-400" />
+                  <Tag className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
                     <p className="font-medium">{event.category}</p>
                     <p className="text-sm text-gray-500">{event.event_type}</p>
@@ -905,24 +912,14 @@ export default function EventDetailPage() {
 
                 {/* Date & Time */}
                 <div className="flex items-start space-x-3">
-                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-medium">{formatDate(event.date)}</p>
-                    {/* <div className="text-sm text-gray-500 space-y-1">
-                      <p className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Bắt đầu: {formatTime(event.start_time)}
-                      </p>
-                      <p className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Kết thúc: {event.end_time ? formatTime(event.end_time) : "Chưa xác định"}
-                      </p>
-                    </div> */}
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-gray-400" />
+                  <MapPin className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
                     <p className="font-medium">{event.location}</p>
                     {event.detailed_location && (
@@ -945,10 +942,10 @@ export default function EventDetailPage() {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <DollarSign className="h-5 w-5 text-gray-400" />
+                  <Banknote className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
                     <p className="font-medium">
-                      {event.fee === 0 ? "Miễn phí" : `${event.fee.toLocaleString("vi-VN")} VNĐ`}
+                      {event.fee === 0 ? "Miễn phí" : event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
                     </p>
                     <p className="text-sm text-gray-500">Phí tham gia</p>
                   </div>

@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react"
+import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users, Banknote } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 import { eventService, type Event as ApiEvent } from "@/services/event.service"
@@ -34,6 +34,8 @@ type UiEvent = {
   event_image_url?: string,
   event_logo_url?: string,
   fee: number
+  fee_display?: string
+  currency?: string
   description: string
   category: string
 }
@@ -69,6 +71,38 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     locationText = anyEvent.detailed_location
   }
 
+  // Normalize fee and currency
+  const fee = anyEvent.participation_fee ?? anyEvent.fee ?? 0;
+  const currency = anyEvent.currency || "VND";
+  
+  // Format fee display
+  let feeDisplay = "";
+  if (fee === 0) {
+    feeDisplay = "Miễn phí";
+  } else {
+    switch (currency.toUpperCase()) {
+      case "USD":
+        feeDisplay = `$${fee.toLocaleString()}`;
+        break;
+      case "EUR":
+        feeDisplay = `€${fee.toLocaleString()}`;
+        break;
+      case "JPY":
+        feeDisplay = `¥${fee.toLocaleString()}`;
+        break;
+      case "KRW":
+        feeDisplay = `₩${fee.toLocaleString()}`;
+        break;
+      case "CNY":
+        feeDisplay = `¥${fee.toLocaleString()}`;
+        break;
+      case "VND":
+      default:
+        feeDisplay = `${fee.toLocaleString("vi-VN")} VNĐ`;
+        break;
+    }
+  }
+
   return {
     event_id: anyEvent.id || anyEvent._id,
     title: anyEvent.title,
@@ -82,7 +116,9 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     },
     event_image_url: anyEvent.event_image_url,
     event_logo_url: anyEvent.event_logo_url,
-    fee: anyEvent.participation_fee ?? anyEvent.fee ?? 0,
+    fee: fee,
+    fee_display: feeDisplay,
+    currency: currency,
     description: anyEvent.description || anyEvent.short_description || "",
     category: anyEvent.category || "General",
   }
@@ -123,6 +159,11 @@ export default function EventsPage() {
   const [totalEvents, setTotalEvents] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const eventsPerPage = 3
+
+  // Function to get appropriate currency icon
+  const getCurrencyIcon = (currency?: string) => {
+    return <Banknote className="h-4 w-4 text-green-600" />
+  }
 
   const loadEvents = useCallback(async (page: number = 1) => {
     setIsLoading(true)
@@ -455,12 +496,13 @@ export default function EventsPage() {
                                 {event.category}
                               </Badge>
                               {event.fee > 0 ? (
-                                <Badge variant="outline" className="text-xs">
-                                  ${event.fee}
+                                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                  {getCurrencyIcon(event.currency)}
+                                  {event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="text-xs text-green-600">
-                                  Free
+                                  Miễn phí
                                 </Badge>
                               )}
                             </div>
