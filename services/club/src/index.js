@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const clubRoutes = require('./routes/clubRoutes');
 const { connectToDatabase } = require('./config/database');
+const imageEventConsumer = require('./services/imageEventConsumer');
 
 // Initialize Express app
 const app = express();
@@ -43,6 +44,16 @@ const start = async () => {
     if (!dbConnected && process.env.NODE_ENV !== 'development' && process.env.MOCK_DB !== 'true') {
       console.error('Could not connect to MongoDB. Exiting application.');
       process.exit(1);
+    }
+    
+    // Initialize RabbitMQ image consumer
+    if (process.env.RABBITMQ_URL) {
+      try {
+        await imageEventConsumer.connect();
+        console.log('📥 Club service listening for image events');
+      } catch (error) {
+        console.warn('⚠️ Could not connect to RabbitMQ for image events:', error.message);
+      }
     }
     
     app.listen(PORT, () => {

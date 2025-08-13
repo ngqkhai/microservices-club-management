@@ -1,177 +1,85 @@
-# E2E Test Runner for Local Development (PowerShell)
-# This script starts the full stack and runs E2E tests
+# Save as scripts/run-e2e-local.ps1 and run from repo root:
+#   powershell -ExecutionPolicy Bypass -File .\scripts\run-e2e-local.ps1
 
-param(
-    [string]$Mode = "",
-    [string]$TestFile = ""
-)
+$ErrorActionPreference = "Stop"
 
-# Function to print colored output
-function Write-Status {
-    param([string]$Message)
-    Write-Host "[INFO] $Message" -ForegroundColor Blue
+# 1) Pre-setup
+Write-Host "Setting working dir to repo root..."
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Repo root is parent of scripts directory
+$repoRoot = Resolve-Path (Join-Path $scriptDir '..')
+Set-Location $repoRoot
+
+Write-Host "Ensuring artifacts dirs..."
+New-Item -ItemType Directory -Force -Path artifacts, test-results, logs | Out-Null
+
+# 2) Node deps
+Write-Host "Installing root deps..."
+npm ci
+Write-Host "Installing frontend deps..."
+Push-Location (Join-Path $repoRoot 'frontend')
+npm ci
+Pop-Location
+
+Write-Host "Installing Playwright Chromium..."
+# On Windows, --with-deps is not supported/needed
+npx playwright install chromium
+
+# 3) Docker build
+Write-Host "Building Docker services..."
+$env:GIT_COMMIT = (git rev-parse HEAD)
+$env:BUILD_NUMBER = "local-1"
+$env:BUILD_TIME = (Get-Date).ToUniversalTime().ToString("s") + "Z"
+
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml build --no-cache `
+  --build-arg GIT_COMMIT=$env:GIT_COMMIT `
+  --build-arg BUILD_NUMBER=$env:BUILD_NUMBER `
+  --build-arg BUILD_TIME=$env:BUILD_TIME
+
+# 4) Docker up
+Write-Host "Starting services..."
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+
+# 5) Wait for health
+Write-Host "Waiting for services to be healthy..."
+for ($i = 1; $i -le 60; $i++) {
+  $ps = docker compose -f docker-compose.yml -f docker-compose.e2e.yml ps
+  if ($ps -match "unhealthy|starting") {
+    Write-Host "Services still starting... (attempt $i/60)"
+    Start-Sleep -Seconds 10
+  } else {
+    Write-Host "All services are (likely) healthy!"
+    break
+  }
+  if ($i -eq 60) {
+    Write-Host "Services failed to become healthy within 10 minutes"
+    docker compose -f docker-compose.yml -f docker-compose.e2e.yml ps
+    throw "Health check timeout"
+  }
 }
 
-function Write-Success {
-    param([string]$Message)
-    Write-Host "[SUCCESS] $Message" -ForegroundColor Green
-}
+# 6) Connectivity checks
+Write-Host "Verifying service connectivity..."
+curl.exe -f http://localhost:3000/api/health
+curl.exe -f http://localhost:8000/health
+curl.exe -f -H "X-API-Key: test-secret-e2e" http://localhost:8000/api/auth/readiness
+curl.exe -f -H "X-API-Key: test-secret-e2e" http://localhost:8000/api/clubs/health
+curl.exe -f -H "X-API-Key: test-secret-e2e" http://localhost:8000/health
 
-function Write-Warning {
-    param([string]$Message)
-    Write-Host "[WARNING] $Message" -ForegroundColor Yellow
-}
+Write-Host "Connectivity checks passed."
 
-function Write-Error-Custom {
-    param([string]$Message)
-    Write-Host "[ERROR] $Message" -ForegroundColor Red
-}
-
-Write-Status "🚀 Starting Club Management System E2E Tests"
-
-# Check if Docker is running
-try {
-    docker info | Out-Null
-} catch {
-    Write-Error-Custom "Docker is not running. Please start Docker and try again."
-    exit 1
-}
-
-# Check if docker-compose is available
-if (!(Get-Command docker-compose -ErrorAction SilentlyContinue)) {
-    Write-Error-Custom "docker-compose is not installed. Please install docker-compose and try again."
-    exit 1
-}
-
-# Set environment variables for E2E testing
-$env:NODE_ENV = "test"
+# 7) Run E2E
+Write-Host "Running Playwright tests..."
+$env:CI = "true"
 $env:API_GATEWAY_SECRET = "test-secret-e2e"
 $env:MONGODB_URI = "mongodb://localhost:27017/club_e2e_test"
 $env:POSTGRES_URL = "postgresql://postgres:postgres@localhost:5432/auth_e2e_test"
-$env:BASE_URL = "http://localhost:3000"
-$env:API_GATEWAY_URL = "http://localhost:8000"
+$env:E2E_VERBOSE = "false"
 
-Write-Status "Environment variables set for E2E testing"
+npx playwright test --project=chromium --reporter=line
 
-# Function to cleanup on exit
-function Cleanup {
-    Write-Warning "Stopping services..."
-    docker-compose down
-    Write-Success "Services stopped"
-}
+Write-Host "E2E tests completed."
 
-# Install dependencies if needed
-if (!(Test-Path "node_modules")) {
-    Write-Status "Installing dependencies..."
-    npm install
-}
-
-# Install Playwright browsers if needed
-$playwrightPath = "$env:USERPROFILE\AppData\Local\ms-playwright"
-if (!(Test-Path $playwrightPath)) {
-    Write-Status "Installing Playwright browsers..."
-    npx playwright install
-}
-
-# Stop any existing services
-Write-Status "Stopping any existing services..."
-docker-compose down
-
-# Start services
-Write-Status "Starting services with docker-compose..."
-docker-compose up -d
-
-# Wait for services to be ready
-Write-Status "Waiting for services to start..."
-Start-Sleep -Seconds 10
-
-# Check if services are responding
-Write-Status "Checking service health..."
-
-# Wait for frontend
-$maxAttempts = 30
-$attempt = 0
-do {
-    try {
-        $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 5
-        if ($response.StatusCode -eq 200) {
-            Write-Success "Frontend is ready"
-            break
-        }
-    } catch {
-        # Continue trying
-    }
-    $attempt++
-    if ($attempt -eq $maxAttempts) {
-        Write-Error-Custom "Frontend failed to start after $maxAttempts attempts"
-        Cleanup
-        exit 1
-    }
-    Start-Sleep -Seconds 2
-} while ($attempt -lt $maxAttempts)
-
-# Wait for API Gateway
-$attempt = 0
-do {
-    try {
-        $response = Invoke-WebRequest -Uri "http://localhost:8000/health" -UseBasicParsing -TimeoutSec 5
-        if ($response.StatusCode -eq 200) {
-            Write-Success "API Gateway is ready"
-            break
-        }
-    } catch {
-        # Continue trying
-    }
-    $attempt++
-    if ($attempt -eq $maxAttempts) {
-        Write-Error-Custom "API Gateway failed to start after $maxAttempts attempts"
-        Cleanup
-        exit 1
-    }
-    Start-Sleep -Seconds 2
-} while ($attempt -lt $maxAttempts)
-
-# Additional wait for all services to fully initialize
-Write-Status "Waiting for all services to fully initialize..."
-Start-Sleep -Seconds 20
-
-# Run E2E tests
-Write-Status "Running E2E tests..."
-
-try {
-    switch ($Mode.ToLower()) {
-        "ui" {
-            Write-Status "Running tests with UI..."
-            npm run test:e2e:ui
-        }
-        "headed" {
-            Write-Status "Running tests in headed mode..."
-            npm run test:e2e:headed
-        }
-        "debug" {
-            Write-Status "Running tests in debug mode..."
-            npx playwright test --debug
-        }
-        default {
-            if ($TestFile) {
-                Write-Status "Running specific test: $TestFile"
-                npx playwright test $TestFile
-            } else {
-                Write-Status "Running all E2E tests..."
-                npm run test:e2e
-            }
-        }
-    }
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Success "All E2E tests passed!"
-        Write-Status "View test report with: npx playwright show-report"
-    } else {
-        Write-Error-Custom "Some E2E tests failed"
-        Write-Status "View test report with: npx playwright show-report"
-        Cleanup
-        exit 1
-    }
-} finally {
-    Cleanup
-}
+# 8) Cleanup hint (manual)
+Write-Host "Use the following to clean up when done:"
+Write-Host 'docker compose -f docker-compose.yml -f docker-compose.e2e.yml down -v'

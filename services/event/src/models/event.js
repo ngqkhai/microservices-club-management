@@ -82,9 +82,26 @@ const eventSchema = new mongoose.Schema({
   images: [{
     type: String
   }],
-  gallery: [{
-    type: String
-  }], // Additional image URLs for event gallery
+  event_image_url: {
+    type: String,
+    maxLength: 500,
+    validate: {
+      validator: function(v) {
+        return !v || /^https?:\/\/.+/.test(v);
+      },
+      message: 'Event image URL must be a valid HTTP/HTTPS URL'
+    }
+  },
+  event_logo_url: {
+    type: String,
+    maxLength: 500,
+    validate: {
+      validator: function(v) {
+        return !v || /^https?:\/\/.+/.test(v);
+      },
+      message: 'Event logo URL must be a valid HTTP/HTTPS URL'
+    }
+  },
   attachments: [{
     filename: {
       type: String,

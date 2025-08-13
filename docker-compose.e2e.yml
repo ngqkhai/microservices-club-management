@@ -92,6 +92,7 @@ services:
   club-service:
     environment:
       MONGODB_URI: mongodb://mongo:27017/club_service_db?directConnection=true
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       mongo:
         condition: service_healthy
@@ -106,6 +107,7 @@ services:
   event-service:
     environment:
       MONGODB_URI: mongodb://mongo:27017/event_service_db?directConnection=true
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       mongo:
         condition: service_healthy

@@ -323,7 +323,7 @@ def seed_recruitment_campaigns():
         
         # Clear existing campaigns
         logging.info("[CLEANING] Clearing existing recruitment campaigns...")
-        db.recruitment_campaigns.delete_many({})
+        db.recruitmentcampaigns.delete_many({})
         
         # Insert new campaigns in batches
         batch_size = 25
@@ -331,20 +331,20 @@ def seed_recruitment_campaigns():
         
         for i in range(0, len(campaigns_data), batch_size):
             batch = campaigns_data[i:i + batch_size]
-            result = db.recruitment_campaigns.insert_many(batch)
+            result = db.recruitmentcampaigns.insert_many(batch)
             logging.info(f"Inserted batch {i//batch_size + 1}: {len(result.inserted_ids)} campaigns")
         
         # Verify insertion
-        total_campaigns = db.recruitment_campaigns.count_documents({})
+        total_campaigns = db.recruitmentcampaigns.count_documents({})
         logging.info(f"[SUCCESS] Total campaigns created: {total_campaigns}")
         
         # Generate statistics
         logging.info("\n[SUMMARY] CAMPAIGN STATISTICS:")
         
         # By status
-        statuses = db.recruitment_campaigns.distinct("status")
+        statuses = db.recruitmentcampaigns.distinct("status")
         for status in statuses:
-            count = db.recruitment_campaigns.count_documents({"status": status})
+            count = db.recruitmentcampaigns.count_documents({"status": status})
             logging.info(f"   {status}: {count}")
         
         # By club category
@@ -367,13 +367,13 @@ def seed_recruitment_campaigns():
             {"$sort": {"count": -1}}
         ]
         
-        category_stats = list(db.recruitment_campaigns.aggregate(pipeline))
+        category_stats = list(db.recruitmentcampaigns.aggregate(pipeline))
         logging.info("\n[STATS] CAMPAIGNS BY CLUB CATEGORY:")
         for stat in category_stats:
             logging.info(f"   {stat['_id']}: {stat['count']} campaigns")
         
         # Active campaigns
-        active_count = db.recruitment_campaigns.count_documents({"status": "published"})
+        active_count = db.recruitmentcampaigns.count_documents({"status": "published"})
         logging.info(f"\n[ACTIVE] Currently active campaigns: {active_count}")
         
         client.close()

@@ -1,44 +1,68 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced Auth Service Database Seeding Script
-Generates comprehensive user data with realistic profiles
+Enhanced Auth Service Database Seeding Script - Version 2
+✅ Uses environment variables instead of hardcoded credentials
+✅ Generates realistic image URLs with placeholder services
+✅ Improved error handling and logging
 """
 
 import logging
+import re
+import unicodedata
 import psycopg2
 from datetime import datetime, timedelta
 import random
 import json
+import os
+import sys
 
-# Configuration
-SUPABASE_DB_URL = "postgresql://postgres.rkzyqtmqflkuxbcghkmy:tDUBMmQzQ5ilqlgU@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+# Add utils to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+
+from database_config import db_config
+from image_url_generator import generate_profile_picture_url
 
 # Logging setup
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, db_config.seeding_config['log_level']),
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+def to_ascii_slug(text: str) -> str:
+    """Convert Unicode text to a lowercase ASCII slug without diacritics.
+    Keeps only [a-z0-9] characters.
+    """
+    if not isinstance(text, str):
+        text = str(text)
+    # Normalize and remove diacritics
+    normalized = unicodedata.normalize('NFKD', text)
+    ascii_text = normalized.encode('ascii', 'ignore').decode('ascii')
+    # Lowercase and keep alphanumerics only
+    ascii_text = ascii_text.lower()
+    ascii_text = re.sub(r'[^a-z0-9]', '', ascii_text)
+    # Fallback if empty
+    return ascii_text or 'user'
+
 def generate_users_data():
-    """Generate comprehensive user data"""
+    """Generate comprehensive user data with realistic image URLs"""
     
     # Vietnamese names and realistic data
     first_names = [
-        'Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Vo', 'Vu', 'Dang', 'Bui',
-        'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Mai', 'Trinh', 'Luu', 'Cao', 'Truong',
-        'Phan', 'Ta', 'Lam', 'Dinh', 'Ton', 'Bach', 'Quach', 'Chau', 'Ong', 'Luc'
+        'Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Võ', 'Vũ', 'Đặng', 'Bùi',
+        'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý', 'Mai', 'Trinh', 'Lưu', 'Cao', 'Trương',
+        'Phan', 'Tạ', 'Lâm', 'Đinh', 'Tôn', 'Bạch', 'Quách', 'Châu', 'Ông', 'Lục'
     ]
     
     middle_names = [
-        'Van', 'Thi', 'Thanh', 'Minh', 'Hoang', 'Duc', 'Quoc', 'Anh', 'Hai', 'Huu',
-        'Ngoc', 'Thu', 'Kim', 'Xuan', 'Duy', 'Bao', 'Khanh', 'Lan', 'Linh', 'My'
+        'Văn', 'Thị', 'Thành', 'Minh', 'Hoàng', 'Đức', 'Quốc', 'Anh', 'Hải', 'Hữu',
+        'Ngọc', 'Thủy', 'Kim', 'Xuân', 'Duy', 'Bảo', 'Khánh', 'Lan', 'Linh', 'My'
     ]
     
     last_names = [
-        'An', 'Binh', 'Cao', 'Duc', 'Em', 'Giang', 'Hoa', 'Khai', 'Linh', 'Mai',
-        'Nam', 'Oanh', 'Phuc', 'Quang', 'Son', 'Tam', 'Uyen', 'Vy', 'Xuan', 'Yen',
-        'Bao', 'Chi', 'Dat', 'Huy', 'Khoa', 'Long', 'Nhat', 'Phong', 'Quan', 'Tung'
+        'An', 'Bình', 'Cao', 'Đức', 'Em', 'Giang', 'Hoa', 'Khải', 'Linh', 'Mai',
+        'Nam', 'Oanh', 'Phúc', 'Quang', 'Sơn', 'Tam', 'Uyên', 'Vy', 'Xuân', 'Yến',
+        'Bảo', 'Chi', 'Đạt', 'Huy', 'Khoa', 'Long', 'Nhật', 'Phong', 'Quân', 'Tùng'
     ]
     
     departments = [
@@ -65,15 +89,15 @@ def generate_users_data():
     
     users_data = []
     
-    # Generate admin users
+    # Generate admin users with realistic profile pictures
     admin_users = [
         {
             'email': 'admin@clubsystem.edu.vn',
             'password_hash': '$2b$12$LQv3c1yqBwdVHdDhzXCZl.j8kF9QzMKlGqE3gOQwHzHzFqZyK9tI2',
-            'full_name': 'Nguyen Van Quan',
+            'full_name': 'Nguyễn Văn Quân',
             'role': 'admin',
             'phone': '+84901000001',
-            'profile_picture_url': 'https://example.com/avatars/admin1.jpg',
+            'profile_picture_url': generate_profile_picture_url('admin1', 'Nam'),
             'bio': 'Quản trị viên hệ thống quản lý câu lạc bộ sinh viên',
             'date_of_birth': datetime(1990, 1, 15),
             'gender': 'Nam',
@@ -84,10 +108,10 @@ def generate_users_data():
         {
             'email': 'clubs.admin@clubsystem.edu.vn', 
             'password_hash': '$2b$12$LQv3c1yqBwdVHdDhzXCZl.j8kF9QzMKlGqE3gOQwHzHzFqZyK9tI2',
-            'full_name': 'Tran Thi Linh',
+            'full_name': 'Trần Thị Linh',
             'role': 'admin',
             'phone': '+84901000002',
-            'profile_picture_url': 'https://example.com/avatars/admin2.jpg',
+            'profile_picture_url': generate_profile_picture_url('admin2', 'Nữ'),
             'bio': 'Quản trị viên phụ trách các hoạt động câu lạc bộ',
             'date_of_birth': datetime(1991, 3, 22),
             'gender': 'Nữ',
@@ -99,14 +123,16 @@ def generate_users_data():
     
     users_data.extend(admin_users)
     
-    # Generate regular users
-    for i in range(1, 101):  # 100 regular users
+    # Generate regular users with realistic profile pictures
+    batch_size = db_config.seeding_config['batch_size']
+    for i in range(1, min(101, batch_size + 1)):  # Respect batch size
         first_name = random.choice(first_names)
         middle_name = random.choice(middle_names)
         last_name = random.choice(last_names)
         
         username_base = f"{last_name.lower()}{first_name.lower()}{i:03d}"
-        email = f"{username_base}@student.university.edu.vn"
+        ascii_username_base = to_ascii_slug(username_base)
+        email = f"{ascii_username_base}@student.university.edu.vn"
         
         # Random personal data
         birth_year = random.randint(1999, 2005)
@@ -135,11 +161,15 @@ def generate_users_data():
         
         # Create social links
         social_links = {
-            'facebook': f"https://facebook.com/{username_base}",
-            'instagram': f"https://instagram.com/{username_base}"
+            'facebook': f"https://facebook.com/{ascii_username_base}",
+            'instagram': f"https://instagram.com/{ascii_username_base}"
         }
         if random.random() > 0.7:  # 30% chance to have LinkedIn
-            social_links['linkedin'] = f"https://linkedin.com/in/{username_base}"
+            social_links['linkedin'] = f"https://linkedin.com/in/{ascii_username_base}"
+        
+        # Generate realistic profile picture
+        user_id = f"user{i:03d}"
+        profile_picture_url = generate_profile_picture_url(user_id, gender)
         
         user_data = {
             'email': email,
@@ -147,7 +177,7 @@ def generate_users_data():
             'full_name': full_name,
             'role': 'user',
             'phone': f'+8490{random.randint(1000000, 9999999)}',
-            'profile_picture_url': f'https://example.com/avatars/user{i:03d}.jpg',
+            'profile_picture_url': profile_picture_url,
             'bio': random.choice(bio_templates),
             'date_of_birth': datetime(birth_year, birth_month, birth_day),
             'gender': gender,
@@ -159,19 +189,27 @@ def generate_users_data():
         users_data.append(user_data)
     
     return users_data
-
+ 
 def seed_auth_service():
     """Seed the authentication service with enhanced user data"""
     
-    print("Starting Enhanced Auth Service Database Seeding...")
-    print("Target: Supabase PostgreSQL Database")
+    print("Starting Enhanced Auth Service Database Seeding v2...")
+    print(f"Target: PostgreSQL Database")
+    print(f"Configuration: {db_config.seeding_config}")
+    
+    # Test database connection first
+    print("\nTesting database connection...")
+    connection_results = db_config.test_connections()
+    if not connection_results['postgresql']:
+        print("PostgreSQL connection failed. Please check your configuration.")
+        return False
     
     try:
         # Connect to database
-        conn = psycopg2.connect(SUPABASE_DB_URL)
+        conn = psycopg2.connect(db_config.supabase_url)
         cur = conn.cursor()
         
-        print("Connected to Supabase PostgreSQL")
+        print("Connected to PostgreSQL")
         
         # Clear existing users
         print("Clearing existing users...")
@@ -179,7 +217,7 @@ def seed_auth_service():
         
         # Generate user data
         users_data = generate_users_data()
-        print(f"Generated {len(users_data)} users")
+        print(f"Generated {len(users_data)} users with realistic profile pictures")
         
         # Insert users
         print("Seeding users...")
@@ -227,6 +265,13 @@ def seed_auth_service():
         print("Users by gender:")
         for gender, count in gender_counts:
             print(f"   - {gender}: {count} users")
+        
+        # Show sample profile picture URLs
+        cur.execute("SELECT full_name, profile_picture_url FROM users LIMIT 3")
+        sample_users = cur.fetchall()
+        print("Sample profile picture URLs:")
+        for name, url in sample_users:
+            print(f"   - {name}: {url}")
             
     except Exception as e:
         print(f"Error: {e}")
@@ -240,10 +285,18 @@ def seed_auth_service():
             pass
     
     return True
-
+ 
 if __name__ == "__main__":
     success = seed_auth_service()
     if success:
-        print("SUCCESS: Enhanced auth service completed successfully")
+        print("\nSUCCESS: Enhanced auth service v2 completed successfully")
+        print("Features:")
+        print("   - Environment-based configuration")
+        print("   - Realistic profile picture URLs")
+        print("   - Improved error handling")
+        print("   - Configurable batch sizes")
     else:
-        print("ERROR: Enhanced auth service seeding failed")
+        print("\nERROR: Enhanced auth service v2 seeding failed")
+        print("Check your .env configuration and database connectivity")
+
+
