@@ -50,6 +50,15 @@ export function ApplicationCard({
     )
   }
 
+  const getRoleLabel = (role?: string) => {
+    const roleLabels = {
+      member: "Thành viên",
+      organizer: "Tổ chức",
+      club_manager: "Quản lý CLB"
+    }
+    return roleLabels[role as keyof typeof roleLabels] || role || "Thành viên"
+  }
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -67,6 +76,11 @@ export function ApplicationCard({
             <p className="text-sm text-gray-500">
               Nộp ngày {formatDate(application.submitted_at)}
             </p>
+            {application.role && (
+              <p className="text-xs text-blue-600 mt-1">
+                Vai trò: {getRoleLabel(application.role)}
+              </p>
+            )}
             {application.rejection_reason && (
               <p className="text-sm text-red-600 mt-1">
                 Lý do từ chối: {application.rejection_reason}

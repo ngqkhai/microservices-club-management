@@ -17,6 +17,14 @@
 - `PUT /api/applications/:applicationId` - Cập nhật đơn ứng tuyển
 - `DELETE /api/applications/:applicationId` - Rút đơn ứng tuyển
 
+### Frontend Configuration
+
+#### Config Endpoints (config/index.ts)
+- `userApplications(userId)` - `GET /api/users/:userId/applications`
+- `applicationDetailDirect(applicationId)` - `GET /api/applications/:applicationId`
+- `updateApplication(applicationId)` - `PUT /api/applications/:applicationId`
+- `withdrawApplication(applicationId)` - `DELETE /api/applications/:applicationId`
+
 #### Files chính:
 - `services/club/src/controllers/recruitmentCampaignController.js` - Controller xử lý API
 - `services/club/src/services/recruitmentCampaignService.js` - Service logic
@@ -73,6 +81,12 @@ const response = await applicationService.getUserApplications(userId, {
 
 // Lấy chi tiết một application
 const detail = await applicationService.getApplication(applicationId)
+
+// Cập nhật đơn ứng tuyển
+await applicationService.updateApplication(applicationId, {
+  answers: [...],
+  message: "Cập nhật thông tin"
+})
 
 // Rút đơn ứng tuyển
 await applicationService.withdrawApplication(applicationId)

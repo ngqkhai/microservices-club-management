@@ -86,6 +86,11 @@ export const config = {
       applicationDetail: (campaignId: string, applicationId: string) => `/api/campaigns/${campaignId}/applications/${applicationId}`,
       userApplications: (userId: string) => `/api/users/${userId}/applications`,
       
+      // Application management endpoints
+      applicationDetailDirect: (applicationId: string) => `/api/applications/${applicationId}`,
+      updateApplication: (applicationId: string) => `/api/applications/${applicationId}`,
+      withdrawApplication: (applicationId: string) => `/api/applications/${applicationId}`,
+      
       // Club manager endpoints
       createForClub: (clubId: string) => `/api/clubs/${clubId}/campaigns`,
       clubCampaigns: (clubId: string) => `/api/clubs/${clubId}/campaigns`,

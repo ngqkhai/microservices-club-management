@@ -48,11 +48,11 @@ export function useApplications({
     setError(null)
 
     try {
-             const response = await applicationService.getUserApplications(userId, {
-         page,
-         limit,
-         status: status === "all" ? undefined : status
-       })
+      const response = await applicationService.getUserApplications(userId, {
+        page,
+        limit,
+        status: status === "all" ? undefined : status
+      })
 
       if (response.success) {
         setApplications(response.data.applications)

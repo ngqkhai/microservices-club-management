@@ -98,6 +98,15 @@ export function ApplicationDetailDialog({
     )
   }
 
+  const getRoleLabel = (role?: string) => {
+    const roleLabels = {
+      member: "Thành viên",
+      organizer: "Tổ chức",
+      club_manager: "Quản lý CLB"
+    }
+    return roleLabels[role as keyof typeof roleLabels] || role || "Thành viên"
+  }
+
   if (!application && !loading) {
     return null
   }
@@ -216,12 +225,12 @@ export function ApplicationDetailDialog({
                     </div>
                   )}
 
-                  {application.role && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Vai trò được giao:</span>
-                      <Badge variant="outline">{application.role}</Badge>
-                    </div>
-                  )}
+                                     {application.role && (
+                     <div className="flex items-center justify-between">
+                       <span className="text-sm text-gray-500">Vai trò được giao:</span>
+                       <Badge variant="outline">{getRoleLabel(application.role)}</Badge>
+                     </div>
+                   )}
 
                   {application.application_message && (
                     <div>

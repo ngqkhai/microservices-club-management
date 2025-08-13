@@ -1,9 +1,10 @@
-import { api } from '@/lib/api'
+import api, { ApiResponse } from '@/lib/api'
+import config from '@/config'
 
 export interface Application {
   id: string
   status: 'pending' | 'active' | 'rejected' | 'withdrawn'
-  role?: 'member' | 'organizer'
+  role?: 'member' | 'organizer' | 'club_manager'
   application_message?: string
   application_answers?: any
   submitted_at: string
@@ -27,23 +28,39 @@ export interface Application {
 }
 
 export interface ApplicationsResponse {
-  success: boolean
-  message: string
-  data: {
-    applications: Application[]
-    pagination: {
-      current_page: number
-      total_pages: number
-      total_items: number
-      items_per_page: number
-    }
+  applications: Application[]
+  pagination: {
+    current_page: number
+    total_pages: number
+    total_items: number
+    items_per_page: number
   }
 }
 
 export interface ApplicationDetailResponse {
-  success: boolean
-  message: string
-  data: Application
+  id: string
+  status: 'pending' | 'active' | 'rejected' | 'withdrawn'
+  role?: 'member' | 'organizer' | 'club_manager'
+  application_message?: string
+  application_answers?: any
+  submitted_at: string
+  approved_by?: string
+  approved_at?: string
+  rejection_reason?: string
+  campaign?: {
+    id: string
+    title: string
+    description: string
+    start_date: string
+    end_date: string
+    status: string
+  }
+  club?: {
+    id: string
+    name: string
+    description: string
+    logo?: string
+  }
 }
 
 class ApplicationService {
@@ -54,22 +71,21 @@ class ApplicationService {
     page?: number
     limit?: number
     status?: string
-  }): Promise<ApplicationsResponse> {
+  }): Promise<ApiResponse<ApplicationsResponse>> {
     const params = new URLSearchParams()
     if (options?.page) params.append('page', options.page.toString())
     if (options?.limit) params.append('limit', options.limit.toString())
     if (options?.status) params.append('status', options.status)
-
-    const response = await api.get(`/users/${userId}/applications?${params.toString()}`)
-    return response.data
+    const endpoint = config.endpoints.campaigns.userApplications(userId)
+    return api.get<ApplicationsResponse>(`${endpoint}?${params.toString()}`)
   }
 
   /**
    * Lấy chi tiết một đơn ứng tuyển cụ thể
    */
-  async getApplication(applicationId: string): Promise<ApplicationDetailResponse> {
-    const response = await api.get(`/applications/${applicationId}`)
-    return response.data
+  async getApplication(applicationId: string): Promise<ApiResponse<ApplicationDetailResponse>> {
+    const endpoint = config.endpoints.campaigns.applicationDetailDirect(applicationId)
+    return api.get<ApplicationDetailResponse>(endpoint)
   }
 
   /**
@@ -78,17 +94,17 @@ class ApplicationService {
   async updateApplication(applicationId: string, data: {
     answers?: any[]
     message?: string
-  }): Promise<ApplicationDetailResponse> {
-    const response = await api.put(`/applications/${applicationId}`, data)
-    return response.data
+  }): Promise<ApiResponse<ApplicationDetailResponse>> {
+    const endpoint = config.endpoints.campaigns.updateApplication(applicationId)
+    return api.put<ApplicationDetailResponse>(endpoint, data)
   }
 
   /**
    * Rút đơn ứng tuyển
    */
-  async withdrawApplication(applicationId: string): Promise<{ success: boolean; message: string }> {
-    const response = await api.delete(`/applications/${applicationId}`)
-    return response.data
+  async withdrawApplication(applicationId: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    const endpoint = config.endpoints.campaigns.withdrawApplication(applicationId)
+    return api.delete<{ success: boolean; message: string }>(endpoint)
   }
 }
 
