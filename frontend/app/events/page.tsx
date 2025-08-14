@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users, Banknote, Heart } from "lucide-react"
+import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users, Banknote, Heart, Grid3X3, List } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 import { eventService, type Event as ApiEvent } from "@/services/event.service"
@@ -39,6 +39,8 @@ type UiEvent = {
   currency?: string
   description: string
   category: string
+  tags: string[]
+  max_participants?: number
   is_favorited?: boolean
 }
 
@@ -123,6 +125,8 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     currency: currency,
     description: anyEvent.description || anyEvent.short_description || "",
     category: anyEvent.category || "General",
+    tags: anyEvent.tags || [],
+    max_participants: anyEvent.max_participants,
   }
 }
 
@@ -162,7 +166,10 @@ export default function EventsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalEvents, setTotalEvents] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
-  const eventsPerPage = 3
+  const eventsPerPage = 6
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Function to get appropriate currency icon
   const getCurrencyIcon = (currency?: string) => {
@@ -338,32 +345,31 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <Breadcrumb className="mb-8">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
+              <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Events</BreadcrumbPage>
+              <BreadcrumbPage>Sự kiện</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Upcoming Events</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Discover exciting events happening across all university clubs. Join activities that match your interests
-            and connect with fellow students.
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Danh sách Sự kiện</h1>
+          <p className="text-sm text-gray-600 max-w-xl mx-auto">
+            Khám phá và tham gia các sự kiện thú vị tại UniVibe
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block lg:w-80">
+          <div className="hidden lg:block lg:w-64">
             <FilterSidebar
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -386,26 +392,27 @@ export default function EventsPage() {
           {/* Main Content */}
           <div className="flex-1 w-full">
             {/* Mobile Search and Filter Toggle */}
-            <div className="lg:hidden mb-6">
-              <div className="flex gap-2 mb-4">
+            <div className="lg:hidden mb-4">
+              <div className="flex gap-2 mb-3">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
                   <Input
-                    placeholder="Search events..."
+                    placeholder="Tìm kiếm sự kiện..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 h-9 text-sm"
                   />
                 </div>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1.5 h-9"
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span className="text-sm">Lọc</span>
                   {activeFiltersCount > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5">
                       {activeFiltersCount}
                     </Badge>
                   )}
@@ -414,8 +421,8 @@ export default function EventsPage() {
 
               {/* Mobile Filter Panel */}
               {showFilters && (
-                <Card className="mb-6">
-                  <CardContent className="p-4">
+                <Card className="mb-4">
+                  <CardContent className="p-3">
                     <FilterSidebar
                       searchTerm={searchTerm}
                       setSearchTerm={setSearchTerm}
@@ -440,41 +447,70 @@ export default function EventsPage() {
             </div>
 
             {/* Results Header */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <div>
-                <p className="text-gray-600">
-                  {isLoading ? "Searching..." : `Showing ${startIndex + 1}-${endIndex} of ${totalEvents} events`}
+                <p className="text-sm text-gray-600">
+                  {isLoading ? "Đang tìm kiếm..." : `Hiển thị ${startIndex + 1}-${endIndex} trong tổng số ${totalEvents} sự kiện`}
                 </p>
                 {activeFiltersCount > 0 && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm text-gray-500">Active filters:</span>
-                    <Badge variant="secondary">{activeFiltersCount}</Badge>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-gray-500">Bộ lọc:</span>
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{activeFiltersCount}</Badge>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={clearFilters}
-                      className="text-blue-600 hover:text-blue-700"
+                      className="text-blue-600 hover:text-blue-700 text-xs h-6 px-2"
                     >
-                      Clear all
+                      Xóa tất cả
                     </Button>
                   </div>
                 )}
               </div>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Kiểu hiển thị:</span>
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className={`h-7 px-2 text-xs ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700' : 'hover:bg-gray-200'}`}
+                  >
+                    <Grid3X3 className="h-3 w-3 mr-1" />
+                    Lưới
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className={`h-7 px-2 text-xs ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700' : 'hover:bg-gray-200'}`}
+                  >
+                    <List className="h-3 w-3 mr-1" />
+                    Danh sách
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            {/* Events Grid */}
+            {/* Events Grid/List */}
             {isLoading ? (
-              <div className="space-y-4">
+              <div className={viewMode === 'grid' 
+                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" 
+                : "space-y-3"
+              }>
                 {[...Array(6)].map((_, i) => (
                   <Card key={i} className="animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        <div className="w-32 h-24 bg-gray-200 rounded"></div>
-                        <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                          <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                          <div className="h-8 bg-gray-200 rounded w-24"></div>
+                    <CardContent className="p-0">
+                      <div className="aspect-video bg-gray-200"></div>
+                      <div className="p-6 space-y-3">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                        <div className="flex justify-between items-center">
+                          <div className="h-6 bg-gray-200 rounded w-16"></div>
+                          <div className="h-8 bg-gray-200 rounded w-8"></div>
                         </div>
                       </div>
                     </CardContent>
@@ -482,127 +518,162 @@ export default function EventsPage() {
                 ))}
               </div>
             ) : events.length > 0 ? (
-              <div className="space-y-4" data-testid="events-list">
+              <div className={viewMode === 'grid' 
+                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" 
+                : "space-y-3"
+              } data-testid="events-list">
                 {events.map((event) => (
                   <Card 
                     key={event.event_id} 
-                    className="hover:shadow-md transition-shadow cursor-pointer" 
+                    className={`group overflow-hidden hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 cursor-pointer ${
+                      viewMode === 'grid' ? 'hover:-translate-y-2' : 'flex'
+                    }`}
                     data-testid="event-card"
                     onClick={() => router.push(`/events/${event.event_id}`)}
                   >
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        {/* Event Image Placeholder */}
-                        <div 
-                          className="w-32 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center"
-                        >
-                          {event.event_image_url ? (
-                            <img 
-                              src={event.event_image_url} 
-                              alt={event.club.name}
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            <Calendar className="h-8 w-8 text-gray-400" />
-                          )}
-                        </div>
-                        
-                        {/* Event Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1 min-w-0">
-                              <h3 
-                                className="text-lg font-semibold text-gray-900 mb-1 truncate hover:text-blue-600 transition-colors cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/events/${event.event_id}`)
-                                }}
-                              >
-                                {event.title}
-                              </h3>
-                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                                {event.description}
-                              </p>
-                            </div>
+                    {/* Event Image */}
+                    <CardHeader className="p-0 relative">
+                      <div className={viewMode === 'grid' ? "aspect-video overflow-hidden" : "h-48 overflow-hidden"}>
+                        {event.event_image_url ? (
+                          <img 
+                            src={event.event_image_url} 
+                            alt={event.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                            <Calendar className="h-12 w-12 text-gray-400" />
                           </div>
-                          
-                          {/* Event Info */}
-                          <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              <button
-                                onClick={() => router.push(`/clubs/${event.club.id}`)}
-                                className="text-blue-600 hover:text-blue-800 hover:underline font-medium truncate cursor-pointer transition-colors"
-                                title={`Xem thông tin ${event.club.name}`}
-                              >
-                                {event.club.name}
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              <span className="font-medium">{event.time}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              <span className="truncate">{event.location}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Category, Fee and Favorite */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                {event.category}
-                              </Badge>
-                              {event.fee > 0 ? (
-                                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                  {getCurrencyIcon(event.currency)}
-                                  {event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs text-green-600">
-                                  Miễn phí
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {/* Favorite Icon Button */}
-                            <Button 
-                              size="sm" 
-                              variant={event.is_favorited ? "default" : "ghost"}
-                              onClick={async (e) => {
-                                e.stopPropagation() // Prevent card click
-                                if (!user) {
-                                  router.push('/login')
-                                  return
-                                }
-                                try {
-                                  const res = await eventService.toggleFavorite(event.event_id)
-                                  if (res.success) {
-                                    const newFavoriteState = res.data?.is_favorited ?? !event.is_favorited
-                                    handleFavoriteChange(event.event_id, newFavoriteState)
-                                  }
-                                } catch (error) {
-                                  console.error('Error toggling favorite:', error)
-                                }
-                              }}
-                              disabled={!user}
-                              className={`h-8 w-8 p-0 rounded-full ${
-                                event.is_favorited 
-                                  ? 'bg-red-50 hover:bg-red-100 text-red-600' 
-                                  : 'hover:bg-gray-100'
-                              }`}
-                              title={event.is_favorited ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
-                            >
-                              <Heart className={`h-4 w-4 ${event.is_favorited ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
-                            </Button>
-                          </div>
-                        </div>
+                        )}
                       </div>
+                      
+                      {/* Overlay content - Swapped positions */}
+                      <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                        {/* Fee/Price badge is now on the left */}
+                        {event.fee > 0 ? (
+                          <Badge variant="destructive" className="bg-green-500">
+                            <Banknote className="w-3 h-3 mr-1" />
+                            {event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="bg-green-500">
+                            <Banknote className="w-3 h-3 mr-1" />
+                            Miễn phí
+                          </Badge>
+                        )}
+
+                        {/* Favorite Button */}
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={async (e) => {
+                            e.stopPropagation() // Prevent card click
+                            if (!user) {
+                              router.push('/login')
+                              return
+                            }
+                            try {
+                              const res = await eventService.toggleFavorite(event.event_id)
+                              if (res.success) {
+                                const newFavoriteState = res.data?.is_favorited ?? !event.is_favorited
+                                handleFavoriteChange(event.event_id, newFavoriteState)
+                              }
+                            } catch (error) {
+                              console.error('Error toggling favorite:', error)
+                            }
+                          }}
+                          disabled={!user}
+                          className="h-8 w-8 p-0 rounded-full bg-white/90 hover:bg-white"
+                          title={event.is_favorited ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                        >
+                          <Heart className={`h-4 w-4 ${event.is_favorited ? "fill-red-500 text-red-500" : "text-gray-600"}`} />
+                        </Button>
+                      </div>
+                    </CardHeader>
+
+                    {/* Event Content */}
+                    <CardContent className={viewMode === 'grid' ? "p-4" : "p-4 flex-1"}>
+                      {/* Category above title */}
+                      <div className="mb-2">
+                        <Badge variant="secondary" className="bg-gray-100 text-gray-700 text-xs">
+                          {event.category}
+                        </Badge>
+                      </div>
+
+                      <div className="mb-3">
+                        {/* Title with reduced font-weight */}
+                        <h3 className={`font-semibold text-gray-900 mb-1 group-hover:text-primary transition-colors line-clamp-2 ${
+                          viewMode === 'grid' ? 'text-lg' : 'text-xl'
+                        }`}>
+                          {event.title}
+                        </h3>
+                        <p className={`text-gray-600 leading-relaxed line-clamp-2 mb-2 ${
+                          viewMode === 'grid' ? 'text-xs' : 'text-sm'
+                        }`}>
+                          {event.description}
+                        </p>
+                      </div>
+
+                      {/* Event Meta Info */}
+                      <div className={`space-y-1 mb-3 ${
+                        viewMode === 'list' ? 'grid grid-cols-2 gap-2' : ''
+                      }`}>
+                        <div className="flex items-center text-gray-500">
+                          <Users className="h-3 w-3 mr-1.5" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/clubs/${event.club.id}`)
+                            }}
+                            className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                          >
+                            {event.club.name}
+                          </button>
+                        </div>
+                        <div className="flex items-center text-gray-500">
+                          <Calendar className="h-3 w-3 mr-1.5" />
+                          <span className="text-xs">{event.date}</span>
+                        </div>
+                        <div className="flex items-center text-gray-500">
+                          <Clock className="h-3 w-3 mr-1.5" />
+                          <span className="text-xs">{event.time}</span>
+                        </div>
+                        <div className="flex items-center text-gray-500">
+                          <MapPin className="h-3 w-3 mr-1.5" />
+                          <span className="text-xs line-clamp-1">{event.location}</span>
+                        </div>
+                        {viewMode === 'list' && (
+                          <div className="flex items-center text-gray-500 col-span-2">
+                            <Users className="h-3 w-3 mr-1.5" />
+                            <span className="text-xs">0/{event.max_participants || 100} người tham gia</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tags */}
+                      {event.tags && event.tags.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex flex-wrap gap-1">
+                            {event.tags.slice(0, viewMode === 'grid' ? 3 : event.tags.length).map((tag, index) => (
+                              <Badge 
+                                key={index} 
+                                variant="outline" 
+                                className="text-xs px-1.5 py-0.5 text-blue-600 border-blue-200 bg-blue-50"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                            {viewMode === 'grid' && event.tags.length > 3 && (
+                              <Badge 
+                                variant="outline" 
+                                className="text-xs px-1.5 py-0.5 text-gray-500 border-gray-200"
+                              >
+                                +{event.tags.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -612,26 +683,26 @@ export default function EventsPage() {
                 <div className="text-gray-400 mb-4">
                   <Calendar className="h-12 w-12 mx-auto" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
-                <p className="text-gray-600 mb-4">Try adjusting your search terms or filters to find more events.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy sự kiện</h3>
+                <p className="text-gray-600 mb-4">Hãy thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc để tìm thêm sự kiện.</p>
                 <Button onClick={clearFilters} variant="outline">
-                  Clear Filters
+                  Xóa bộ lọc
                 </Button>
               </div>
             )}
 
             {/* Pagination */}
             {totalEvents > 0 && !isLoading && totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-8">
+              <div className="flex justify-center items-center gap-2 mt-6">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={goToPreviousPage}
                   disabled={currentPage === 1}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 text-xs h-8"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  <ChevronLeft className="h-3 w-3" />
+                  Trước
                 </Button>
                 
                 <div className="flex items-center gap-1">
@@ -683,7 +754,7 @@ export default function EventsPage() {
                             variant={currentPage === page ? "default" : "outline"}
                             size="sm"
                             onClick={() => goToPage(page as number)}
-                            className="w-8 h-8 p-0"
+                            className="w-7 h-7 p-0 text-xs"
                           >
                             {page}
                           </Button>
@@ -698,10 +769,10 @@ export default function EventsPage() {
                   size="sm"
                   onClick={goToNextPage}
                   disabled={currentPage === totalPages}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 text-xs h-8"
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
+                  Sau
+                  <ChevronRight className="h-3 w-3" />
                 </Button>
               </div>
             )}

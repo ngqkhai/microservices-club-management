@@ -279,7 +279,7 @@ export default function ClubManagerDashboard() {
   if (!isInitialized) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
@@ -291,7 +291,7 @@ export default function ClubManagerDashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded mb-8 w-96"></div>
             <div className="h-64 bg-gray-200 rounded mb-8"></div>
@@ -308,7 +308,7 @@ export default function ClubManagerDashboard() {
   if (!club) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900">Không thể tải thông tin câu lạc bộ</h1>
             <p className="mt-2 text-gray-600">Vui lòng thử lại sau.</p>
@@ -323,7 +323,7 @@ export default function ClubManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <Breadcrumb className="mb-8">
           <BreadcrumbList>

@@ -104,18 +104,20 @@ export default function ClubsPage() {
   }
 
   // Transform club data for ClubCard component
-  const transformedClubs = displayedClubs.map(club => ({
+  const transformedClubs = displayedClubs.map((club, index) => ({
     club_id: club.id,
     name: club.name,
     description: club.description || '',
     category: club.category,
     members: club.member_count,
-    logo_url: club.logo_url || "/placeholder.svg?height=100&width=100"
+    logo_url: club.logo_url || "/placeholder.svg?height=100&width=100",
+    cover_url: (club as any).cover_url, // Use cover image if available
+    isPopular: club.member_count > 100 || index < 3 // Mark clubs with many members or first 3 as popular
   }))
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <Breadcrumb className="mb-8">
           <BreadcrumbList>
@@ -222,12 +224,13 @@ export default function ClubsPage() {
 
         {/* Clubs Grid */}
         {cache.isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
+              <Card key={i} className="animate-pulse overflow-hidden">
+                <div className="aspect-video bg-gray-200"></div>
+                <CardContent className="pt-8 pb-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
+                    <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
                     <div className="flex-1">
                       <div className="h-4 bg-gray-200 rounded mb-2"></div>
                       <div className="h-3 bg-gray-200 rounded w-20"></div>
@@ -242,7 +245,7 @@ export default function ClubsPage() {
           </div>
         ) : transformedClubs.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" data-testid="clubs-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8" data-testid="clubs-grid">
               {transformedClubs.map((club) => (
                 <ClubCard key={club.club_id} club={club} />
               ))}

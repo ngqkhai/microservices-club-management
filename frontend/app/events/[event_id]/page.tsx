@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -198,7 +198,10 @@ export default function EventDetailPage() {
     return <Banknote className="h-5 w-5 text-green-600" />
   }
 
+  // Fetch event data and user status
   useEffect(() => {
+    if (!eventId) return // Early return if no eventId
+    
     let mounted = true
     ;(async () => {
       setIsLoading(true)
@@ -207,20 +210,12 @@ export default function EventDetailPage() {
         if (mounted && res.success && res.data) {
           const ui = toUiEvent(res.data)
           setEvent(ui)
+          
           // Initialize user-specific status if available
           const userStatus = (res.data as any).user_status
           if (userStatus) {
             setIsRegistered(userStatus.registration_status === 'registered' || userStatus.registration_status === 'attended')
             setIsFavorited(!!userStatus.is_favorited)
-          } else if (user) {
-            // Fallback: fetch status explicitly
-            try {
-              const st = await eventService.getUserEventStatus(eventId)
-              if (st.success && (st.data as any)) {
-                setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
-                setIsFavorited(!!st.data.is_favorited)
-              }
-            } catch {}
           }
         } else if (mounted) {
           setEvent(null)
@@ -234,13 +229,33 @@ export default function EventDetailPage() {
     return () => {
       mounted = false
     }
-  }, [eventId, user])
+  }, [eventId]) // Only depend on eventId
+
+  // Fetch user status separately when user changes
+  useEffect(() => {
+    if (!user || !eventId) return
+    
+    let mounted = true
+    ;(async () => {
+      try {
+        const st = await eventService.getUserEventStatus(eventId)
+        if (mounted && st.success && (st.data as any)) {
+          setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
+          setIsFavorited(!!st.data.is_favorited)
+        }
+      } catch {}
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [user, eventId])
 
   // Load related events: 2 by same category + 3 by same club
   useEffect(() => {
+    if (!event?.event_id) return // Add early return to prevent unnecessary fetches
+    
     let mounted = true
     ;(async () => {
-      if (!event) return
       setIsRelatedLoading(true)
       try {
         const relatedEvents: any[] = []
@@ -294,9 +309,9 @@ export default function EventDetailPage() {
     return () => {
       mounted = false
     }
-  }, [event])
+  }, [event?.event_id, event?.category, event?.club?.id]) // More specific dependencies
 
-  const handleRegister = async () => {
+  const handleRegister = useCallback(async () => {
     if (!user) {
       toast({
         title: "Vui lòng đăng nhập",
@@ -306,6 +321,13 @@ export default function EventDetailPage() {
       router.push("/login")
       return
     }
+
+    // Calculate these values inline to avoid dependency issues
+    const totalRegistrations = event?.statistics?.total_registrations ?? event?.current_participants ?? 0
+    const isEventFull = totalRegistrations >= (event?.max_participants ?? 0)
+    const now = new Date()
+    const registrationDeadline = event?.registration_deadline ? new Date(event.registration_deadline) : null
+    const isRegistrationExpired = registrationDeadline ? now > registrationDeadline : false
 
     if (isRegistrationExpired) {
       toast({
@@ -328,21 +350,16 @@ export default function EventDetailPage() {
     try {
       const res = await eventService.joinEvent(event.event_id)
       if (res.success) {
-        // Refresh status from server to avoid stale UI
-        const st = await eventService.getUserEventStatus(event.event_id)
-        if (st.success) {
-          setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
-        } else {
-          setIsRegistered(true)
-        }
+        // Update local state directly instead of fetching again
+        setIsRegistered(true)
         toast({ title: "Đăng ký thành công!" })
       }
     } catch {
       toast({ title: "Lỗi", description: "Không thể đăng ký tham gia", variant: "destructive" })
     }
-  }
+  }, [user, event, toast, router])
 
-  const handleToggleFavorite = async () => {
+  const handleToggleFavorite = useCallback(async () => {
     if (!user) {
       toast({
         title: "Vui lòng đăng nhập",
@@ -357,15 +374,15 @@ export default function EventDetailPage() {
       if (res.success) {
         const fav = res.data?.is_favorited ?? !isFavorited
         setIsFavorited(fav)
-    toast({
+        toast({
           title: fav ? "Đã thêm vào yêu thích" : "Đã bỏ yêu thích",
           description: `Sự kiện "${event.title}" ${fav ? "đã được thêm vào" : "đã được bỏ khỏi"} danh sách yêu thích`,
-    })
+        })
       }
     } catch {
       toast({ title: "Lỗi", description: "Không thể cập nhật yêu thích", variant: "destructive" })
     }
-  }
+  }, [user, event?.event_id, event?.title, isFavorited, toast])
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href)
@@ -439,21 +456,33 @@ export default function EventDetailPage() {
     }
   }
 
-  const totalRegistrations = event?.statistics?.total_registrations ?? event?.current_participants ?? 0
-  const isEventFull = totalRegistrations >= (event?.max_participants ?? 0)
-  const spotsLeft = event ? (event.max_participants ?? 0) - totalRegistrations : 0
-  const registrationProgress = event ? (totalRegistrations / (event.max_participants ?? 1)) * 100 : 0
-  
-  // Check if registration deadline has passed
-  const now = new Date()
-  const registrationDeadline = event?.registration_deadline ? new Date(event.registration_deadline) : null
-  const isRegistrationExpired = registrationDeadline ? now > registrationDeadline : false
-  const canRegister = !isEventFull && !isRegistrationExpired && !isRegistered
+  // Memoized calculations to prevent unnecessary re-renders
+  const { totalRegistrations, isEventFull, spotsLeft, registrationProgress, isRegistrationExpired, canRegister } = useMemo(() => {
+    const totalRegistrations = event?.statistics?.total_registrations ?? event?.current_participants ?? 0
+    const isEventFull = totalRegistrations >= (event?.max_participants ?? 0)
+    const spotsLeft = event ? (event.max_participants ?? 0) - totalRegistrations : 0
+    const registrationProgress = event ? (totalRegistrations / (event.max_participants ?? 1)) * 100 : 0
+    
+    // Check if registration deadline has passed
+    const now = new Date()
+    const registrationDeadline = event?.registration_deadline ? new Date(event.registration_deadline) : null
+    const isRegistrationExpired = registrationDeadline ? now > registrationDeadline : false
+    const canRegister = !isEventFull && !isRegistrationExpired && !isRegistered
+    
+    return {
+      totalRegistrations,
+      isEventFull,
+      spotsLeft,
+      registrationProgress,
+      isRegistrationExpired,
+      canRegister
+    }
+  }, [event?.statistics?.total_registrations, event?.current_participants, event?.max_participants, event?.registration_deadline, isRegistered])
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded mb-8 w-64"></div>
             <div className="h-64 bg-gray-200 rounded mb-8"></div>
@@ -487,166 +516,218 @@ export default function EventDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <Breadcrumb className="mb-8">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/events">Sự kiện</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{event.title}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      {/* Event Cover Image & Header */}
+      <div className="relative w-full h-96 md:h-[500px]">
+        <img 
+          src={event.event_image_url || "/placeholder.svg"} 
+          alt={event.title} 
+          className="w-full h-full object-cover" 
+        />
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+        
+        {/* Content Overlay Container - Same width as main content */}
+        <div className="absolute inset-0 flex flex-col justify-between">
+          {/* Top Section - Navigation and Action Buttons */}
+          <div className="bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-4">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* Breadcrumb and Back Button */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => router.back()} 
+                    className="text-white hover:bg-white/20 p-2 h-auto w-auto"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <Breadcrumb className="text-white">
+                    <BreadcrumbList className="text-sm">
+                      <BreadcrumbItem>
+                        <BreadcrumbLink href="/" className="text-white/90 hover:text-white">
+                          Trang chủ
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="text-white/60" />
+                      <BreadcrumbItem>
+                        <BreadcrumbLink href="/events" className="text-white/90 hover:text-white">
+                          Sự kiện
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="text-white/60" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage className="text-white font-medium">
+                          {event.title.length > 30 ? event.title.substring(0, 30) + '...' : event.title}
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
 
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Quay lại
-        </Button>
-
-        {/* Event Header */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
-          {/* Event Image */}
-          <div className="relative h-64 md:h-80">
-            <img src={event.event_image_url || "/placeholder.svg"} alt={event.title} className="w-full h-full object-cover" />
-            {/* Enhanced overlay for better text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
-            <div className="absolute bottom-6 left-6 right-6">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Badge variant="secondary" className="bg-white/25 text-white border-white/40 backdrop-blur-sm shadow-lg">
-                  <Tag className="h-3 w-3 mr-1" />
-                  {event.category}
-                </Badge>
-                {event.event_type && (
-                  <Badge variant="secondary" className="bg-white/25 text-white border-white/40 backdrop-blur-sm shadow-lg">
-                    {event.event_type}
-                  </Badge>
-                )}
-                {event.tags.slice(0, 3).map((tag: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="bg-white/25 text-white border-white/40 backdrop-blur-sm shadow-lg">
-                    {tag}
-                  </Badge>
-                ))}
+                {/* Action Buttons - Top Right */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleFavorite}
+                    className="bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30"
+                  >
+                    <Heart className={`h-4 w-4 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    className="bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                {event.title}
-              </h1>
-              <p className="text-white text-lg drop-shadow-md">
-                Được tổ chức bởi {event.club.name || `Club ${event.club.id}`}
-              </p>
             </div>
           </div>
 
-          {/* Event Actions */}
-          <div className="p-6 border-b">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={event.club.logo_url || "/placeholder.svg"} alt={event.club.name || `Club ${event.club.id}`} />
-                  <AvatarFallback>{(event.club.name || event.club.id)[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <Link
-                    href={`/clubs/${event.club.id}`}
-                    className="font-medium text-blue-600 hover:text-blue-700 flex items-center"
-                  >
-                    {event.club.name || `Club ${event.club.id}`}
-                    <ExternalLink className="h-4 w-4 ml-1" />
-                  </Link>
-                  <p className="text-sm text-gray-500">
-                    Tổ chức bởi {event.organizers.slice(0, 3).map((org: any) => org.name).join(", ")}
-                    {event.organizers.length > 3 && ` và ${event.organizers.length - 3} người khác`}
-                  </p>
-                </div>
-              </div>
+          {/* Bottom Section - Event Info */}
+          <div className="bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-4 pb-6">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                             {/* Status Badges and Tags */}
+               <div className="flex flex-wrap gap-2 mb-4">
+                 <Badge className="bg-blue-600 text-white border-0">
+                   {event.status === 'upcoming' ? 'Sắp diễn ra' : 
+                    event.status === 'ongoing' ? 'Đang diễn ra' : 
+                    event.status === 'completed' ? 'Đã kết thúc' : 'Sắp diễn ra'}
+                 </Badge>
+                 {event.event_type && (
+                   <Badge className="bg-gray-800 text-white border-0">
+                     {event.event_type}
+                   </Badge>
+                 )}
+                 {event.tags && event.tags.length > 0 && event.tags.slice(0, 3).map((tag: string, index: number) => (
+                   <Badge 
+                     key={index} 
+                     className="bg-purple-100 text-purple-700 border-0 font-medium"
+                   >
+                     {tag}
+                   </Badge>
+                 ))}
+                 {event.tags && event.tags.length > 3 && (
+                   <Badge className="bg-purple-100 text-purple-700 border-0 font-medium">
+                     +{event.tags.length - 3}
+                   </Badge>
+                 )}
+               </div>
 
-              <div className="flex space-x-3 w-full sm:w-auto">
-                <Button
-                  onClick={handleRegister}
-                  disabled={!canRegister}
-                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700"
-                >
-                  {isRegistered ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Đã đăng ký
-                    </>
-                  ) : isEventFull ? (
-                    <>
-                      <AlertCircle className="h-4 w-4 mr-2" />
-                      Đã đầy
-                    </>
-                  ) : isRegistrationExpired ? (
-                    <>
-                      <Clock className="h-4 w-4 mr-2" />
-                      Hết hạn đăng ký
-                    </>
-                  ) : (
-                    <>
-                      <Users className="h-4 w-4 mr-2" />
-                      Đăng ký tham gia
-                    </>
-                  )}
-                </Button>
+              {/* Event Title */}
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 drop-shadow-lg">
+                {event.title}
+              </h1>
 
-                {isRegistered && (
-                  <Button variant="outline" onClick={async () => {
-                    try {
-                      await eventService.leaveEvent(event.event_id)
-                      const st = await eventService.getUserEventStatus(event.event_id)
-                      if (st.success) {
-                        setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
-                      } else {
-                        setIsRegistered(false)
-                      }
-                      toast({ title: 'Đã rời sự kiện' })
-                    } catch {
-                      toast({ title: 'Lỗi', description: 'Không thể rời sự kiện', variant: 'destructive' })
-                    }
-                  }}>
-                    Rời sự kiện
-                  </Button>
-                )}
+              {/* Event Description */}
+              <p className="text-white/90 text-lg mb-4 drop-shadow-md max-w-2xl">
+                {event.description.split('\n')[0]}
+              </p>
 
-                <Button variant="outline" onClick={handleToggleFavorite} className="bg-transparent">
-                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
-                  {isFavorited ? "Đã yêu thích" : "Yêu thích"}
-                </Button>
+                             {/* Organizer Info and Register Button */}
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                   <Avatar className="h-10 w-10 border-2 border-white/20">
+                     <AvatarImage src={event.club.logo_url || "/placeholder.svg"} alt={event.club.name} />
+                     <AvatarFallback className="bg-white/20 text-white">
+                       {(event.club.name || event.club.id)[0]}
+                     </AvatarFallback>
+                   </Avatar>
+                   <div>
+                     <p className="text-white font-medium">
+                       Tổ chức bởi {event.club.name || `Club ${event.club.id}`}
+                     </p>
+                     <p className="text-white/80 text-sm">
+                       {event.organizers.slice(0, 2).map((org: any) => org.name).join(", ")}
+                       {event.organizers.length > 2 && ` và ${event.organizers.length - 2} người khác`}
+                     </p>
+                   </div>
+                 </div>
 
-                <Button variant="outline" onClick={handleShare} className="bg-transparent">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
+                 {/* Register Button */}
+                 <div className="flex gap-2">
+                   <Button
+                     onClick={handleRegister}
+                     disabled={!canRegister}
+                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                   >
+                     {isRegistered ? (
+                       <>
+                         <CheckCircle className="h-4 w-4 mr-2" />
+                         Đã đăng ký
+                       </>
+                     ) : isEventFull ? (
+                       <>
+                         <AlertCircle className="h-4 w-4 mr-2" />
+                         Đã đầy
+                       </>
+                     ) : isRegistrationExpired ? (
+                       <>
+                         <Clock className="h-4 w-4 mr-2" />
+                         Hết hạn đăng ký
+                       </>
+                     ) : (
+                       <>
+                         <Users className="h-4 w-4 mr-2" />
+                         Đăng ký tham gia
+                       </>
+                     )}
+                   </Button>
+
+                   {isRegistered && (
+                     <Button 
+                       variant="outline" 
+                       onClick={async () => {
+                         try {
+                           await eventService.leaveEvent(event.event_id)
+                           const st = await eventService.getUserEventStatus(event.event_id)
+                           if (st.success) {
+                             setIsRegistered(st.data.registration_status === 'registered' || st.data.registration_status === 'attended')
+                           } else {
+                             setIsRegistered(false)
+                           }
+                           toast({ title: 'Đã rời sự kiện' })
+                         } catch {
+                           toast({ title: 'Lỗi', description: 'Không thể rời sự kiện', variant: 'destructive' })
+                         }
+                       }}
+                       className="bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30"
+                     >
+                       Rời sự kiện
+                     </Button>
+                   )}
+                 </div>
+               </div>
             </div>
           </div>
         </div>
 
+
+      </div>
+
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Event Details */}
-          <div className="lg:col-span-2">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-                <TabsTrigger value="schedule">Lịch trình</TabsTrigger>
-                <TabsTrigger value="media">Hình ảnh</TabsTrigger>
-                <TabsTrigger value="attachments">Tài liệu</TabsTrigger>
-                <TabsTrigger value="comments">Bình luận</TabsTrigger>
-              </TabsList>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Event Details */}
+            <div className="lg:col-span-2">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
+                  <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Chi tiết</TabsTrigger>
+                  <TabsTrigger value="schedule" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Lịch trình</TabsTrigger>
+                  <TabsTrigger value="media" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Thư viện</TabsTrigger>
+                  <TabsTrigger value="comments" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Bình luận</TabsTrigger>
+                </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
                 {/* Event Description */}
-                <Card>
+                <Card className="bg-white rounded-xl shadow-sm border-0">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Info className="h-5 w-5 mr-2" />
+                    <CardTitle className="text-xl font-semibold text-gray-900">
                       Mô tả sự kiện
                     </CardTitle>
                   </CardHeader>
@@ -661,12 +742,13 @@ export default function EventDetailPage() {
                   </CardContent>
                 </Card>
 
+
+
                 {/* Requirements */}
                 {event.requirements && event.requirements.length > 0 && (
-                  <Card>
+                  <Card className="bg-white rounded-xl shadow-sm border-0">
                     <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2" />
+                      <CardTitle className="text-xl font-semibold text-gray-900">
                         Yêu cầu tham gia
                       </CardTitle>
                     </CardHeader>
@@ -685,10 +767,9 @@ export default function EventDetailPage() {
 
                 {/* Contact Information */}
                 {(event.contact_info?.email || event.contact_info?.phone || event.contact_info?.website) && (
-                  <Card>
+                  <Card className="bg-white rounded-xl shadow-sm border-0">
                     <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <User className="h-5 w-5 mr-2" />
+                      <CardTitle className="text-xl font-semibold text-gray-900">
                         Thông tin liên hệ
                       </CardTitle>
                     </CardHeader>
@@ -765,9 +846,9 @@ export default function EventDetailPage() {
               </TabsContent>
 
               <TabsContent value="schedule">
-                <Card>
+                <Card className="bg-white rounded-xl shadow-sm border-0">
                   <CardHeader>
-                    <CardTitle>Lịch trình sự kiện</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-gray-900">Lịch trình sự kiện</CardTitle>
                     <CardDescription>Chi tiết các hoạt động trong sự kiện</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -788,10 +869,9 @@ export default function EventDetailPage() {
               </TabsContent>
 
               <TabsContent value="media">
-                <Card>
+                <Card className="bg-white rounded-xl shadow-sm border-0">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <ImageIcon className="h-5 w-5 mr-2" />
+                    <CardTitle className="text-xl font-semibold text-gray-900">
                       Hình ảnh sự kiện
                     </CardTitle>
                     <CardDescription>Bộ sưu tập hình ảnh từ các sự kiện trước</CardDescription>
@@ -836,10 +916,9 @@ export default function EventDetailPage() {
               </TabsContent>
 
               <TabsContent value="attachments">
-                <Card>
+                <Card className="bg-white rounded-xl shadow-sm border-0">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <FileText className="h-5 w-5 mr-2" />
+                    <CardTitle className="text-xl font-semibold text-gray-900">
                       Tài liệu đính kèm
                     </CardTitle>
                     <CardDescription>Tài liệu hướng dẫn và thông tin bổ sung</CardDescription>
@@ -891,37 +970,37 @@ export default function EventDetailPage() {
           {/* Right Column - Event Info */}
           <div className="space-y-6">
             {/* Event Quick Info */}
-            <Card>
+            <Card className="bg-white rounded-xl shadow-sm border-0">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CalendarDays className="h-5 w-5 mr-2" />
+                <CardTitle className="text-xl font-semibold text-gray-900">
                   Thông tin sự kiện
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Event Category & Type */}
+                {/* Date */}
                 <div className="flex items-center space-x-3">
-                  <Tag className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  <Calendar className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">{event.category}</p>
-                    <p className="text-sm text-gray-500">{event.event_type}</p>
+                    <p className="font-medium text-gray-900">{formatDate(event.date)}</p>
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Date & Time */}
-                <div className="flex items-start space-x-3">
-                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                {/* Time */}
+                <div className="flex items-center space-x-3">
+                  <Clock className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">{formatDate(event.date)}</p>
+                    <p className="font-medium text-gray-900">
+                      {event.start_time}
+                      {event.end_time && ` - ${event.end_time}`}
+                    </p>
                   </div>
                 </div>
 
+                {/* Location */}
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">{event.location}</p>
+                    <p className="font-medium text-gray-900">{event.location}</p>
                     {event.detailed_location && (
                       <p className="text-sm text-gray-500">
                         {event.detailed_location.startsWith('http') ? (
@@ -941,22 +1020,20 @@ export default function EventDetailPage() {
                   </div>
                 </div>
 
+                {/* Fee */}
                 <div className="flex items-center space-x-3">
                   <Banknote className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-900">
                       {event.fee === 0 ? "Miễn phí" : event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
                     </p>
-                    <p className="text-sm text-gray-500">Phí tham gia</p>
                   </div>
                 </div>
-
-                <Separator />
 
                 {/* Registration Progress */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">Đăng ký</span>
+                    <span className="text-sm font-medium text-gray-900">Số người tham gia</span>
                     <span className="text-sm text-gray-500">
                       {totalRegistrations}/{event.max_participants}
                     </span>
@@ -968,47 +1045,17 @@ export default function EventDetailPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {isEventFull ? "Sự kiện đã đầy" : isRegistrationExpired ? "Đã hết hạn đăng ký" : `Còn ${spotsLeft} chỗ trống`}
+                    {Math.round(registrationProgress)}% đã đăng ký
                   </p>
-                </div>
-
-                {/* Registration Deadline */}
-                <div className={`rounded-lg p-3 border ${
-                  isRegistrationExpired 
-                    ? "bg-red-50 border-red-200" 
-                    : "bg-yellow-50 border-yellow-200"
-                }`}>
-                  <div className="flex items-center">
-                    <Clock className={`h-4 w-4 mr-2 ${
-                      isRegistrationExpired ? "text-red-600" : "text-yellow-600"
-                    }`} />
-                    <div>
-                      <p className={`text-sm font-medium ${
-                        isRegistrationExpired ? "text-red-800" : "text-yellow-800"
-                      }`}>
-                        {isRegistrationExpired ? "Đã hết hạn đăng ký" : "Hạn đăng ký"}
-                      </p>
-                      <p className={`text-sm ${
-                        isRegistrationExpired ? "text-red-700" : "text-yellow-700"
-                      }`}>
-                        {new Date(event.registration_deadline).toLocaleDateString("vi-VN")}
-                      </p>
-                      {isRegistrationExpired && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Không thể đăng ký sau thời gian này
-                        </p>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Social Links */}
             {event.social_links && (
-              <Card>
+              <Card className="bg-white rounded-xl shadow-sm border-0">
                 <CardHeader>
-                  <CardTitle>Theo dõi sự kiện</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-gray-900">Theo dõi sự kiện</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -1063,9 +1110,9 @@ export default function EventDetailPage() {
             )}
 
             {/* Related Events */}
-            <Card>
+            <Card className="bg-white rounded-xl shadow-sm border-0">
               <CardHeader>
-                <CardTitle>Sự kiện liên quan</CardTitle>
+                <CardTitle className="text-xl font-semibold text-gray-900">Sự kiện liên quan</CardTitle>
               </CardHeader>
               <CardContent>
                 {isRelatedLoading ? (

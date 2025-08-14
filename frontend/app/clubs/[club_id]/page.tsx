@@ -594,7 +594,7 @@ export default function ClubDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse">
             <div className="h-4 bg-gray-200 rounded mb-8 w-64"></div>
             <div className="h-64 bg-gray-200 rounded mb-8"></div>
@@ -634,7 +634,7 @@ export default function ClubDetailPage() {
       {/* Club Header with Cover Image */}
       <ClubHeader club={club} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <Breadcrumb className="mb-8">
           <BreadcrumbList>

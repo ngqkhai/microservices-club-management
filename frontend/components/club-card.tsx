@@ -2,7 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Users, ArrowRight } from "lucide-react"
+import { ImageWithFallback } from "@/components/figma/ImageWithFallback"
+import { Users, ArrowRight, Heart } from "lucide-react"
 import Link from "next/link"
 
 interface Club {
@@ -12,6 +13,8 @@ interface Club {
   category: string
   members: number
   logo_url?: string
+  cover_url?: string
+  isPopular?: boolean
 }
 
 interface ClubCardProps {
@@ -30,10 +33,18 @@ export function ClubCard({ club }: ClubCardProps) {
 
   const getCategoryColor = (category: string) => {
     const colors = {
-      Arts: "bg-pink-100 text-pink-800",
+      "Học thuật": "bg-blue-100 text-blue-800",
+      "Nghệ thuật": "bg-purple-100 text-purple-800", 
+      "Cộng đồng": "bg-green-100 text-green-800",
+      "Thể thao": "bg-green-100 text-green-800",
+      "Công nghệ": "bg-blue-100 text-blue-800",
+      "Tình nguyện": "bg-orange-100 text-orange-800",
+      "Kinh doanh": "bg-yellow-100 text-yellow-800",
+      // English versions for backward compatibility
+      Arts: "bg-purple-100 text-purple-800",
       Technology: "bg-blue-100 text-blue-800",
       Sports: "bg-green-100 text-green-800",
-      Academic: "bg-purple-100 text-purple-800",
+      Academic: "bg-blue-100 text-blue-800",
       Service: "bg-orange-100 text-orange-800",
       Business: "bg-yellow-100 text-yellow-800",
     }
@@ -52,46 +63,120 @@ export function ClubCard({ club }: ClubCardProps) {
     return labels[category as keyof typeof labels] || category
   }
 
+  const getAvatarColor = (category: string) => {
+    const colors = {
+      "Học thuật": "bg-blue-500",
+      "Nghệ thuật": "bg-purple-500",
+      "Cộng đồng": "bg-green-500",
+      "Thể thao": "bg-green-500",
+      "Công nghệ": "bg-blue-500",
+      "Tình nguyện": "bg-orange-500",
+      "Kinh doanh": "bg-yellow-500",
+      // English versions for backward compatibility
+      Arts: "bg-purple-500",
+      Technology: "bg-blue-500",
+      Sports: "bg-green-500",
+      Academic: "bg-blue-500",
+      Service: "bg-orange-500",
+      Business: "bg-yellow-500",
+    }
+    return colors[category as keyof typeof colors] || "bg-blue-500"
+  }
+
+  // Get cover image URL with fallback to category-based placeholder
+  const getImageUrl = () => {
+    // First priority: use cover_url if available
+    if (club.cover_url) return club.cover_url
+    
+    // Fallback: Generate a placeholder based on club category
+    const imageMap = {
+      "Học thuật": "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      "Nghệ thuật": "https://images.unsplash.com/photo-1566439934134-6e1aafac9750?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300", 
+      "Cộng đồng": "https://images.unsplash.com/photo-1663478595761-26d99b2e29f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      "Thể thao": "https://images.unsplash.com/photo-1571019613540-b866c46ba65d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      "Công nghệ": "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      // English versions for backward compatibility
+      Arts: "https://images.unsplash.com/photo-1566439934134-6e1aafac9750?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      Technology: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      Sports: "https://images.unsplash.com/photo-1571019613540-b866c46ba65d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      Academic: "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      Service: "https://images.unsplash.com/photo-1663478595761-26d99b2e29f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+    }
+    
+    return imageMap[club.category as keyof typeof imageMap] || "https://images.unsplash.com/photo-1562774053-701939374585?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300"
+  }
+
   return (
-    <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1" data-testid="club-card">
-      <CardHeader className="pb-3">
-        <div className="flex items-center space-x-4 mb-3">
-          <Avatar className="h-16 w-16">
-            <AvatarImage
-              src={club.logo_url || "/assets/default-club-logo.png"}
+    <Card 
+      className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/20"
+      data-testid="club-card"
+    >
+      {/* Card Header with Image */}
+      <CardHeader className="p-0 relative">
+        <div className="aspect-video overflow-hidden">
+          <ImageWithFallback
+            src={getImageUrl()}
+            alt={club.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+        
+        {/* Overlay content */}
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+          <Badge className={getCategoryColor(club.category)}>
+            {getCategoryLabel(club.category)}
+          </Badge>
+          {club.isPopular && (
+            <Badge variant="destructive" className="bg-red-500">
+              <Heart className="w-3 h-3 mr-1" />
+              Phổ biến
+            </Badge>
+          )}
+        </div>
+
+        {/* Club Avatar */}
+        <div className="absolute -bottom-6 left-6">
+          <Avatar className="h-12 w-12 border-4 border-white shadow-lg">
+            <AvatarImage 
+              src={club.logo_url || "/assets/default-club-logo.png"} 
               alt={club.name}
               className="object-cover"
             />
-            <AvatarFallback className="bg-blue-600 text-white font-semibold text-lg">
+            <AvatarFallback className={`${getAvatarColor(club.category)} text-white font-bold`}>
               {getInitials(club.name)}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-2">
-              <Badge variant="secondary" className={getCategoryColor(club.category)}>
-                {getCategoryLabel(club.category)}
-              </Badge>
-              <div className="flex items-center text-sm text-gray-500">
-                <Users className="h-4 w-4 mr-1" />
-                {club.members}
-              </div>
-            </div>
-            <CardTitle className="text-lg line-clamp-1">{club.name}</CardTitle>
-          </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <CardDescription className="line-clamp-3 mb-4 text-sm leading-relaxed">{club.description}</CardDescription>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm" className="flex-1 bg-transparent">
+
+      {/* Card Content */}
+      <CardContent className="pt-8 pb-6">
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">
+            {club.name}
+          </h3>
+          <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
+            {club.description}
+          </p>
+        </div>
+
+        {/* Members count */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-gray-500">
+            <Users className="h-4 w-4 mr-2" />
+            <span className="text-sm">{club.members} thành viên</span>
+          </div>
+          
+          <Button 
+            asChild
+            size="sm" 
+            className="bg-primary hover:bg-primary/90 text-white group-hover:shadow-md transition-all"
+          >
             <Link href={`/clubs/${club.club_id}`}>
-              Chi tiết
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Xem chi tiết
+              <ArrowRight className="ml-2 h-3 w-3" />
             </Link>
           </Button>
-          {/* <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-            Tham gia
-          </Button> */}
         </div>
       </CardContent>
     </Card>
