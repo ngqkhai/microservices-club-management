@@ -54,6 +54,7 @@ import { eventService } from "@/services/event.service"
 import { clubService } from "@/services/club.service"
 import { applicationService, Application } from "@/services/application.service"
 import { ApplicationDetailDialog } from "@/components/application-detail-dialog"
+import { EventQrModal } from "@/components/event-qr-modal"
 
 // Replace mocks with live-loaded state
 
@@ -87,6 +88,8 @@ export default function ProfilePage() {
   const [applicationDetailOpen, setApplicationDetailOpen] = useState(false)
   const [favoriteEvents, setFavoriteEvents] = useState<any[]>([])
   const [pageLoading, setPageLoading] = useState(false)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -614,7 +617,15 @@ export default function ProfilePage() {
                                 {formatDate(event.date)} • {event.time}
                               </p>
                             </div>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedEventId(event.event_id)
+                                setQrModalOpen(true)
+                              }}
+                              disabled={event.status !== "confirmed"}
+                            >
                               <QrCode className="h-4 w-4 mr-2" />
                               QR Code
                             </Button>
@@ -891,36 +902,18 @@ export default function ProfilePage() {
                             <Badge variant={event.status === "confirmed" ? "default" : "secondary"}>
                               {event.status === "confirmed" ? "Đã xác nhận" : "Chờ xác nhận"}
                             </Badge>
-                            {event.qr_code && (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm" variant="outline">
-                                    <QrCode className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle>Vé tham gia sự kiện</DialogTitle>
-                                    <DialogDescription>Quét mã QR này khi tham gia sự kiện</DialogDescription>
-                                  </DialogHeader>
-                                  <div className="flex items-center justify-center p-6">
-                                    <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-                                      <QrCode className="h-24 w-24 text-gray-400" />
-                                    </div>
-                                  </div>
-                                  <DialogFooter className="sm:justify-start">
-                                    <Button type="button" variant="secondary">
-                                      <Download className="h-4 w-4 mr-2" />
-                                      Tải xuống
-                                    </Button>
-                                    <Button type="button" variant="outline">
-                                      <ExternalLink className="h-4 w-4 mr-2" />
-                                      Thêm vào lịch
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            )}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedEventId(event.event_id)
+                                setQrModalOpen(true)
+                              }}
+                              disabled={event.status !== "confirmed"}
+                            >
+                              <QrCode className="h-4 w-4 mr-2" />
+                              QR Code
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -1105,6 +1098,15 @@ export default function ProfilePage() {
           )
         }}
       />
+
+      {/* Event QR Modal */}
+      {selectedEventId && (
+        <EventQrModal
+          eventId={selectedEventId}
+          open={qrModalOpen}
+          onOpenChange={setQrModalOpen}
+        />
+      )}
     </div>
   )
 }

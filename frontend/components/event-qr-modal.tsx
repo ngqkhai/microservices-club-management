@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { eventService } from "@/services/event.service"
 import ReactQRCode from "react-qr-code"
+import { QrCode } from "lucide-react"
 
 type Props = {
   eventId: string
@@ -17,10 +18,12 @@ export function EventQrModal({ eventId, open, onOpenChange }: Props) {
   const [expiresAt, setExpiresAt] = useState<string>("")
   const [remainingSec, setRemainingSec] = useState<number>(0)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
   const refreshTimer = useRef<any>(null)
 
   const loadTicket = async () => {
     setLoading(true)
+    setError("")
     try {
       const res = await eventService.getEventTicket(eventId)
       if (res.success && res.data?.qr_token) {
@@ -34,9 +37,11 @@ export function EventQrModal({ eventId, open, onOpenChange }: Props) {
         if (refreshTimer.current) clearTimeout(refreshTimer.current)
         const ttlMs = Math.max(new Date(res.data.expires_at).getTime() - Date.now() - 10000, 15000)
         refreshTimer.current = setTimeout(loadTicket, ttlMs)
+      } else {
+        setError(res.message || "Không thể tải vé. Vui lòng thử lại.")
       }
-    } catch (_) {
-      // ignore
+    } catch (error: any) {
+      setError(error.message || "Bạn chưa đăng ký sự kiện này hoặc sự kiện đã kết thúc.")
     } finally {
       setLoading(false)
     }
@@ -45,6 +50,12 @@ export function EventQrModal({ eventId, open, onOpenChange }: Props) {
   useEffect(() => {
     if (open) {
       loadTicket()
+    } else {
+      // Reset state when modal closes
+      setQrDataUrl("")
+      setExpiresAt("")
+      setRemainingSec(0)
+      setError("")
     }
     return () => {
       if (refreshTimer.current) clearTimeout(refreshTimer.current)
@@ -78,6 +89,14 @@ export function EventQrModal({ eventId, open, onOpenChange }: Props) {
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <QrCode className="h-8 w-8 text-red-600" />
+              </div>
+              <p className="text-sm text-red-600 mb-4">{error}</p>
+              <Button onClick={loadTicket} variant="outline">Thử lại</Button>
             </div>
           ) : qrDataUrl ? (
             <div className="flex flex-col items-center">
