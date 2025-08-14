@@ -63,7 +63,8 @@ def fetch_clubs():
             "name": 1,
             "category": 1,
             "manager": 1,
-            "description": 1
+            "description": 1,
+            "logo_url": 1,
         }))
         
         client.close()
@@ -72,6 +73,36 @@ def fetch_clubs():
     except Exception as e:
         logger.error(f"❌ Failed to fetch clubs: {e}")
         return []
+
+def fetch_active_memberships_grouped_by_club():
+    """Fetch active memberships from Club Service and group them by club_id"""
+    try:
+        client = MongoClient(db_config.club_db_uri)
+        db = client.club_service_db
+        memberships_collection = db['memberships']
+
+        cursor = memberships_collection.find(
+            { 'status': 'active' },
+            { 'club_id': 1, 'user_id': 1, 'user_full_name': 1, 'role': 1 }
+        )
+
+        grouped = {}
+        for m in cursor:
+            club_id = m.get('club_id')
+            if club_id is None:
+                continue
+            grouped.setdefault(club_id, []).append({
+                'user_id': m.get('user_id'),
+                'user_full_name': m.get('user_full_name'),
+                'membership_role': m.get('role', 'member')
+            })
+
+        client.close()
+        logger.info(f"✅ Retrieved active memberships grouped by club for {len(grouped)} clubs")
+        return grouped
+    except Exception as e:
+        logger.error(f"❌ Failed to fetch memberships: {e}")
+        return {}
 
 def generate_thematic_events_data():
     """Generate events with proper club-category relationships"""
@@ -325,6 +356,7 @@ def generate_thematic_events_data():
     # Get actual data
     users = fetch_users()
     clubs = fetch_clubs()
+    memberships_by_club = fetch_active_memberships_grouped_by_club()
     
     if not users or not clubs:
         logger.error("❌ Cannot proceed without users and clubs data")
@@ -358,7 +390,7 @@ def generate_thematic_events_data():
         for club in category_clubs:
             club_id = club['_id']
             club_name = club['name']
-            
+            club_logo_url = club['logo_url']
             # Select 2-3 random templates for this club
             selected_templates = random.sample(event_templates, min(random.randint(2, 3), len(event_templates)))
             
@@ -366,7 +398,39 @@ def generate_thematic_events_data():
                 # Generate 1-2 variations of each template
                 for variation in range(random.randint(1, 2)):
                     event_id = str(ObjectId())
-                    organizer_id = random.choice(user_ids)
+                    club_members = memberships_by_club.get(club_id, [])
+
+                    organizers = []
+                    lead_user_id = None
+
+                    if club_members:
+                        # Pick 1-3 organizers from actual club members
+                        max_organizers = min(3, len(club_members))
+                        selected_members = random.sample(club_members, k=random.randint(1, max_organizers))
+
+                        # Prefer a lead from managers/organizers
+                        lead_candidates = [m for m in selected_members if m.get('membership_role') in ('club_manager', 'organizer')]
+                        lead = random.choice(lead_candidates) if lead_candidates else random.choice(selected_members)
+                        lead_user_id = lead.get('user_id')
+
+                        for m in selected_members:
+                            organizers.append({
+                                'user_id': m.get('user_id'),
+                                'role': 'lead_organizer' if m is lead else 'organizer',
+                                'user_full_name': m.get('user_full_name'),
+                                'membership_role': m.get('membership_role'),
+                                'joined_at': datetime.now() - timedelta(days=random.randint(1, 30))
+                            })
+                    else:
+                        # Fallback: no club members found, pick a random user
+                        lead_user_id = random.choice(user_ids)
+                        organizers = [{
+                            'user_id': lead_user_id,
+                            'role': 'lead_organizer',
+                            'user_full_name': None,
+                            'membership_role': None,
+                            'joined_at': datetime.now() - timedelta(days=random.randint(1, 30))
+                        }]
                     
                     # Randomize dates (events spread across past and future)
                     start_date = datetime.now() + timedelta(days=random.randint(-60, 90))
@@ -423,6 +487,12 @@ def generate_thematic_events_data():
                     event_data = {
                         '_id': ObjectId(event_id),
                         'club_id': club_id,
+                         # Embedded club object for faster reads and denormalized access
+                         'club': {
+                             'id': club_id,
+                             'name': club_name,
+                             'logo_url': club_logo_url
+                         },
                         'title': random.choice(title_variations),
                         'description': template['description'],
                         'short_description': template['short_description'],
@@ -452,17 +522,13 @@ def generate_thematic_events_data():
                         },
                         'status': random.choice(['published', 'published', 'published', 'draft', 'cancelled']),
                         'visibility': random.choice(['public', 'public', 'public', 'private']),
-                        'organizers': [{
-                            'user_id': organizer_id,
-                            'role': 'lead_organizer',
-                            'joined_at': datetime.now() - timedelta(days=random.randint(1, 30))
-                        }],
+                        'organizers': organizers,
                         'statistics': {
                             'total_registrations': random.randint(0, template['max_participants']),
                             'total_interested': random.randint(0, template['max_participants'] * 2),
                             'total_attended': 0 if start_date > datetime.now() else random.randint(0, template['max_participants'])
                         },
-                        'created_by': random.choice(user_ids),
+                        'created_by': lead_user_id or random.choice(user_ids),
                         'current_participants': random.randint(0, template['max_participants']),
                         'created_at': datetime.now() - timedelta(days=random.randint(1, 60)),
                         'updated_at': datetime.now() - timedelta(days=random.randint(0, 5))
