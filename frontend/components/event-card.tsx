@@ -18,16 +18,18 @@ interface Event {
   fee_display?: string
   currency?: string
   description: string
+  is_favorited?: boolean
 }
 
 interface EventCardProps {
   event: Event
   showClub?: boolean
+  onFavoriteChange?: (eventId: string, isFavorited: boolean) => void
 }
 
-export function EventCard({ event, showClub = true }: EventCardProps) {
+export function EventCard({ event, showClub = true, onFavoriteChange }: EventCardProps) {
   const { toast } = useToast()
-  const [favorited, setFavorited] = useState(false)
+  const [favorited, setFavorited] = useState(event.is_favorited || false)
 
   // Function to get appropriate currency icon
   const getCurrencyIcon = (currency?: string) => {
@@ -106,9 +108,11 @@ export function EventCard({ event, showClub = true }: EventCardProps) {
               try {
                 const res = await eventService.toggleFavorite(event.event_id)
                 if (res.success) {
-                  setFavorited(res.data?.is_favorited ?? !favorited)
+                  const newFavoriteState = res.data?.is_favorited ?? !favorited
+                  setFavorited(newFavoriteState)
+                  onFavoriteChange?.(event.event_id, newFavoriteState)
                   toast({
-                    title: res.data?.is_favorited ? "Đã thêm vào yêu thích" : "Đã bỏ yêu thích",
+                    title: newFavoriteState ? "Đã thêm vào yêu thích" : "Đã bỏ yêu thích",
                   })
                 }
               } catch {

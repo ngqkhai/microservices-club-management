@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -20,9 +20,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-  const { login, isLoading } = useAuthStore()
+  const { login, isLoading, user, isInitialized } = useAuthStore()
   const { toast } = useToast()
   const router = useRouter()
+
+  // Redirect to home if already logged in
+  useEffect(() => {
+    if (isInitialized && user) {
+      router.push("/")
+    }
+  }, [isInitialized, user, router])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -70,6 +77,29 @@ export default function LoginPage() {
         variant: "destructive",
       })
     }
+  }
+
+  // Show loading while checking auth status
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full">
+          <Card>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Đang kiểm tra...</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render login form if user is already logged in
+  if (user) {
+    return null
   }
 
   return (

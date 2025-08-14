@@ -568,8 +568,10 @@ export default function ClubDetailPage() {
           questions: fullCampaign.application_questions,
         });
 
+        // Set campaign immediately to show popup, then update URL
         setSelectedCampaign(fullCampaign);
-        router.push(`/clubs/${clubId}?apply=true`);
+        // Use replace instead of push to avoid adding extra history entry
+        router.replace(`/clubs/${clubId}?apply=true&campaign_id=${campaign.id}`, { scroll: false });
       } else {
         console.error("❌ Failed to fetch campaign details:", response.message);
         toast({
@@ -964,7 +966,7 @@ export default function ClubDetailPage() {
       </div>
 
       {/* Application Form Modal */}
-      {applyFromQuery && selectedCampaign && (
+      {selectedCampaign && (
         <>
           {console.log(
             "🎯 Rendering ApplicationForm with selectedCampaign:",

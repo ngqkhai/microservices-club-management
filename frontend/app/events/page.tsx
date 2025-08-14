@@ -14,11 +14,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users, Banknote } from "lucide-react"
+import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users, Banknote, Heart } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 import { eventService, type Event as ApiEvent } from "@/services/event.service"
 import { clubService } from "@/services/club.service"
+import { useAuthStore } from "@/stores/auth-store"
 
 type UiEvent = {
   event_id: string
@@ -38,6 +39,7 @@ type UiEvent = {
   currency?: string
   description: string
   category: string
+  is_favorited?: boolean
 }
 
 function transformEventForUI(event: ApiEvent): UiEvent {
@@ -130,6 +132,7 @@ const DEFAULT_CLUBS = ["All"]
 
 export default function EventsPage() {
   const router = useRouter()
+  const { user } = useAuthStore()
   const [events, setEvents] = useState<UiEvent[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -141,6 +144,7 @@ export default function EventsPage() {
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS)
   const [clubs, setClubs] = useState<{ label: string; value: string }[]>([{ label: 'All', value: 'All' }])
+  const [favoriteEventIds, setFavoriteEventIds] = useState<Set<string>>(new Set())
   
   // Debounced search state to avoid firing requests on every keystroke
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
@@ -165,6 +169,30 @@ export default function EventsPage() {
     return <Banknote className="h-4 w-4 text-green-600" />
   }
 
+  // Load user's favorite events
+  const loadUserFavorites = useCallback(async () => {
+    if (!user) {
+      setFavoriteEventIds(new Set())
+      return
+    }
+
+    try {
+      const response = await eventService.getUserFavoriteEvents({ limit: 100 })
+      if (response.success && response.data?.events) {
+        const favoriteIds = new Set(response.data.events.map((event: any) => event.id || event._id))
+        setFavoriteEventIds(favoriteIds)
+      }
+    } catch (error) {
+      console.error('Failed to load user favorites:', error)
+      setFavoriteEventIds(new Set())
+    }
+  }, [user])
+
+  // Load favorites when user changes
+  useEffect(() => {
+    loadUserFavorites()
+  }, [loadUserFavorites])
+
   const loadEvents = useCallback(async (page: number = 1) => {
     setIsLoading(true)
     try {
@@ -185,7 +213,12 @@ export default function EventsPage() {
       if (requestId === latestRequestIdRef.current) {
         if (response.success && response.data) {
           const data = response.data.events || []
-          const mapped = data.map(transformEventForUI)
+          const mapped = data.map((event: any) => {
+            const uiEvent = transformEventForUI(event)
+            // Apply favorite status from user's favorites
+            uiEvent.is_favorited = favoriteEventIds.has(uiEvent.event_id)
+            return uiEvent
+          })
           setEvents(mapped)
           
           // Extract pagination info from meta or pagination object
@@ -215,7 +248,7 @@ export default function EventsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [debouncedSearchTerm, selectedDate, selectedCategory, selectedLocation, selectedClub, eventsPerPage])
+  }, [debouncedSearchTerm, selectedDate, selectedCategory, selectedLocation, selectedClub, eventsPerPage, favoriteEventIds])
 
   useEffect(() => {
     loadEvents(currentPage)
@@ -283,6 +316,25 @@ export default function EventsPage() {
   // Calculate display info
   const startIndex = (currentPage - 1) * eventsPerPage
   const endIndex = startIndex + events.length
+
+  const handleFavoriteChange = (eventId: string, isFavorited: boolean) => {
+    setFavoriteEventIds(prev => {
+      const newSet = new Set(prev)
+      if (isFavorited) {
+        newSet.add(eventId)
+      } else {
+        newSet.delete(eventId)
+      }
+      return newSet
+    })
+
+    // Update the events array to reflect the change immediately
+    setEvents(prev => prev.map(event => 
+      event.event_id === eventId 
+        ? { ...event, is_favorited: isFavorited }
+        : event
+    ))
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -432,7 +484,12 @@ export default function EventsPage() {
             ) : events.length > 0 ? (
               <div className="space-y-4" data-testid="events-list">
                 {events.map((event) => (
-                  <Card key={event.event_id} className="hover:shadow-md transition-shadow" data-testid="event-card">
+                  <Card 
+                    key={event.event_id} 
+                    className="hover:shadow-md transition-shadow cursor-pointer" 
+                    data-testid="event-card"
+                    onClick={() => router.push(`/events/${event.event_id}`)}
+                  >
                     <CardContent className="p-6">
                       <div className="flex gap-4">
                         {/* Event Image Placeholder */}
@@ -454,7 +511,13 @@ export default function EventsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">
+                              <h3 
+                                className="text-lg font-semibold text-gray-900 mb-1 truncate hover:text-blue-600 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/events/${event.event_id}`)
+                                }}
+                              >
                                 {event.title}
                               </h3>
                               <p className="text-sm text-gray-600 mb-2 line-clamp-2">
@@ -489,7 +552,7 @@ export default function EventsPage() {
                             </div>
                           </div>
                           
-                          {/* Category and Fee */}
+                          {/* Category, Fee and Favorite */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Badge variant="secondary" className="text-xs">
@@ -507,15 +570,36 @@ export default function EventsPage() {
                               )}
                             </div>
                             
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline" onClick={() => router.push(`/events/${event.event_id}`)}>
-                                View Details
-                              </Button>
-                              <Button size="sm">
-                                Interested
-                              </Button>
-                            </div>
+                            {/* Favorite Icon Button */}
+                            <Button 
+                              size="sm" 
+                              variant={event.is_favorited ? "default" : "ghost"}
+                              onClick={async (e) => {
+                                e.stopPropagation() // Prevent card click
+                                if (!user) {
+                                  router.push('/login')
+                                  return
+                                }
+                                try {
+                                  const res = await eventService.toggleFavorite(event.event_id)
+                                  if (res.success) {
+                                    const newFavoriteState = res.data?.is_favorited ?? !event.is_favorited
+                                    handleFavoriteChange(event.event_id, newFavoriteState)
+                                  }
+                                } catch (error) {
+                                  console.error('Error toggling favorite:', error)
+                                }
+                              }}
+                              disabled={!user}
+                              className={`h-8 w-8 p-0 rounded-full ${
+                                event.is_favorited 
+                                  ? 'bg-red-50 hover:bg-red-100 text-red-600' 
+                                  : 'hover:bg-gray-100'
+                              }`}
+                              title={event.is_favorited ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                            >
+                              <Heart className={`h-4 w-4 ${event.is_favorited ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                            </Button>
                           </div>
                         </div>
                       </div>

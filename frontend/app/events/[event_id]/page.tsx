@@ -234,7 +234,7 @@ export default function EventDetailPage() {
     return () => {
       mounted = false
     }
-  }, [eventId])
+  }, [eventId, user])
 
   // Load related events: 2 by same category + 3 by same club
   useEffect(() => {
