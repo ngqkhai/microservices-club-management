@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useLayoutEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,6 +40,10 @@ export default function ClubsPage() {
   const [categories, setCategories] = useState<string[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(false)
   const [recruitmentPage, setRecruitmentPage] = useState(1);
+  
+  // Ref to store scroll position during pagination
+  const scrollPositionRef = useRef<number>(0)
+  const isPaginationRef = useRef<boolean>(false)
 
   // Use campaigns hook for recruitment data
   const { campaigns: activeRecruitments, pagination: recruitmentPagination, loading: recruitmentsLoading, error: recruitmentsError, loadPublishedCampaigns } = useCampaigns();
@@ -57,6 +61,15 @@ export default function ClubsPage() {
     loadAllClubs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, pagination.page]);
+
+  // Prevent scroll to top during pagination using useLayoutEffect
+  useLayoutEffect(() => {
+    if (isPaginationRef.current) {
+      // Immediately restore scroll position before browser can scroll to top
+      window.scrollTo(0, scrollPositionRef.current)
+      isPaginationRef.current = false
+    }
+  })
 
   // Load categories on component mount
   useEffect(() => {
@@ -100,6 +113,10 @@ export default function ClubsPage() {
   }
 
   const handlePageChange = (page: number) => {
+    // Save current scroll position and mark as pagination
+    scrollPositionRef.current = window.scrollY
+    isPaginationRef.current = true
+    
     setPage(page)
   }
 

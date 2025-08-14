@@ -107,10 +107,11 @@ export function ClubCard({ club }: ClubCardProps) {
   }
 
   return (
-    <Card 
-      className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/20"
-      data-testid="club-card"
-    >
+    <Link href={`/clubs/${club.club_id}`}>
+      <Card 
+        className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/20 cursor-pointer"
+        data-testid="club-card"
+      >
       {/* Card Header with Image */}
       <CardHeader className="p-0 relative">
         <div className="aspect-video overflow-hidden">
@@ -166,19 +167,9 @@ export function ClubCard({ club }: ClubCardProps) {
             <Users className="h-4 w-4 mr-2" />
             <span className="text-sm">{club.members} thành viên</span>
           </div>
-          
-          <Button 
-            asChild
-            size="sm" 
-            className="bg-primary hover:bg-primary/90 text-white group-hover:shadow-md transition-all"
-          >
-            <Link href={`/clubs/${club.club_id}`}>
-              Xem chi tiết
-              <ArrowRight className="ml-2 h-3 w-3" />
-            </Link>
-          </Button>
         </div>
       </CardContent>
     </Card>
+    </Link>
   )
 }

@@ -640,7 +640,14 @@ export default function EventDetailPage() {
                    </Avatar>
                    <div>
                      <p className="text-white font-medium">
-                       Tổ chức bởi {event.club.name || `Club ${event.club.id}`}
+                       Tổ chức bởi{" "}
+                       <Link 
+                         href={`/clubs/${event.club.id}`}
+                         className="text-white hover:text-blue-200 transition-colors inline-flex items-center gap-1"
+                       >
+                         {event.club.name || `Club ${event.club.id}`}
+                         <ExternalLink className="h-3 w-3" />
+                       </Link>
                      </p>
                      <p className="text-white/80 text-sm">
                        {event.organizers.slice(0, 2).map((org: any) => org.name).join(", ")}

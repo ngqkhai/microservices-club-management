@@ -307,7 +307,7 @@ export default function HomePage() {
               Khám phá những câu lạc bộ được yêu thích nhất tại trường đại học
             </p>
             <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
-              Xem tất cả câu lạc bộ
+              <Link href="/clubs">Xem tất cả câu lạc bộ</Link>
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -469,8 +469,9 @@ export default function HomePage() {
               ) : (
                 <div className="space-y-6">
                   {recentAndUpcomingEvents.upcoming.map((event) => (
-                    <Card key={event.event_id} className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                      <div className="flex flex-col sm:flex-row">
+                    <Link key={event.event_id} href={`/events/${event.event_id}`}>
+                      <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                        <div className="flex flex-col sm:flex-row">
                         {/* Event Image */}
                         <div className="sm:w-60 aspect-video sm:aspect-square overflow-hidden">
                           <ImageWithFallback
@@ -527,21 +528,11 @@ export default function HomePage() {
                               </div>
                             </div>
 
-                            {/* Action Button */}
-                            <Button 
-                              asChild
-                              size="sm" 
-                              className="bg-primary hover:bg-primary/90 text-white self-start group-hover:shadow-md transition-all"
-                            >
-                              <Link href={`/events/${event.event_id}`}>
-                                Xem chi tiết
-                                <ArrowRight className="ml-2 h-4 w-4" />
-                              </Link>
-                            </Button>
                           </div>
                         </CardContent>
                       </div>
                     </Card>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -578,8 +569,9 @@ export default function HomePage() {
                     </div>
                   ) : (
                     recentAndUpcomingEvents.recent.map((event) => (
-                      <Card key={event.event_id} className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                        <div className="flex flex-col sm:flex-row">
+                      <Link key={event.event_id} href={`/events/${event.event_id}`}>
+                        <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                          <div className="flex flex-col sm:flex-row">
                           {/* Event Image */}
                           <div className="sm:w-60 aspect-video sm:aspect-square overflow-hidden">
                             <ImageWithFallback
@@ -635,21 +627,11 @@ export default function HomePage() {
                                 </div>
                               </div>
 
-                              {/* Action Button */}
-                              <Button 
-                                asChild
-                                size="sm" 
-                                className="bg-primary hover:bg-primary/90 text-white self-start group-hover:shadow-md transition-all"
-                              >
-                                <Link href={`/events/${event.event_id}`}>
-                                  Xem chi tiết
-                                  <ArrowRight className="ml-2 h-4 w-4" />
-                                </Link>
-                              </Button>
                             </div>
                           </CardContent>
                         </div>
                       </Card>
+                      </Link>
                     ))
                   )}
                 </div>
@@ -722,7 +704,7 @@ export default function HomePage() {
                 asChild
               variant="outline"
                 size="lg" 
-                className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-4 text-lg font-semibold"
+                className="border-2 border-white text-primary hover:bg-white hover:text-primary px-8 py-4 text-lg font-semibold"
             >
                 <Link href="/login">
                   <LogIn className="mr-2 h-5 w-5" />
