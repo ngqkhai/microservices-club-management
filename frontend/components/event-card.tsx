@@ -57,11 +57,11 @@ export function EventCard({ event, showClub = true, onFavoriteChange }: EventCar
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
-            <CardTitle className="text-lg">{event.title}</CardTitle>
+            <CardTitle className="text-lg group-hover:text-primary transition-colors">{event.title}</CardTitle>
             {showClub && <CardDescription className="mt-1">Organized by {event.club}</CardDescription>}
           </div>
           <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export function EventCard({ event, showClub = true, onFavoriteChange }: EventCar
         <p className="text-sm text-gray-700 mb-4 line-clamp-2">{event.description}</p>
 
         <div className="flex gap-2">
-          <Button asChild size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700">
+          <Button asChild size="sm" className="flex-1 bg-primary hover:bg-primary/90 group-hover:shadow-md transition-all">
             <Link href={`/events/${event.event_id}`}>
               <Eye className="h-4 w-4 mr-2" />
               View Details

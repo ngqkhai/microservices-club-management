@@ -1,79 +1,167 @@
 import Link from "next/link"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react"
 
 export function Footer() {
+  const footerLinks = {
+    platform: [
+      { name: "Trang chủ", href: "/" },
+      { name: "Câu lạc bộ", href: "/clubs" },
+      { name: "Sự kiện", href: "/events" },
+      { name: "Thành viên", href: "/profile" },
+    ],
+    support: [
+      { name: "Trung tâm trợ giúp", href: "#" },
+      { name: "Liên hệ", href: "#" },
+      { name: "Báo cáo sự cố", href: "#" },
+      { name: "FAQ", href: "#" },
+    ],
+    resources: [
+      { name: "Blog", href: "#" },
+      { name: "Hướng dẫn", href: "#" },
+      { name: "Tài nguyên", href: "#" },
+      { name: "API", href: "#" },
+    ],
+    legal: [
+      { name: "Điều khoản sử dụng", href: "#" },
+      { name: "Chính sách bảo mật", href: "#" },
+      { name: "Cookie Policy", href: "#" },
+      { name: "Bản quyền", href: "#" },
+    ],
+  };
+
+  const socialLinks = [
+    { icon: Facebook, href: "#", label: "Facebook" },
+    { icon: Instagram, href: "#", label: "Instagram" },
+    { icon: Twitter, href: "#", label: "Twitter" },
+    { icon: Youtube, href: "#", label: "YouTube" },
+  ];
+
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Logo and Description */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="text-2xl font-bold text-blue-400 mb-4">UniVibe</div>
-            <p className="text-gray-300 mb-4 max-w-md">
-              Kết nối sinh viên đại học thông qua các câu lạc bộ, sự kiện và những trải nghiệm ý nghĩa. Tham gia cộng đồng của chúng tôi và khám phá đam mê của bạn.
+    <footer className="bg-gray-900 text-gray-300">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
+          {/* Brand Column */}
+          <div className="lg:col-span-2">
+            <div className="text-2xl font-bold text-white mb-4">
+              UniVibe
+            </div>
+            <p className="text-gray-400 mb-6 leading-relaxed">
+              Nền tảng kết nối cộng đồng sinh viên hàng đầu Việt Nam. 
+              Tham gia, khám phá và tạo nên những trải nghiệm đáng nhớ.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                Facebook
-              </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                Instagram
-              </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
-                Twitter
-              </a>
+            
+            {/* Contact Info */}
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center">
+                <Mail className="h-4 w-4 mr-2 text-primary" />
+                <span>contact@univibe.edu.vn</span>
+              </div>
+              <div className="flex items-center">
+                <Phone className="h-4 w-4 mr-2 text-primary" />
+                <span>+84 123 456 789</span>
+              </div>
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2 text-primary" />
+                <span>Hà Nội, Việt Nam</span>
+              </div>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Platform Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Liên kết nhanh</h3>
+            <h3 className="text-white font-semibold mb-4">Nền tảng</h3>
             <ul className="space-y-2">
-              <li>
-                <Link href="/clubs" className="text-gray-300 hover:text-blue-400 transition-colors">
-                  Duyệt câu lạc bộ
-                </Link>
-              </li>
-              <li>
-                <Link href="/events" className="text-gray-300 hover:text-blue-400 transition-colors">
-                  Sự kiện sắp tới
-                </Link>
-              </li>
-              <li>
-                <Link href="/profile" className="text-gray-300 hover:text-blue-400 transition-colors">
-                  Hồ sơ của tôi
-                </Link>
-              </li>
-              <li>
-                <Link href="/signup" className="text-gray-300 hover:text-blue-400 transition-colors">
-                  Tham gia ngay
-                </Link>
-              </li>
+              {footerLinks.platform.map((link) => (
+                <li key={link.name}>
+                  <Link 
+                    href={link.href} 
+                    className="text-gray-400 hover:text-white transition-colors duration-200"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Support Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Thông tin liên hệ</h3>
+            <h3 className="text-white font-semibold mb-4">Hỗ trợ</h3>
             <ul className="space-y-2">
-              <li className="flex items-center">
-                <Mail className="h-4 w-4 mr-2 text-blue-400" />
-                <span className="text-gray-300">hello.univibe@gmail.com</span>
-              </li>
-              <li className="flex items-center">
-                <Phone className="h-4 w-4 mr-2 text-blue-400" />
-                <span className="text-gray-300">+1 (555) 123-4567</span>
-              </li>
-              <li className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-blue-400" />
-                <span className="text-gray-300">227 Nguyễn Văn Cừ, Phường, Chợ Quán, Hồ Chí Minh</span>
-              </li>
+              {footerLinks.support.map((link) => (
+                <li key={link.name}>
+                  <a 
+                    href={link.href} 
+                    className="text-gray-400 hover:text-white transition-colors duration-200"
+                  >
+                    {link.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Resources Links */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Tài nguyên</h3>
+            <ul className="space-y-2">
+              {footerLinks.resources.map((link) => (
+                <li key={link.name}>
+                  <a 
+                    href={link.href} 
+                    className="text-gray-400 hover:text-white transition-colors duration-200"
+                  >
+                    {link.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal Links */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Pháp lý</h3>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link) => (
+                <li key={link.name}>
+                  <a 
+                    href={link.href} 
+                    className="text-gray-400 hover:text-white transition-colors duration-200"
+                  >
+                    {link.name}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
-          <p className="text-gray-400">© 2025 University Club Management System. All rights reserved.</p>
+        <Separator className="my-8 bg-gray-700" />
+
+        {/* Bottom Footer */}
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="text-gray-400 text-sm mb-4 md:mb-0">
+            © 2024 UniVibe. Tất cả quyền được bảo lưu.
+          </div>
+          
+          {/* Social Links */}
+          <div className="flex space-x-4">
+            {socialLinks.map((social) => {
+              const Icon = social.icon;
+              return (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors duration-200"
+                  aria-label={social.label}
+                >
+                  <Icon className="h-5 w-5" />
+                </a>
+              );
+            })}
+          </div>
         </div>
       </div>
     </footer>
