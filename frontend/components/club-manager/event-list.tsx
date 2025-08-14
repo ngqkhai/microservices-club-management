@@ -89,10 +89,8 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
   const statusOptions = [
     { value: 'draft', label: 'Bản nháp', color: 'bg-gray-500' },
     { value: 'published', label: 'Đã xuất bản', color: 'bg-green-600' },
-    { value: 'ongoing', label: 'Đang diễn ra', color: 'bg-blue-600' },
-    { value: 'completed', label: 'Đã kết thúc', color: 'bg-purple-600' },
     { value: 'cancelled', label: 'Đã hủy', color: 'bg-red-600' },
-    { value: 'hidden', label: 'Đã ẩn', color: 'bg-gray-400' }
+    { value: 'completed', label: 'Đã kết thúc', color: 'bg-purple-600' }
   ]
 
   useEffect(() => {
@@ -260,21 +258,12 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
         actions.push("publish")
         break
       case "published":
-        actions.push("pause", "complete", "checkin")
-        break
-      case "ongoing":
-        actions.push("complete", "pause", "checkin")
-        break
-      case "paused":
-        actions.push("resume", "complete")
+        actions.push("complete", "checkin")
         break
       case "completed":
         // No additional actions
         break
       case "cancelled":
-        actions.push("restore")
-        break
-      case "hidden":
         actions.push("restore")
         break
     }
@@ -483,28 +472,7 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
                                 Xuất bản
                               </DropdownMenuItem>
                             )
-                          case "pause":
-                            return (
-                              <DropdownMenuItem 
-                                key={action} 
-                                onClick={() => handleStatusChangeRequest(event._id, "paused")}
-                                disabled={isLoading}
-                              >
-                                <Pause className="h-4 w-4 mr-2" />
-                                Tạm dừng
-                              </DropdownMenuItem>
-                            )
-                          case "resume":
-                            return (
-                              <DropdownMenuItem 
-                                key={action} 
-                                onClick={() => handleStatusChangeRequest(event._id, "ongoing")}
-                                disabled={isLoading}
-                              >
-                                <Play className="h-4 w-4 mr-2" />
-                                Tiếp tục
-                              </DropdownMenuItem>
-                            )
+
                           case "complete":
                             return (
                               <DropdownMenuItem
@@ -601,7 +569,7 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
                       onClick={() => handleViewEvent(event)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
-                      Xem
+                      Xem nhanh
                     </Button>
                   </div>
                 </div>
@@ -652,10 +620,6 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
                   <label className="text-sm font-medium text-gray-500">Danh mục</label>
                   <p className="text-sm">{selectedEvent.category}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Loại sự kiện</label>
-                  <p className="text-sm">{selectedEvent.event_type}</p>
-                </div>
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -682,15 +646,11 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
         <DialogContent>
           <DialogHeader>
             <DialogTitle className={pendingStatusChange?.newStatus === "completed" ? "text-green-600" : 
-              pendingStatusChange?.newStatus === "paused" ? "text-orange-600" : 
-              pendingStatusChange?.newStatus === "published" ? "text-green-600" : 
-              pendingStatusChange?.newStatus === "ongoing" ? "text-blue-600" : "text-gray-600"}>
+              pendingStatusChange?.newStatus === "published" ? "text-green-600" : "text-gray-600"}>
               Xác nhận thay đổi trạng thái
             </DialogTitle>
             <DialogDescription>
               Bạn có chắc chắn muốn {pendingStatusChange?.newStatus === "published" ? "xuất bản" : 
-                pendingStatusChange?.newStatus === "paused" ? "tạm dừng" :
-                pendingStatusChange?.newStatus === "ongoing" ? "tiếp tục" :
                 pendingStatusChange?.newStatus === "completed" ? "hoàn thành" : "khôi phục"} sự kiện này?
             </DialogDescription>
           </DialogHeader>
@@ -702,9 +662,7 @@ export function EventList({ events: initialEvents, clubId, onEventUpdate }: Even
               onClick={confirmStatusChange} 
               disabled={isLoading}
               className={pendingStatusChange?.newStatus === "completed" ? "bg-green-600 hover:bg-green-700" : 
-                pendingStatusChange?.newStatus === "paused" ? "bg-orange-600 hover:bg-orange-700" : 
-                pendingStatusChange?.newStatus === "published" ? "bg-green-600 hover:bg-green-700" : 
-                pendingStatusChange?.newStatus === "ongoing" ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 hover:bg-gray-700"}
+                pendingStatusChange?.newStatus === "published" ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-700"}
             >
               {isLoading ? "Đang xử lý..." : "Xác nhận"}
             </Button>

@@ -195,13 +195,32 @@ export default function EventRegistrationsPage() {
   }
 
   const getStatusBadge = (status: Registration['status']) => {
-    const statusConfig: Record<Registration['status'], { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-      registered: { label: "Đã đăng ký", variant: "default" },
-      attended: { label: "Đã điểm danh", variant: "secondary" },
-      cancelled: { label: "Đã hủy", variant: "outline" },
+    const statusConfig: Record<Registration['status'], { label: string; variant: "default" | "secondary" | "outline" | "destructive"; className?: string }> = {
+      registered: { 
+        label: "Đã đăng ký", 
+        variant: "default",
+        className: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+      },
+      attended: { 
+        label: "Đã điểm danh", 
+        variant: "secondary",
+        className: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+      },
+      cancelled: { 
+        label: "Đã hủy", 
+        variant: "outline",
+        className: "bg-red-100 text-red-800 border-red-200 hover:bg-red-200"
+      },
     }
     const config = statusConfig[status] || { label: String(status), variant: "secondary" }
-    return <Badge variant={config.variant}>{config.label}</Badge>
+    return (
+      <Badge 
+        variant={config.variant} 
+        className={config.className}
+      >
+        {config.label}
+      </Badge>
+    )
   }
 
   const getPaymentStatusBadge = (status: string) => {

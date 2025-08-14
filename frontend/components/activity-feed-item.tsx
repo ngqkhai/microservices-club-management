@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, MapPin, DollarSign, Eye } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 interface Event {
   event_id: string
@@ -12,6 +13,8 @@ interface Event {
   status: string
   fee: number
   location: string
+  event_logo_url?: string
+  event_image_url?: string
 }
 
 interface ActivityFeedItemProps {
@@ -52,9 +55,21 @@ export function ActivityFeedItem({ event }: ActivityFeedItemProps) {
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1 min-w-0">
-            {/* Date/Time Icon */}
-            <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-blue-600" />
+            {/* Event Logo/Image */}
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
+              {event.event_logo_url || event.event_image_url ? (
+                <Image
+                  src={event.event_logo_url || event.event_image_url || ''}
+                  alt={event.title}
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-blue-600" />
+                </div>
+              )}
             </div>
 
             {/* Event Info */}

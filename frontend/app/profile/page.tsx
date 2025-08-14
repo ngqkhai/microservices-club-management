@@ -598,7 +598,7 @@ export default function ProfilePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Sự kiện sắp tới</CardTitle>
-                    <CardDescription>Các sự kiện bạn đã đăng ký trong thời gian tới</CardDescription>
+                    <CardDescription>Các sự kiện bạn đã đăng ký trong thời gian tới • Click vào sự kiện để xem chi tiết</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -608,27 +608,38 @@ export default function ProfilePage() {
                         .map((event) => (
                           <div
                             key={event.event_id}
-                            className="flex items-center justify-between p-4 bg-blue-50 rounded-lg"
+                            className="flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                            onClick={() => router.push(`/events/${event.event_id}`)}
                           >
-                            <div>
+                            <div className="flex-1">
                               <h4 className="font-medium">{event.title}</h4>
                               <p className="text-sm text-gray-600">{event.club_name}</p>
                               <p className="text-sm text-gray-500">
                                 {formatDate(event.date)} • {event.time}
                               </p>
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedEventId(event.event_id)
-                                setQrModalOpen(true)
-                              }}
-                              disabled={event.status !== "confirmed"}
-                            >
-                              <QrCode className="h-4 w-4 mr-2" />
-                              QR Code
-                            </Button>
+                            <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedEventId(event.event_id)
+                                  setQrModalOpen(true)
+                                }}
+                                disabled={event.status !== "confirmed"}
+                              >
+                                <QrCode className="h-4 w-4 mr-2" />
+                                QR Code
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => router.push(`/events/${event.event_id}`)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Chi tiết
+                              </Button>
+                            </div>
                           </div>
                         ))}
                     </div>
@@ -779,10 +790,7 @@ export default function ProfilePage() {
                                 {formatDate(event.date)} • {event.time}
                               </p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                Đăng ký ngay
-                              </Button>
+                            <div className="flex items-center space-x-2">   
                               <Button size="sm" variant="outline" asChild>
                                 <Link href={`/events/${event.id}`}>Chi tiết</Link>
                               </Button>
