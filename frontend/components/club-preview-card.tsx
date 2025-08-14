@@ -11,6 +11,7 @@ interface Club {
   name: string
   description: string
   logo_url: string
+  cover_url?: string
   members: number
   category: string
   image?: string
@@ -68,7 +69,7 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
       <CardHeader className="p-0 relative">
         <div className="aspect-video overflow-hidden">
           <ImageWithFallback
-            src={club.image || "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwZGViYXRlJTIwY2x1YnxlbnwxfHx8fDE3NTUxNjY1NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080"}
+            src={club.image || club.cover_url || "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwZGViYXRlJTIwY2x1YnxlbnwxfHx8fDE3NTUxNjY1NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080"}
             alt={club.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
@@ -90,7 +91,7 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
         {/* Club Avatar */}
         <div className="absolute -bottom-6 left-6">
           <Avatar className="h-12 w-12 border-4 border-white shadow-lg">
-            <AvatarImage src={club.logo_url || "/placeholder.svg"} alt={club.name} />
+            <AvatarImage src={club.logo_url || club.cover_url || "/placeholder.svg"} alt={club.name} />
             <AvatarFallback className={`${getAvatarColor(club.category)} text-white font-bold`}>
               {getInitials(club.name)}
             </AvatarFallback>
