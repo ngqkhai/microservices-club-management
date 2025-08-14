@@ -24,8 +24,12 @@ import {
 export const getEvents = async (req, res) => {
   try {
     const dto = new GetEventsDTO(req.query);
-    // Public route: only return published events regardless of client-provided status
-    dto.status = 'published';
+    
+    // Allow 'completed' status for recent events, otherwise default to 'published'
+    if (dto.status !== 'completed') {
+      dto.status = 'published';
+    }
+    
     const result = await getFilteredEvents(dto);
     res.status(200).json(result);
   } catch (error) {

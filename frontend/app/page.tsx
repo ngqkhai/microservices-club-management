@@ -467,75 +467,83 @@ export default function HomePage() {
                   <p>Hãy kiểm tra lại sau để cập nhật những hoạt động mới nhất.</p>
                 </div>
               ) : (
-        <div className="space-y-6">
-          {recentAndUpcomingEvents.upcoming.map((event) => (
-            <Card key={event.event_id} className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <div className="flex flex-col sm:flex-row">
-                {/* Event Image */}
-                <div className="sm:w-60 aspect-video sm:aspect-square overflow-hidden">
-                  <ImageWithFallback
-                    src={(event as any).event_image_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxldmVudCUyMGNvbW11bml0eXxlbnwxfHx8fDE3NTUxNjY2Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080"}
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                <div className="space-y-6">
+                  {recentAndUpcomingEvents.upcoming.map((event) => (
+                    <Card key={event.event_id} className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                      <div className="flex flex-col sm:flex-row">
+                        {/* Event Image */}
+                        <div className="sm:w-60 aspect-video sm:aspect-square overflow-hidden">
+                          <ImageWithFallback
+                            src={event.event_image_url || event.event_logo_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxldmVudCUyMGNvbW11bml0eXxlbnwxfHx8fDE3NTUxNjY2Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080"}
+                            alt={event.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+
+                        {/* Event Content */}
+                        <CardContent className="flex-1 p-6">
+                          <div className="flex flex-col h-full">
+                            {/* Header with badges and rating */}
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex gap-2">
+                                <Badge 
+                                  variant="default"
+                                  className="bg-primary text-white"
+                                >
+                                  Sự kiện
+                                </Badge>
+                              </div>
+                              <div className="flex items-center text-yellow-500">
+                                <Star className="w-4 h-4 mr-1 fill-current" />
+                                <span className="text-sm font-medium">4.5</span>
+                              </div>
+                            </div>
+
+                            {/* Title and Club */}
+                            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">
+                              {event.title}
+                            </h3>
+                            <p className="text-sm text-primary font-medium mb-4">
+                              {event.club_name}
+                            </p>
+
+                            {/* Event Details */}
+                            <div className="space-y-2 mb-6 flex-1">
+                              <div className="flex items-center text-gray-600">
+                                <Calendar className="w-4 h-4 mr-3 text-gray-400" />
+                                <span className="text-sm">{new Date(event.start_time).toLocaleDateString('vi-VN')}</span>
+                              </div>
+                              <div className="flex items-center text-gray-600">
+                                <Clock className="w-4 h-4 mr-3 text-gray-400" />
+                                <span className="text-sm">{new Date(event.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div className="flex items-center text-gray-600">
+                                <MapPin className="w-4 h-4 mr-3 text-gray-400" />
+                                <span className="text-sm">{event.location}</span>
+                              </div>
+                              <div className="flex items-center text-gray-600">
+                                <Users className="w-4 h-4 mr-3 text-gray-400" />
+                                <span className="text-sm">0 người tham gia</span>
+                              </div>
+                            </div>
+
+                            {/* Action Button */}
+                            <Button 
+                              asChild
+                              size="sm" 
+                              className="bg-primary hover:bg-primary/90 text-white self-start group-hover:shadow-md transition-all"
+                            >
+                              <Link href={`/events/${event.event_id}`}>
+                                Xem chi tiết
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
-
-                {/* Event Content */}
-                <CardContent className="flex-1 p-6">
-                  <div className="flex flex-col h-full">
-                    {/* Header with badges and rating */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex gap-2">
-                        <Badge 
-                          variant="default"
-                          className="bg-primary text-white"
-                        >
-                          Sự kiện
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Title and Club */}
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">
-                      {event.title}
-                    </h3>
-                    <p className="text-sm text-primary font-medium mb-4">
-                      {event.club_name}
-                    </p>
-
-                    {/* Event Details */}
-                    <div className="space-y-2 mb-6 flex-1">
-                      <div className="flex items-center text-gray-600">
-                        <Calendar className="w-4 h-4 mr-3 text-gray-400" />
-                        <span className="text-sm">{new Date(event.start_time).toLocaleDateString('vi-VN')}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <Clock className="w-4 h-4 mr-3 text-gray-400" />
-                        <span className="text-sm">{new Date(event.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <MapPin className="w-4 h-4 mr-3 text-gray-400" />
-                        <span className="text-sm">{event.location}</span>
-                      </div>
-                    </div>
-
-                    {/* Action Button */}
-                    <Button 
-                      asChild
-                      size="sm" 
-                      className="bg-primary hover:bg-primary/90 text-white self-start group-hover:shadow-md transition-all"
-                    >
-                      <Link href={`/events/${event.event_id}`}>
-                        Xem chi tiết
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </div>
-            </Card>
-          ))}
-        </div>
               )}
             </TabsContent>
 
@@ -575,7 +583,7 @@ export default function HomePage() {
                           {/* Event Image */}
                           <div className="sm:w-60 aspect-video sm:aspect-square overflow-hidden">
                             <ImageWithFallback
-                              src={(event as any).event_image_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxldmVudCUyMGNvbW11bml0eXxlbnwxfHx8fDE3NTUxNjY2Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080"}
+                              src={event.event_image_url || event.event_logo_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxldmVudCUyMGNvbW11bml0eXxlbnwxfHx8fDE3NTUxNjY2Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080"}
                               alt={event.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
@@ -602,7 +610,7 @@ export default function HomePage() {
                                 {event.title}
                               </h3>
                               <p className="text-sm text-primary font-medium mb-4">
-                                {(event as any).club?.name || "Câu lạc bộ"}
+                                {event.club_name}
                               </p>
 
                               {/* Event Details */}
@@ -614,8 +622,7 @@ export default function HomePage() {
                                 <div className="flex items-center text-gray-600">
                                   <Clock className="w-4 h-4 mr-3 text-gray-400" />
                                   <span className="text-sm">
-                                    {new Date(event.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - 
-                                    {new Date((event as any).end_time || event.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(event.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                 </div>
                                 <div className="flex items-center text-gray-600">
@@ -624,9 +631,7 @@ export default function HomePage() {
                                 </div>
                                 <div className="flex items-center text-gray-600">
                                   <Users className="w-4 h-4 mr-3 text-gray-400" />
-                                  <span className="text-sm">
-                                    {(event as any).registrations?.length || 0} người đã tham gia
-                                  </span>
+                                  <span className="text-sm">0 người đã tham gia</span>
                                 </div>
                               </div>
 

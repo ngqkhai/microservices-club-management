@@ -11,8 +11,8 @@ export async function getFilteredEvents(dto) {
   const result = await getEventsFromMock({
     filter: dto.filter,
     club_id: dto.club_id,
-    // Enforce published-only for public listing layer; controller already sets dto.status
-    status: 'published',
+    // Use the status from DTO (allows 'completed' for recent events)
+    status: dto.status,
     category: dto.category,
     location: dto.location,
     search: dto.search,

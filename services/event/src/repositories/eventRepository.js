@@ -78,6 +78,11 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
     dateConditions.push({ start_date: { $gte: now } });
   }
   
+  // Filter by completed events (for recent events)
+  if (status === 'completed') {
+    dateConditions.push({ start_date: { $lt: now } });
+  }
+  
   // Combine date conditions with existing query
   if (dateConditions.length > 0) {
     if (query.$and) {
@@ -97,8 +102,11 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
   const total = await Event.countDocuments(query);
   
   // Get events with pagination
+  // Sort by start_date ascending for upcoming events, descending for completed events
+  const sortOrder = status === 'completed' ? { start_date: -1, created_at: -1 } : { start_date: 1, created_at: -1 };
+  
   const events = await Event.find(query)
-    .sort({ start_date: 1, created_at: -1 })
+    .sort(sortOrder)
     .skip(skip)
     .limit(limit)
     .populate('club_id', 'name logo_url description')
