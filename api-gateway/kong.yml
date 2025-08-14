@@ -134,6 +134,120 @@ routes:
         config:
           secret_value: "${API_GATEWAY_SECRET}"
 
+  # Club Service Individual Campaign Routes (GET - Public)
+  - name: campaign-individual-get-public
+    service: club-service
+    paths:
+      - ~/api/campaigns/[a-fA-F0-9]{24}$
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [campaign, individual, public, club]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
+  # Campaigns - Club-specific published (Public)
+  - name: campaign-club-published-public
+    service: club-service
+    paths:
+      - ~/api/campaigns/clubs/[a-fA-F0-9]{24}/published$
+    methods: [GET, OPTIONS]
+    strip_path: false
+    tags: [campaign, public, club]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+
+  # Campaign Applications - User actions (Protected)
+  - name: campaign-applications-protected
+    service: club-service
+    paths:
+      - ~/api/campaigns/[a-fA-F0-9]{24}/apply$
+      - ~/api/campaigns/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}$
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [campaign, protected, applications]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Club Campaign Management - Detailed endpoints (Protected)
+  - name: club-campaigns-protected
+    service: club-service
+    paths:
+      - ~/api/clubs/[a-fA-F0-9]{24}/campaigns/[a-fA-F0-9]{24}$
+      - ~/api/clubs/[a-fA-F0-9]{24}/campaigns/[a-fA-F0-9]{24}/(publish|pause|resume|complete)$
+      - ~/api/clubs/[a-fA-F0-9]{24}/campaigns/[a-fA-F0-9]{24}/applications$
+      - ~/api/clubs/[a-fA-F0-9]{24}/campaigns/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}$
+      - ~/api/clubs/[a-fA-F0-9]{24}/campaigns/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/status$
+      - ~/api/clubs/[a-fA-F0-9]{24}/campaigns/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/(approve|reject)$
+      - ~/api/clubs/[a-fA-F0-9]{24}/applications/[a-fA-F0-9]{24}/(status|approve|reject)$
+    methods: [GET, POST, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [club, campaign, protected]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
+  # Application - Individual endpoints (Protected)
+  - name: application-individual-protected
+    service: club-service
+    paths:
+      - ~/api/applications/[a-fA-F0-9]{24}$
+    methods: [GET, PUT, DELETE, OPTIONS]
+    strip_path: false
+    tags: [application, protected]
+    plugins:
+      - name: api-gateway-secret
+        config:
+          secret_value: "${API_GATEWAY_SECRET}"
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+          secret_is_base64: false
+      - name: jwt-claims-headers
+        config:
+          claims_to_include:
+            - id
+            - email
+            - role
+            - full_name
+          header_prefix: "x-user-"
+
   # Club Service Individual Club Routes (with ID parameter) - Public
   - name: club-individual-public-routes
     service: club-service
