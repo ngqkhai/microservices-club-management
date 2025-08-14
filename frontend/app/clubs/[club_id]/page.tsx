@@ -972,7 +972,7 @@ export default function ClubDetailPage() {
       )}
 
       {/* Debug info */}
-      {process.env.NODE_ENV === "development" && (
+      {/* {process.env.NODE_ENV === "development" && (
         <div className="fixed bottom-4 right-4 bg-black text-white p-2 rounded text-xs max-w-sm">
           <div>
             selectedCampaign: {selectedCampaign ? selectedCampaign.id : "null"}
@@ -982,7 +982,7 @@ export default function ClubDetailPage() {
             {selectedCampaign?.application_questions?.length || 0}
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
