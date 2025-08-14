@@ -27,8 +27,9 @@ export function useCampaigns() {
         // Handle the actual API response structure where campaigns are directly in response.data
         if (Array.isArray(response.data)) {
           setCampaigns(response.data);
-          // Check if pagination exists at the response level (not nested in data)
-          setPagination((response as any).pagination || null);
+          // Pagination is now available in response.pagination
+          console.log('Response with pagination:', response);
+          setPagination(response.pagination || null);
         } else {
           // Fallback for expected structure
           setCampaigns(response.data.data || []);
@@ -90,8 +91,8 @@ export function useClubCampaigns(clubId: string) {
         // Handle the actual API response structure where campaigns are directly in response.data
         if (Array.isArray(response.data)) {
           setCampaigns(response.data);
-          // Check if pagination exists at the response level (not nested in data)
-          setPagination((response as any).pagination || null);
+          // Pagination is at the response level
+          setPagination(response.pagination || null);
         } else {
           // Fallback for expected structure
           setCampaigns(response.data.data || []);

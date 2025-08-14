@@ -52,6 +52,9 @@ import Link from "next/link"
 import { authService } from "@/services"
 import { eventService } from "@/services/event.service"
 import { clubService } from "@/services/club.service"
+import { applicationService, Application } from "@/services/application.service"
+import { ApplicationDetailDialog } from "@/components/application-detail-dialog"
+import { EventQrModal } from "@/components/event-qr-modal"
 
 // Replace mocks with live-loaded state
 
@@ -79,9 +82,14 @@ export default function ProfilePage() {
   })
   const [eventParticipation, setEventParticipation] = useState<any[]>([])
   const [joinedClubs, setJoinedClubs] = useState<any[]>([])
-  const [applications, setApplications] = useState<any[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
+  const [applicationsLoading, setApplicationsLoading] = useState(false)
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
+  const [applicationDetailOpen, setApplicationDetailOpen] = useState(false)
   const [favoriteEvents, setFavoriteEvents] = useState<any[]>([])
   const [pageLoading, setPageLoading] = useState(false)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -176,12 +184,28 @@ export default function ProfilePage() {
           })
           setFavoriteEvents(favItems)
         }
-              } catch {
-          // noop
+
+        // Load user applications
+        setApplicationsLoading(true)
+        try {
+          const applicationsRes = await applicationService.getUserApplications(user.id, {
+            page: 1,
+            limit: 10
+          })
+          if (applicationsRes.success && applicationsRes.data?.applications) {
+            setApplications(applicationsRes.data.applications)
+          }
+        } catch (error) {
+          console.error('Failed to load applications:', error)
         } finally {
-          // Đảm bảo page loading được set thành false sau khi load xong
-          setIsPageLoading(false)
+          setApplicationsLoading(false)
         }
+      } catch {
+        // noop
+      } finally {
+        // Đảm bảo page loading được set thành false sau khi load xong
+        setIsPageLoading(false)
+      }
       })()
     }, [user, isInitialized, router])
 
@@ -400,6 +424,36 @@ export default function ProfilePage() {
     }
   }
 
+  const handleWithdrawApplication = async (applicationId: string) => {
+    try {
+      const response = await applicationService.withdrawApplication(applicationId)
+      if (response.success) {
+        // Cập nhật danh sách applications
+        setApplications(prev => prev.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: 'withdrawn' as const }
+            : app
+        ))
+        toast({
+          title: "Rút đơn thành công",
+          description: "Đơn ứng tuyển của bạn đã được rút.",
+        })
+      } else {
+        toast({
+          title: "Lỗi",
+          description: response.message || "Không thể rút đơn ứng tuyển.",
+          variant: "destructive",
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể rút đơn ứng tuyển.",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (!user) {
     return null
   }
@@ -544,7 +598,7 @@ export default function ProfilePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Sự kiện sắp tới</CardTitle>
-                    <CardDescription>Các sự kiện bạn đã đăng ký trong thời gian tới</CardDescription>
+                    <CardDescription>Các sự kiện bạn đã đăng ký trong thời gian tới • Click vào sự kiện để xem chi tiết</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -554,19 +608,38 @@ export default function ProfilePage() {
                         .map((event) => (
                           <div
                             key={event.event_id}
-                            className="flex items-center justify-between p-4 bg-blue-50 rounded-lg"
+                            className="flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                            onClick={() => router.push(`/events/${event.event_id}`)}
                           >
-                            <div>
+                            <div className="flex-1">
                               <h4 className="font-medium">{event.title}</h4>
                               <p className="text-sm text-gray-600">{event.club_name}</p>
                               <p className="text-sm text-gray-500">
                                 {formatDate(event.date)} • {event.time}
                               </p>
                             </div>
-                            <Button size="sm" variant="outline">
-                              <QrCode className="h-4 w-4 mr-2" />
-                              QR Code
-                            </Button>
+                            <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedEventId(event.event_id)
+                                  setQrModalOpen(true)
+                                }}
+                                disabled={event.status !== "confirmed"}
+                              >
+                                <QrCode className="h-4 w-4 mr-2" />
+                                QR Code
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => router.push(`/events/${event.event_id}`)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Chi tiết
+                              </Button>
+                            </div>
                           </div>
                         ))}
                     </div>
@@ -576,56 +649,121 @@ export default function ProfilePage() {
                 {/* Application Status Section */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <FileText className="h-5 w-5 mr-2" />
-                      Trạng thái đơn ứng tuyển
-                    </CardTitle>
-                    <CardDescription>Theo dõi các đơn ứng tuyển của bạn</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center">
+                          <FileText className="h-5 w-5 mr-2" />
+                          Trạng thái đơn ứng tuyển
+                        </CardTitle>
+                        <CardDescription>Theo dõi các đơn ứng tuyển của bạn</CardDescription>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/profile/applications">
+                          Xem tất cả
+                        </Link>
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {applications.length === 0 ? (
-                        <p className="text-sm text-gray-500">Bạn chưa có đơn ứng tuyển nào.</p>
-                      ) : (
-                        applications.map((application: any) => (
-                          <div
-                            key={application.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                          >
-                            <div>
-                              <h4 className="font-medium">{application.clubName}</h4>
-                              <p className="text-sm text-gray-600">{application.position}</p>
-                              <p className="text-xs text-gray-500">Nộp ngày {formatDate(application.submittedDate)}</p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge
-                                variant={
-                                  application.status === "pending"
-                                    ? "secondary"
-                                    : application.status === "accepted"
-                                      ? "default"
-                                      : "destructive"
-                                }
-                              >
-                                {application.status === "pending"
-                                  ? "Đang xử lý"
-                                  : application.status === "accepted"
-                                    ? "Được chấp nhận"
-                                    : "Bị từ chối"}
-                              </Badge>
-                              <Button size="sm" variant="outline" asChild>
-                                <Link href={`/clubs/${application.clubId}`}>Xem</Link>
-                              </Button>
-                              {application.status === "pending" && (
-                                <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
-                                  Hủy
-                                </Button>
-                              )}
-                            </div>
+                    {applicationsLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="animate-pulse">
+                            <div className="h-16 bg-gray-200 rounded-lg"></div>
                           </div>
-                        ))
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {applications.length === 0 ? (
+                          <p className="text-sm text-gray-500">Bạn chưa có đơn ứng tuyển nào.</p>
+                        ) : (
+                          applications.map((application: Application) => (
+                            <div
+                              key={application.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex-1">
+                                <h4 className="font-medium">{application.club?.name || 'Không xác định'}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {application.campaign?.title || 'Ứng tuyển thành viên'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Nộp ngày {formatDate(application.submitted_at)}
+                                </p>
+                                {application.rejection_reason && (
+                                  <p className="text-xs text-red-600 mt-1">
+                                    Lý do: {application.rejection_reason}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={
+                                    application.status === "pending"
+                                      ? "secondary"
+                                      : application.status === "active"
+                                        ? "default"
+                                        : application.status === "withdrawn"
+                                          ? "outline"
+                                          : "destructive"
+                                  }
+                                >
+                                  {application.status === "pending"
+                                    ? "Đang xử lý"
+                                    : application.status === "active"
+                                      ? "Được chấp nhận"
+                                      : application.status === "withdrawn"
+                                        ? "Đã rút"
+                                        : "Bị từ chối"}
+                                </Badge>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedApplicationId(application.id)
+                                    setApplicationDetailOpen(true)
+                                  }}
+                                >
+                                  Chi tiết
+                                </Button>
+                                {application.club?.id && (
+                                  <Button size="sm" variant="outline" asChild>
+                                    <Link href={`/clubs/${application.club.id}`}>Xem CLB</Link>
+                                  </Button>
+                                )}
+                                {application.status === "pending" && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
+                                        Rút đơn
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Rút đơn ứng tuyển</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Bạn có chắc chắn muốn rút đơn ứng tuyển này? Hành động này không thể hoàn tác.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => handleWithdrawApplication(application.id)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Rút đơn
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -652,10 +790,7 @@ export default function ProfilePage() {
                                 {formatDate(event.date)} • {event.time}
                               </p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                Đăng ký ngay
-                              </Button>
+                            <div className="flex items-center space-x-2">   
                               <Button size="sm" variant="outline" asChild>
                                 <Link href={`/events/${event.id}`}>Chi tiết</Link>
                               </Button>
@@ -775,36 +910,18 @@ export default function ProfilePage() {
                             <Badge variant={event.status === "confirmed" ? "default" : "secondary"}>
                               {event.status === "confirmed" ? "Đã xác nhận" : "Chờ xác nhận"}
                             </Badge>
-                            {event.qr_code && (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm" variant="outline">
-                                    <QrCode className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle>Vé tham gia sự kiện</DialogTitle>
-                                    <DialogDescription>Quét mã QR này khi tham gia sự kiện</DialogDescription>
-                                  </DialogHeader>
-                                  <div className="flex items-center justify-center p-6">
-                                    <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-                                      <QrCode className="h-24 w-24 text-gray-400" />
-                                    </div>
-                                  </div>
-                                  <DialogFooter className="sm:justify-start">
-                                    <Button type="button" variant="secondary">
-                                      <Download className="h-4 w-4 mr-2" />
-                                      Tải xuống
-                                    </Button>
-                                    <Button type="button" variant="outline">
-                                      <ExternalLink className="h-4 w-4 mr-2" />
-                                      Thêm vào lịch
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            )}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedEventId(event.event_id)
+                                setQrModalOpen(true)
+                              }}
+                              disabled={event.status !== "confirmed"}
+                            >
+                              <QrCode className="h-4 w-4 mr-2" />
+                              QR Code
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -975,6 +1092,29 @@ export default function ProfilePage() {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Application Detail Dialog */}
+      <ApplicationDetailDialog
+        applicationId={selectedApplicationId}
+        open={applicationDetailOpen}
+        onOpenChange={setApplicationDetailOpen}
+        onApplicationUpdated={(updatedApplication) => {
+          setApplications(prev => 
+            prev.map(app => 
+              app.id === updatedApplication.id ? updatedApplication : app
+            )
+          )
+        }}
+      />
+
+      {/* Event QR Modal */}
+      {selectedEventId && (
+        <EventQrModal
+          eventId={selectedEventId}
+          open={qrModalOpen}
+          onOpenChange={setQrModalOpen}
+        />
+      )}
     </div>
   )
 }

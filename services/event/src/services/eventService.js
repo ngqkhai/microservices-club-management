@@ -45,12 +45,16 @@ export async function getFilteredEvents(dto) {
     status: event.status,
     visibility: event.visibility,
     club_id: event.club_id,
-    club: event.club_id ? {
+    club: event.club && event.club.id ? {
+      id: event.club.id,
+      name: event.club.name,
+      logo_url: event.club.logo_url
+    } : (event.club_id ? {
       id: event.club_id._id || event.club_id.id,
       name: event.club_id.name,
       logo_url: event.club_id.logo_url,
       description: event.club_id.description
-    } : null,
+    } : null),
     organizers: event.organizers,
     statistics: event.statistics,
     created_by: event.created_by,
@@ -387,6 +391,7 @@ export const createEventService = async (eventData) => {
     end_date,
     start_time,
     end_time,
+    agenda,
     registration_deadline,
     max_participants,
     participation_fee,
@@ -397,11 +402,16 @@ export const createEventService = async (eventData) => {
     event_image_url,
     event_logo_url,
     attachments,
+    contact_info,
+    social_links,
     status, 
     visibility,
     organizers,
     created_by, 
     club_id,
+    club,
+    club_name,
+    club_logo_url,
     // Backward compatibility
     start_at,
     end_at,
@@ -478,6 +488,7 @@ export const createEventService = async (eventData) => {
     location,
     start_date: startDateTime,
     end_date: endDateTime,
+    agenda: agenda || [],
     registration_deadline,
     max_participants: maxCapacity,
     participation_fee: eventFee || 0,
@@ -488,6 +499,8 @@ export const createEventService = async (eventData) => {
     event_image_url,
     event_logo_url,
     attachments: attachments || [],
+    contact_info: contact_info || {},
+    social_links: social_links || {},
     status: status || 'draft',
     visibility: visibility || 'club_members',
     organizers: organizers || [],
@@ -498,6 +511,11 @@ export const createEventService = async (eventData) => {
     },
     created_by,
     club_id: new mongoose.Types.ObjectId(club_id), // Convert to ObjectId
+    club: {
+      id: club_id ? new mongoose.Types.ObjectId(club_id) : null,
+      name: club_name || (club && club.club_name) || null,
+      logo_url: club_logo_url || (club && club.club_logo_url) || null
+    },
     // Backward compatibility fields
     start_at: startDate,
     end_at: endDate,
@@ -779,11 +797,23 @@ export const getEventByIdService = async (eventId, userId = null) => {
     const participants_count = participantsAgg?.participants_count || 0;
     const attended_count = participantsAgg?.attended_count || 0;
 
+    // Format club information - use embedded club data first, fallback to populated club_id
+    const clubInfo = event.club && event.club.id ? {
+      id: event.club.id,
+      name: event.club.name,
+      logo_url: event.club.logo_url
+    } : (event.club_id ? {
+      id: event.club_id._id || event.club_id.id || event.club_id,
+      name: event.club_id.name || null,
+      logo_url: event.club_id.logo_url || null
+    } : null);
+
     return {
       ...event,
       participants_count,
       attended_count,
       current_participants: participants_count, // backward compat
+      club: clubInfo,
       user_status: userStatus
     };
   } catch (error) {

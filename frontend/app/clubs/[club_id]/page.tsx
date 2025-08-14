@@ -37,6 +37,7 @@ import {
   Mail,
   Facebook,
   Instagram,
+  Banknote,
 } from "lucide-react";
 import { EventCard } from "@/components/event-card";
 import { RecruitmentCard } from "@/components/recruitment-card";
@@ -76,6 +77,61 @@ const validateEventData = (event: any): boolean => {
 
 // Transform API event to component event
 const transformEventForCard = (apiEvent: ApiEvent): any => {
+  // Normalize location based on event type
+  const loc = apiEvent.location;
+  let locationText = "TBA";
+  
+  if (typeof loc === "string" && (loc as string).trim().length > 0) {
+    locationText = loc as string;
+  } else if (loc && typeof loc === "object") {
+    const locationType = (loc as any).location_type || (loc as any).type;
+    if (locationType === "virtual" || locationType === "online") {
+      // Online event - chỉ hiển thị platform
+      locationText = (loc as any).platform || "Online";
+    } else if (locationType === "physical" || locationType === "offline") {
+      // Offline event - chỉ hiển thị address
+      locationText = (loc as any).address || "TBA";
+    } else {
+      // Fallback cho các loại location khác
+      const parts = [(loc as any).address, (loc as any).room].filter(Boolean);
+      if (parts.length > 0) {
+        locationText = parts.join(" - ");
+      }
+    }
+  }
+
+  // Normalize fee and currency
+  const fee = apiEvent.participation_fee || apiEvent.fee || 0;
+  const currency = apiEvent.currency || "VND";
+  
+  // Format fee display
+  let feeDisplay = "";
+  if (fee === 0) {
+    feeDisplay = "Miễn phí";
+  } else {
+    switch (currency.toUpperCase()) {
+      case "USD":
+        feeDisplay = `$${fee.toLocaleString()}`;
+        break;
+      case "EUR":
+        feeDisplay = `€${fee.toLocaleString()}`;
+        break;
+      case "JPY":
+        feeDisplay = `¥${fee.toLocaleString()}`;
+        break;
+      case "KRW":
+        feeDisplay = `₩${fee.toLocaleString()}`;
+        break;
+      case "CNY":
+        feeDisplay = `¥${fee.toLocaleString()}`;
+        break;
+      case "VND":
+      default:
+        feeDisplay = `${fee.toLocaleString("vi-VN")} VNĐ`;
+        break;
+    }
+  }
+
   return {
     event_id: apiEvent.id,
     title: apiEvent.title,
@@ -83,9 +139,11 @@ const transformEventForCard = (apiEvent: ApiEvent): any => {
     time: apiEvent.start_date
       ? new Date(apiEvent.start_date).toTimeString().slice(0, 5)
       : "00:00",
-    location: apiEvent.location?.address || apiEvent.location?.room || "TBA",
+    location: locationText,
     club: "Club Event",
-    fee: apiEvent.participation_fee || apiEvent.fee || 0,
+    fee: fee,
+    fee_display: feeDisplay,
+    currency: currency,
     description: apiEvent.short_description || apiEvent.description || "",
   };
 };

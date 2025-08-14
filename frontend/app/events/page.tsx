@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react"
+import { Search, Calendar, SlidersHorizontal, ChevronLeft, ChevronRight, Clock, MapPin, Users, Banknote } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { FilterSidebar } from "@/components/filter-sidebar"
 import { eventService, type Event as ApiEvent } from "@/services/event.service"
@@ -30,8 +30,12 @@ type UiEvent = {
     id: string
     name: string
     logo?: string
-  }
+  },
+  event_image_url?: string,
+  event_logo_url?: string,
   fee: number
+  fee_display?: string
+  currency?: string
   description: string
   category: string
 }
@@ -50,9 +54,14 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     locationText = loc
   } else if (loc && typeof loc === "object") {
     const locationType = loc.location_type || loc.type
-    if (locationType === "online") {
-      locationText = loc.platform ? `${loc.platform} (Online)` : "Online"
+    if (locationType === "virtual" || locationType === "online") {
+      // Online event - chỉ hiển thị platform
+      locationText = loc.platform || "Online"
+    } else if (locationType === "physical" || locationType === "offline") {
+      // Offline event - chỉ hiển thị address
+      locationText = loc.address || "TBA"
     } else {
+      // Fallback cho các loại location khác
       const parts = [loc.address, loc.room, anyEvent.detailed_location].filter(Boolean)
       if (parts.length > 0) {
         locationText = parts.join(" - ")
@@ -60,6 +69,38 @@ function transformEventForUI(event: ApiEvent): UiEvent {
     }
   } else if (anyEvent.detailed_location) {
     locationText = anyEvent.detailed_location
+  }
+
+  // Normalize fee and currency
+  const fee = anyEvent.participation_fee ?? anyEvent.fee ?? 0;
+  const currency = anyEvent.currency || "VND";
+  
+  // Format fee display
+  let feeDisplay = "";
+  if (fee === 0) {
+    feeDisplay = "Miễn phí";
+  } else {
+    switch (currency.toUpperCase()) {
+      case "USD":
+        feeDisplay = `$${fee.toLocaleString()}`;
+        break;
+      case "EUR":
+        feeDisplay = `€${fee.toLocaleString()}`;
+        break;
+      case "JPY":
+        feeDisplay = `¥${fee.toLocaleString()}`;
+        break;
+      case "KRW":
+        feeDisplay = `₩${fee.toLocaleString()}`;
+        break;
+      case "CNY":
+        feeDisplay = `¥${fee.toLocaleString()}`;
+        break;
+      case "VND":
+      default:
+        feeDisplay = `${fee.toLocaleString("vi-VN")} VNĐ`;
+        break;
+    }
   }
 
   return {
@@ -73,7 +114,11 @@ function transformEventForUI(event: ApiEvent): UiEvent {
       name: anyEvent.club?.name || "Câu lạc bộ",
       logo: anyEvent.club?.logo || anyEvent.club?.logo_url || "",
     },
-    fee: anyEvent.participation_fee ?? anyEvent.fee ?? 0,
+    event_image_url: anyEvent.event_image_url,
+    event_logo_url: anyEvent.event_logo_url,
+    fee: fee,
+    fee_display: feeDisplay,
+    currency: currency,
     description: anyEvent.description || anyEvent.short_description || "",
     category: anyEvent.category || "General",
   }
@@ -114,6 +159,11 @@ export default function EventsPage() {
   const [totalEvents, setTotalEvents] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const eventsPerPage = 3
+
+  // Function to get appropriate currency icon
+  const getCurrencyIcon = (currency?: string) => {
+    return <Banknote className="h-4 w-4 text-green-600" />
+  }
 
   const loadEvents = useCallback(async (page: number = 1) => {
     setIsLoading(true)
@@ -387,13 +437,11 @@ export default function EventsPage() {
                       <div className="flex gap-4">
                         {/* Event Image Placeholder */}
                         <div 
-                          className="w-32 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => router.push(`/clubs/${event.club.id}`)}
-                          title={`Xem thông tin ${event.club.name}`}
+                          className="w-32 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center"
                         >
-                          {event.club.logo ? (
+                          {event.event_image_url ? (
                             <img 
-                              src={event.club.logo} 
+                              src={event.event_image_url} 
                               alt={event.club.name}
                               className="w-full h-full object-cover rounded-lg"
                             />
@@ -419,7 +467,13 @@ export default function EventsPage() {
                           <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4" />
-                              <span className="truncate">{event.club.name}</span>
+                              <button
+                                onClick={() => router.push(`/clubs/${event.club.id}`)}
+                                className="text-blue-600 hover:text-blue-800 hover:underline font-medium truncate cursor-pointer transition-colors"
+                                title={`Xem thông tin ${event.club.name}`}
+                              >
+                                {event.club.name}
+                              </button>
                             </div>
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
@@ -442,12 +496,13 @@ export default function EventsPage() {
                                 {event.category}
                               </Badge>
                               {event.fee > 0 ? (
-                                <Badge variant="outline" className="text-xs">
-                                  ${event.fee}
+                                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                  {getCurrencyIcon(event.currency)}
+                                  {event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="text-xs text-green-600">
-                                  Free
+                                  Miễn phí
                                 </Badge>
                               )}
                             </div>

@@ -88,7 +88,7 @@ class RecruitmentCampaignController {
         status = requestedStatuses;
       } else {
         // Default to draft for backward compatibility
-        status = 'draft';
+        status = ['draft', 'published', 'completed', 'paused'];
       }
 
       const options = {

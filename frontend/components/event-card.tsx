@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Clock, DollarSign, Heart, Eye } from "lucide-react"
+import { Calendar, MapPin, Clock, Banknote, Heart, Eye } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -15,6 +15,8 @@ interface Event {
   location: string
   club: string
   fee: number
+  fee_display?: string
+  currency?: string
   description: string
 }
 
@@ -26,6 +28,11 @@ interface EventCardProps {
 export function EventCard({ event, showClub = true }: EventCardProps) {
   const { toast } = useToast()
   const [favorited, setFavorited] = useState(false)
+
+  // Function to get appropriate currency icon
+  const getCurrencyIcon = (currency?: string) => {
+    return <Banknote className="h-3 w-3 text-green-600" />
+  }
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
@@ -58,10 +65,11 @@ export function EventCard({ event, showClub = true }: EventCardProps) {
           <div className="flex items-center gap-2">
             {event.fee > 0 ? (
               <Badge variant="secondary" className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3" />${event.fee}
+                {getCurrencyIcon(event.currency)}
+                {event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
               </Badge>
             ) : (
-              <Badge variant="outline">Free</Badge>
+              <Badge variant="outline">Miễn phí</Badge>
             )}
           </div>
         </div>

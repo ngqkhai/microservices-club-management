@@ -1,3 +1,4 @@
+import e from 'express';
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
 import { 
   getFilteredEvents, 

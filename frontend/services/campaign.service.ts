@@ -1,4 +1,4 @@
-import api, { ApiResponse } from '@/lib/api';
+import api, { ApiResponse, apiRequest } from '@/lib/api';
 import config from '@/config';
 
 /**
@@ -108,14 +108,14 @@ class CampaignService {
     page?: number;
     limit?: number;
     club_id?: string;
-  }): Promise<ApiResponse<PaginatedResponse<Campaign>>> {
+  }): Promise<ApiResponse<Campaign[]>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.set('page', params.page.toString());
     if (params?.limit) queryParams.set('limit', params.limit.toString());
     if (params?.club_id) queryParams.set('club_id', params.club_id);
     
     const url = `${config.endpoints.campaigns.published}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-    return api.get<PaginatedResponse<Campaign>>(url, { skipAuth: true });
+    return api.get<Campaign[]>(url, { skipAuth: true });
   }
 
   /**

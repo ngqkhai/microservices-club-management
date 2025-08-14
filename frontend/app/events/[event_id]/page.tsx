@@ -42,7 +42,9 @@ import {
   CalendarDays,
   QrCode,
   Facebook,
-  Instagram
+  Instagram,
+  Euro,
+  Banknote
 } from "lucide-react"
 import { useAuthStore } from "@/stores/auth-store"
 import { useToast } from "@/hooks/use-toast"
@@ -94,13 +96,32 @@ function toUiEvent(api: any): UiEvent {
   // Normalize location
   const loc = api.location
   let locationText = "TBA"
+  let detailedLocation = ""
+  
   if (typeof loc === "string" && loc.trim()) {
     locationText = loc
   } else if (loc && typeof loc === "object") {
     const locationType = loc.location_type || loc.type
-    if (locationType === "online") {
-      locationText = loc.platform ? `${loc.platform} (Online)` : "Online"
+    if (locationType === "virtual" || locationType === "online") {
+      // Online event
+      if (loc.platform && loc.virtual_link) {
+        locationText = `${loc.platform} (Online)`
+        detailedLocation = loc.virtual_link
+      } else if (loc.platform) {
+        locationText = `${loc.platform} (Online)`
+      } else if (loc.virtual_link) {
+        locationText = "Online"
+        detailedLocation = loc.virtual_link
+      } else {
+        locationText = "Online"
+      }
+    } else if (locationType === "physical" || locationType === "offline") {
+      // Offline event
+      const parts = [loc.room, loc.address].filter(Boolean)
+      locationText = parts.length ? parts.join(" - ") : "TBA"
+      detailedLocation = api.detailed_location || ""
     } else {
+      // Fallback for other location types
       const parts = [loc.address, loc.room, api.detailed_location].filter(Boolean)
       locationText = parts.length ? parts.join(" - ") : "TBA"
     }
@@ -119,7 +140,7 @@ function toUiEvent(api: any): UiEvent {
     start_time: startDt ? startDt.toISOString().slice(11, 16) : "",
     end_time: endDt ? endDt.toISOString().slice(11, 16) : undefined,
     location: locationText,
-    detailed_location: api.detailed_location,
+    detailed_location: detailedLocation,
     category: api.category,
     event_type: api.event_type,
     club: { 
@@ -128,8 +149,8 @@ function toUiEvent(api: any): UiEvent {
       logo_url: club.logo_url || club.logo || ""
     },
     organizers: organizers.map((org: any) => ({
-      name: org.name || "Ban tổ chức",
-      role: org.role,
+      name: org.user_full_name || "Ban tổ chức",
+      role: org.role.split("_").map((r: string) => r.charAt(0).toUpperCase() + r.slice(1)).join(" "),
       email: api.contact_info?.email,
       phone: api.contact_info?.phone,
       avatar_url: org.avatar_url,
@@ -171,6 +192,11 @@ export default function EventDetailPage() {
   const [relatedEvents, setRelatedEvents] = useState<UiEvent[]>([])
   const [isRelatedLoading, setIsRelatedLoading] = useState(false)
   const [showQr, setShowQr] = useState(false)
+
+  // Function to get appropriate currency icon
+  const getCurrencyIcon = (currency?: string) => {
+    return <Banknote className="h-5 w-5 text-green-600" />
+  }
 
   useEffect(() => {
     let mounted = true
@@ -875,7 +901,7 @@ export default function EventDetailPage() {
               <CardContent className="space-y-4">
                 {/* Event Category & Type */}
                 <div className="flex items-center space-x-3">
-                  <Tag className="h-5 w-5 text-gray-400" />
+                  <Tag className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
                     <p className="font-medium">{event.category}</p>
                     <p className="text-sm text-gray-500">{event.event_type}</p>
@@ -886,35 +912,40 @@ export default function EventDetailPage() {
 
                 {/* Date & Time */}
                 <div className="flex items-start space-x-3">
-                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-medium">{formatDate(event.date)}</p>
-                    {/* <div className="text-sm text-gray-500 space-y-1">
-                      <p className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Bắt đầu: {formatTime(event.start_time)}
-                      </p>
-                      <p className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Kết thúc: {event.end_time ? formatTime(event.end_time) : "Chưa xác định"}
-                      </p>
-                    </div> */}
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-gray-400" />
+                  <MapPin className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
                     <p className="font-medium">{event.location}</p>
-                    <p className="text-sm text-gray-500">{event.detailed_location}</p>
+                    {event.detailed_location && (
+                      <p className="text-sm text-gray-500">
+                        {event.detailed_location.startsWith('http') ? (
+                          <a 
+                            href={event.detailed_location} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {event.detailed_location}
+                          </a>
+                        ) : (
+                          event.detailed_location
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <DollarSign className="h-5 w-5 text-gray-400" />
+                  <Banknote className="h-5 w-5 text-gray-400 flex-shrink-0" />
                   <div>
                     <p className="font-medium">
-                      {event.fee === 0 ? "Miễn phí" : `${event.fee.toLocaleString("vi-VN")} VNĐ`}
+                      {event.fee === 0 ? "Miễn phí" : event.fee_display || `${event.fee.toLocaleString("vi-VN")} VNĐ`}
                     </p>
                     <p className="text-sm text-gray-500">Phí tham gia</p>
                   </div>

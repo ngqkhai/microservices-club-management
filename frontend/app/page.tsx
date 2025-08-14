@@ -9,62 +9,30 @@ import Link from "next/link"
 import { ClubPreviewCard } from "@/components/club-preview-card"
 import { ActivityFeedItem } from "@/components/activity-feed-item"
 import { useFeaturedClubsStore } from "@/stores/featured-clubs-store"
+import { eventService } from "@/services/event.service"
 
-// Mock data for recent and upcoming events
-const recentAndUpcomingEvents = {
-  upcoming: [
-    {
-      event_id: "workshop-git",
-      title: "Workshop Git & GitHub",
-      start_time: "2024-07-18T13:00:00",
-      club_name: "CLB Công nghệ thông tin",
-      status: "upcoming",
-      fee: 0,
-      location: "Phòng máy tính 201",
-    },
-    {
-      event_id: "music-concert",
-      title: "Đêm nhạc mùa xuân 2024",
-      start_time: "2024-07-20T19:00:00",
-      club_name: "CLB Âm nhạc",
-      status: "upcoming",
-      fee: 50000,
-      location: "Hội trường lớn",
-    },
-    {
-      event_id: "sports-tournament",
-      title: "Giải bóng đá liên câu lạc bộ",
-      start_time: "2024-07-22T16:00:00",
-      club_name: "CLB Thể thao",
-      status: "upcoming",
-      fee: 0,
-      location: "Sân bóng đá trường",
-    },
-  ],
-  recent: [
-    {
-      event_id: "soft-skills-seminar",
-      title: "Seminar Kỹ năng mềm",
-      start_time: "2024-07-10T09:00:00",
-      club_name: "CLB Kỹ năng sống",
-      status: "ended",
-      fee: 30000,
-      location: "Hội trường nhỏ",
-    },
-    {
-      event_id: "art-exhibition",
-      title: "Triển lãm nghệ thuật sinh viên",
-      start_time: "2024-07-12T17:00:00",
-      club_name: "CLB Nghệ thuật",
-      status: "ended",
-      fee: 0,
-      location: "Phòng triển lãm",
-    },
-  ],
+interface EventData {
+  event_id: string
+  title: string
+  start_time: string
+  club_name: string
+  status: string
+  fee: number
+  location: string
+  event_logo_url?: string
+  event_image_url?: string
 }
 
 export default function HomePage() {
   const [eventsLoading, setEventsLoading] = useState(true)
+  const [recentLoading, setRecentLoading] = useState(false)
+  const [recentAndUpcomingEvents, setRecentAndUpcomingEvents] = useState<{
+    upcoming: EventData[]
+    recent: EventData[]
+  }>({
+    upcoming: [],
+    recent: []
+  })
   
   // Featured clubs store
   const { cache, loadFeaturedClubs, resetRetry } = useFeaturedClubsStore()
@@ -77,13 +45,85 @@ export default function HomePage() {
   }, [cache.isLoaded, cache.isLoading, loadFeaturedClubs])
 
   useEffect(() => {
-    // Simulate API loading for events
-    const timer = setTimeout(() => {
-      setEventsLoading(false)
-    }, 1000)
+    // Fetch upcoming events only on initial load
+    const fetchUpcomingEvents = async () => {
+      setEventsLoading(true)
+      try {
+        const upcomingResponse = await eventService.getEvents({
+          limit: 3,
+          filter: 'upcoming',
+          status: 'published'
+        })
 
-    return () => clearTimeout(timer)
+        const upcoming = upcomingResponse.success ? upcomingResponse.data?.events || [] : []
+
+        setRecentAndUpcomingEvents(prev => ({
+          ...prev,
+          upcoming: upcoming.map((event: any) => ({
+            event_id: event.id,
+            title: event.title,
+            start_time: event.start_date,
+            club_name: event.club?.name || 'Unknown Club',
+            status: 'upcoming',
+            fee: event.participation_fee || 0,
+            location: event.location?.address || event.location?.room || 
+                     (event.location?.location_type === 'virtual' ? 'Online' : 'TBA'),
+            event_logo_url: event.event_logo_url,
+            event_image_url: event.event_image_url
+          }))
+        }))
+      } catch (error) {
+        console.error('Failed to fetch upcoming events:', error)
+        setRecentAndUpcomingEvents(prev => ({
+          ...prev,
+          upcoming: []
+        }))
+      } finally {
+        setEventsLoading(false)
+      }
+    }
+
+    fetchUpcomingEvents()
   }, [])
+
+  // Function to fetch recent events
+  const fetchRecentEvents = async () => {
+    if (recentAndUpcomingEvents.recent.length > 0) return // Already loaded
+    
+    setRecentLoading(true)
+    try {
+      const recentResponse = await eventService.getEvents({
+        limit: 2,
+        status: 'completed'
+      })
+
+      const recent = recentResponse.success ? recentResponse.data?.events || [] : []
+
+      setRecentAndUpcomingEvents(prev => ({
+        ...prev,
+        recent: recent.map((event: any) => ({
+          event_id: event.id,
+          title: event.title,
+          start_time: event.start_date,
+          club_name: event.club?.name || 'Unknown Club',
+          status: 'ended',
+          fee: event.participation_fee || 0,
+          location: event.location?.address || event.location?.room || 
+                   (event.location?.location_type === 'virtual' ? 'Online' : 'TBA'),
+          event_logo_url: event.event_logo_url,
+          event_image_url: event.event_image_url
+        }))
+      }))
+    } catch (error) {
+      console.error('Failed to fetch recent events:', error)
+      setRecentAndUpcomingEvents(prev => ({
+        ...prev,
+        recent: []
+      }))
+    } finally {
+      setRecentLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -223,7 +263,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          <Tabs defaultValue="upcoming" className="w-full">
+          <Tabs defaultValue="upcoming" className="w-full" onValueChange={(value) => {
+            if (value === 'recent') {
+              fetchRecentEvents()
+            }
+          }}>
             <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
               <TabsTrigger value="upcoming">Sắp diễn ra</TabsTrigger>
               <TabsTrigger value="recent">Gần đây</TabsTrigger>
@@ -257,7 +301,7 @@ export default function HomePage() {
             </TabsContent>
 
             <TabsContent value="recent" className="space-y-4">
-              {eventsLoading ? (
+              {recentLoading ? (
                 <div className="space-y-4">
                   {[...Array(2)].map((_, i) => (
                     <Card key={i} className="animate-pulse">
@@ -276,9 +320,16 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {recentAndUpcomingEvents.recent.map((event) => (
-                    <ActivityFeedItem key={event.event_id} event={event} />
-                  ))}
+                  {recentAndUpcomingEvents.recent.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p>Không có sự kiện gần đây.</p>
+                    </div>
+                  ) : (
+                    recentAndUpcomingEvents.recent.map((event) => (
+                      <ActivityFeedItem key={event.event_id} event={event} />
+                    ))
+                  )}
                 </div>
               )}
             </TabsContent>

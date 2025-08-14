@@ -65,6 +65,7 @@ export interface Event {
   };
   organizers?: Array<{
     user_id: string;
+    user_full_name: string;
     role: string;
     joined_at: string;
   }>;
@@ -99,43 +100,52 @@ export interface EventParticipant {
 }
 
 /**
- * Create event request interface
+ * Create event request interface - matches Event Management API
  */
 export interface CreateEventRequest {
   title: string;
   description: string;
   short_description?: string;
   category?: string;
+  location: {
+    location_type: 'physical' | 'virtual' | 'hybrid';
+    address?: string;
+    room?: string;
+    virtual_link?: string;
+    platform?: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
   start_date: string;
-  start_time?: string;
   end_date?: string;
-  end_time?: string;
-  location: string;
-  detailed_location?: string;
+  registration_deadline?: string;
   max_participants?: number;
   participation_fee?: number;
   currency?: string;
-  registration_deadline?: string;
   requirements?: string[];
   tags?: string[];
-  visibility?: 'public' | 'club_members';
-  allow_registration?: boolean;
-  status?: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
-  organizers?: Array<{
+  images?: string[];
+  event_image_url?: string;
+  event_logo_url?: string;
+  attachments?: Array<{
     name: string;
-    role: string;
+    url: string;
+    type: string;
+    size?: number;
   }>;
-  club_id: string;
-  // Additional fields
+  status?: 'draft' | 'published' | 'cancelled' | 'completed';
+  visibility?: 'public' | 'club_members';
+  organizers?: Array<{
+    user_id: string;
+    user_full_name: string;
+    role: string;
+    joined_at: string;
+  }>;
   agenda?: Array<{
     time: string;
     activity: string;
-  }>;
-  resources?: Array<{
-    name: string;
-    type: string;
-    url: string;
-    size?: string;
   }>;
   contact_info?: {
     email?: string;
@@ -147,14 +157,8 @@ export interface CreateEventRequest {
     instagram?: string;
     discord?: string;
   };
-  venue_capacity?: number;
-  organizer?: {
-    user_id: string;
-    name: string;
-    role: string;
-    email: string;
-    phone: string;
-  };
+  created_by?: string;
+  club_id: string;
 }
 
 /**
@@ -323,7 +327,37 @@ class EventService {
 
   /** Facets for filters */
   async getEventCategories(): Promise<ApiResponse<string[]>> {
-    return api.get<string[]>('/api/events/categories', { skipAuth: true });
+    try {
+      // Try to get categories from API first
+      const response = await api.get<string[]>('/api/events/categories', { skipAuth: true });
+      
+      // If API returns valid data, use it
+      if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+        return response;
+      }
+      
+      // Fallback to hardcoded valid categories from backend schema
+      const validCategories = ['Workshop', 'Seminar', 'Competition', 'Social', 'Fundraiser', 'Meeting', 'Other'];
+      
+      return {
+        success: true,
+        data: validCategories,
+        message: 'Using fallback categories from schema',
+        status: 200
+      };
+    } catch (error) {
+      console.error('Error fetching categories, using fallback:', error);
+      
+      // Return hardcoded valid categories as fallback
+      const validCategories = ['Workshop', 'Seminar', 'Competition', 'Social', 'Fundraiser', 'Meeting', 'Other'];
+      
+      return {
+        success: true,
+        data: validCategories,
+        message: 'Using fallback categories due to API error',
+        status: 200
+      };
+    }
   }
 
   async getEventLocations(): Promise<ApiResponse<string[]>> {

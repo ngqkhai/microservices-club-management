@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Clock, Users, ArrowRight, MapPin } from "lucide-react"
 import Link from "next/link"
 import { Campaign } from "@/services/campaign.service"
+import { clubService } from "@/services/club.service"
 
 interface RecruitmentBannerProps {
   campaigns: Campaign[]
@@ -17,11 +18,42 @@ interface RecruitmentBannerProps {
 export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps) {
   const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({})
   const [isClient, setIsClient] = useState(false)
+  const [clubLogos, setClubLogos] = useState<{ [clubId: string]: string }>({})
+  const [loadingLogos, setLoadingLogos] = useState<{ [clubId: string]: boolean }>({})
 
   useEffect(() => {
     // Set isClient to true after component mounts (client-side only)
     setIsClient(true)
   }, [])
+
+  // Fetch club logos for campaigns
+  useEffect(() => {
+    const fetchClubLogos = async () => {
+      const uniqueClubIds = [...new Set(campaigns.map(campaign => campaign.club_id))]
+      
+      for (const clubId of uniqueClubIds) {
+        // Skip if already loaded or loading
+        if (clubLogos[clubId] || loadingLogos[clubId]) continue
+        
+        setLoadingLogos(prev => ({ ...prev, [clubId]: true }))
+        
+        try {
+          const response = await clubService.getClub(clubId)
+          if (response.success && response.data?.logo_url) {
+            setClubLogos(prev => ({ ...prev, [clubId]: response.data.logo_url }))
+          }
+        } catch (error) {
+          console.error(`Failed to fetch logo for club ${clubId}:`, error)
+        } finally {
+          setLoadingLogos(prev => ({ ...prev, [clubId]: false }))
+        }
+      }
+    }
+
+    if (campaigns.length > 0) {
+      fetchClubLogos()
+    }
+  }, [campaigns, clubLogos, loadingLogos])
 
   useEffect(() => {
     if (!isClient) return // Don't run countdown until we're on the client
@@ -87,8 +119,17 @@ export function RecruitmentBanner({ campaigns, onApply }: RecruitmentBannerProps
             <CardContent className="p-6">
               <div className="flex items-start space-x-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src="/placeholder.svg" alt={campaign.club_name || "Club"} />
-                  <AvatarFallback className="bg-blue-600 text-white">{getInitials(campaign.club_name || "Club")}</AvatarFallback>
+                  <AvatarImage 
+                    src={clubLogos[campaign.club_id] || "/placeholder.svg"} 
+                    alt={campaign.club_name || "Club"} 
+                  />
+                  <AvatarFallback className="bg-blue-600 text-white">
+                    {loadingLogos[campaign.club_id] ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      getInitials(campaign.club_name || "Club")
+                    )}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 line-clamp-1">{campaign.club_name}</h3>
