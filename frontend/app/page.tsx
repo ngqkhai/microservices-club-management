@@ -157,31 +157,31 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-16 sm:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#5A56E8] via-[#3A5A8A] to-[#5AB8C2] py-16 sm:py-24">
         {/* Background decoration */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-100/40 rounded-full blur-2xl"></div>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white/5 rounded-full blur-2xl"></div>
         </div>
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
               Khám phá{" "}
-              <span className="text-primary">Cộng đồng</span>{" "}
+              <span className="text-yellow-300">Cộng đồng</span>{" "}
               của bạn
           </h1>
 
             {/* Subtitle */}
-            <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
               Kết nối với những người bạn cùng sở thích, tham gia các câu lạc bộ thú vị 
               và khám phá những trải nghiệm đáng nhớ trong cuộc sống đại học của bạn.
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg">
+              <Button asChild size="lg" className="bg-white text-[#2F2CE8] hover:bg-gray-100 px-8 py-4 text-lg font-semibold shadow-lg">
               <Link href="/clubs">
                 <Users className="mr-2 h-5 w-5" />
                 Tham gia câu lạc bộ
@@ -192,7 +192,7 @@ export default function HomePage() {
                 asChild
                 variant="outline" 
                 size="lg" 
-                className="border-primary text-primary hover:bg-primary hover:text-white px-8 py-4 text-lg"
+                className="border-2 border-white text-[#2F2CE8] hover:bg-white hover:text-[#2F2CE8] px-8 py-4 text-lg font-semibold"
               >
               <Link href="/events">
                 <Calendar className="mr-2 h-5 w-5" />
@@ -212,9 +212,9 @@ export default function HomePage() {
               </div>
               
               {/* Floating elements */}
-              <div className="absolute -top-4 -left-4 w-20 h-20 bg-yellow-200 rounded-full opacity-60 animate-bounce delay-1000"></div>
-              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-green-200 rounded-full opacity-60 animate-bounce delay-500"></div>
-              <div className="absolute top-1/2 -right-8 w-12 h-12 bg-purple-200 rounded-full opacity-60 animate-bounce"></div>
+              <div className="absolute -top-4 -left-4 w-20 h-20 bg-white/20 rounded-full opacity-60 animate-bounce delay-1000"></div>
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/15 rounded-full opacity-60 animate-bounce delay-500"></div>
+              <div className="absolute top-1/2 -right-8 w-12 h-12 bg-white/10 rounded-full opacity-60 animate-bounce"></div>
             </div>
           </div>
         </div>
