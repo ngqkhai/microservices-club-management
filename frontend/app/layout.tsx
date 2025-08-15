@@ -12,7 +12,27 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "UniVibe - University Club Management",
   description: "Connect with clubs and events at your university",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  icons: {
+    icon: [
+      {
+        url: '/favicon.ico',
+        sizes: 'any',
+      },
+      {
+        url: '/logo.png',
+        type: 'image/png',
+        sizes: '32x32',
+      },
+    ],
+    apple: [
+      {
+        url: '/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
 }
 
 export default function RootLayout({
