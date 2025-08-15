@@ -479,7 +479,21 @@ class RecruitmentCampaignController {
       const { campaignId } = req.params;
       const userId = req.user?.id || req.headers['x-user-id'];
       const userEmail = req.user?.email || req.headers['x-user-email'];
-      const userFullName = req.user?.full_name || req.headers['x-user-full_name'];
+      
+      // Handle full_name from req.user (already decoded in middleware) or decode from header
+      let userFullName = req.user?.full_name;
+      if (!userFullName && req.headers['x-user-full-name']) {
+        try {
+          userFullName = Buffer.from(req.headers['x-user-full-name'], 'base64').toString('utf8');
+          console.debug('Decoded full_name from header:', { 
+            original: req.headers['x-user-full-name'], 
+            decoded: userFullName 
+          });
+        } catch (error) {
+          console.warn('Failed to decode base64 full_name from header, using original value:', error.message);
+          userFullName = req.headers['x-user-full-name'];
+        }
+      }
 
       if (!userId) {
         return res.status(401).json({

@@ -39,7 +39,19 @@ const authMiddleware = (req, res, next) => {
     const userId = req.headers['x-user-id'];
     const userEmail = req.headers['x-user-email'];
     const userRole = req.headers['x-user-role'];
-    const userFullName = req.headers['x-user-full-name'];
+    const userFullNameRaw = req.headers['x-user-full-name'];
+    
+    // Decode base64 encoded full_name (to handle UTF-8 characters like Vietnamese names)
+    let userFullName = userFullNameRaw;
+    if (userFullNameRaw) {
+      try {
+        userFullName = Buffer.from(userFullNameRaw, 'base64').toString('utf8');
+        console.debug('Decoded full_name from base64:', { original: userFullNameRaw, decoded: userFullName });
+      } catch (error) {
+        console.warn('Failed to decode base64 full_name, using original value:', error.message);
+        userFullName = userFullNameRaw;
+      }
+    }
 
     // Validate that all required headers are present
     if (!userId || !userEmail || !userRole) {

@@ -99,7 +99,19 @@ const validateApiGatewayHeaders = (req, res, next) => {
   const userId = req.headers['x-user-id'];
   const userRole = req.headers['x-user-role'];
   const userEmail = req.headers['x-user-email'];
-  const userFullName = req.headers['x-user-full-name'];
+  const userFullNameRaw = req.headers['x-user-full-name'];
+  
+  // Decode base64 encoded full_name (to handle UTF-8 characters like Vietnamese names)
+  let userFullName = userFullNameRaw;
+  if (userFullNameRaw) {
+    try {
+      userFullName = Buffer.from(userFullNameRaw, 'base64').toString('utf8');
+      console.debug('Decoded full_name from base64:', { original: userFullNameRaw, decoded: userFullName });
+    } catch (error) {
+      console.warn('Failed to decode base64 full_name, using original value:', error.message);
+      userFullName = userFullNameRaw;
+    }
+  }
 
   // Validate UUID format for user ID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

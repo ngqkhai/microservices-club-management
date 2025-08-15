@@ -35,7 +35,8 @@ def get_existing_clubs():
             'name': 1, 
             'category': 1,
             'manager': 1,
-            'created_by': 1
+            'created_by': 1,
+            'logo_url': 1
         }))
         
         client.close()
@@ -48,39 +49,48 @@ def get_existing_clubs():
         return []
 
 def generate_campaign_questions(club_category):
-    """Generate application questions based on club category"""
-    
+    """Generate application questions based on club category using allowed types
+    Allowed types: text, textarea, select, checkbox
+    """
+
     base_questions = [
         {
             "id": "personal_intro",
             "question": "Hãy giới thiệu về bản thân bạn",
-            "type": "text",
+            "type": "textarea",
             "is_required": True,
-            "max_length": 500
+            "max_length": 800
         },
         {
             "id": "motivation",
             "question": "Tại sao bạn muốn tham gia câu lạc bộ này?",
-            "type": "text", 
+            "type": "textarea",
             "is_required": True,
-            "max_length": 300
+            "max_length": 600
         }
     ]
-    
+
     category_questions = {
         "Công nghệ": [
             {
                 "id": "programming_experience",
                 "question": "Bạn có kinh nghiệm lập trình không? Nếu có, hãy chia sẻ.",
-                "type": "text",
+                "type": "textarea",
                 "is_required": False,
-                "max_length": 200
+                "max_length": 400
             },
             {
                 "id": "tech_interests",
                 "question": "Bạn quan tâm đến lĩnh vực công nghệ nào?",
-                "type": "multiple_choice",
-                "options": ["Web Development", "Mobile App", "AI/ML", "Data Science", "Cybersecurity", "Game Development"],
+                "type": "checkbox",
+                "options": [
+                    "Web Development",
+                    "Mobile App",
+                    "AI/ML",
+                    "Data Science",
+                    "Cybersecurity",
+                    "Game Development"
+                ],
                 "is_required": True
             }
         ],
@@ -88,8 +98,13 @@ def generate_campaign_questions(club_category):
             {
                 "id": "sports_experience",
                 "question": "Bạn có kinh nghiệm chơi thể thao không?",
-                "type": "single_choice",
-                "options": ["Chưa bao giờ", "Nghiệp dư", "Bán chuyên nghiệp", "Chuyên nghiệp"],
+                "type": "select",
+                "options": [
+                    "Chưa bao giờ",
+                    "Nghiệp dư",
+                    "Bán chuyên nghiệp",
+                    "Chuyên nghiệp"
+                ],
                 "is_required": True
             },
             {
@@ -111,8 +126,13 @@ def generate_campaign_questions(club_category):
             {
                 "id": "research_interest",
                 "question": "Bạn có muốn tham gia nghiên cứu không?",
-                "type": "single_choice",
-                "options": ["Rất muốn", "Có thể", "Chưa chắc chắn", "Không quan tâm"],
+                "type": "select",
+                "options": [
+                    "Rất muốn",
+                    "Có thể",
+                    "Chưa chắc chắn",
+                    "Không quan tâm"
+                ],
                 "is_required": False
             }
         ],
@@ -120,24 +140,32 @@ def generate_campaign_questions(club_category):
             {
                 "id": "art_skills",
                 "question": "Bạn có kỹ năng nghệ thuật gì?",
-                "type": "multiple_choice",
-                "options": ["Vẽ", "Hát", "Nhảy", "Chơi nhạc cụ", "Nhiếp ảnh", "Thiết kế", "Viết lách"],
+                "type": "checkbox",
+                "options": [
+                    "Vẽ",
+                    "Hát",
+                    "Nhảy",
+                    "Chơi nhạc cụ",
+                    "Nhiếp ảnh",
+                    "Thiết kế",
+                    "Viết lách"
+                ],
                 "is_required": False
             },
             {
                 "id": "art_portfolio",
                 "question": "Bạn có portfolio nghệ thuật không? (Link hoặc mô tả)",
-                "type": "text",
+                "type": "textarea",
                 "is_required": False,
-                "max_length": 200
+                "max_length": 300
             }
         ]
     }
-    
+
     questions = base_questions.copy()
     if club_category in category_questions:
         questions.extend(category_questions[club_category])
-    
+
     return questions
 
 def generate_campaign_data(clubs):
@@ -270,6 +298,7 @@ def generate_campaign_data(clubs):
                 'end_date': end_date,
                 'max_applications': random.randint(20, 100),
                 'status': status,
+                'logo_url': club.get('logo_url') or f"https://picsum.photos/seed/{str(club_id)[:8]}-{i}/300/300",
                 'statistics': {
                     'total_applications': 0,
                     'approved_applications': 0,

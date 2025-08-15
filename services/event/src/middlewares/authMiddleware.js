@@ -83,13 +83,14 @@ export const authMiddleware = (req, res, next) => {
     const userRole = req.headers['x-user-role'];
     const rawFullName = req.headers['x-user-full-name'];
 
-    // Attempt to correct mojibake when non-ASCII names travel via HTTP headers
+    // Decode base64 encoded full_name (from Kong JWT plugin to handle UTF-8 characters)
     const decodeHeaderUtf8 = (value) => {
       if (!value || typeof value !== 'string') return value;
       try {
-        // Re-interpret as latin1 bytes then decode to UTF-8
-        return Buffer.from(value, 'latin1').toString('utf8');
+        // Decode from base64 to handle UTF-8 characters like Vietnamese names
+        return Buffer.from(value, 'base64').toString('utf8');
       } catch (e) {
+        console.warn('Failed to decode base64 full_name, using original value:', e.message);
         return value;
       }
     };

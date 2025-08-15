@@ -95,9 +95,23 @@ function plugin:access(conf)
         header_name = (conf.header_prefix or "x-user-") .. normalized_name
       end
       
+      -- Handle UTF-8 encoding properly for header values
+      local header_value
+      if type(claim_value) == "string" then
+        -- For UTF-8 strings like Vietnamese names, encode as base64 to preserve encoding
+        if claim_name == "full_name" then
+          header_value = ngx.encode_base64(claim_value)
+          kong.log.debug("Encoded full_name to base64: " .. header_value)
+        else
+          header_value = claim_value
+        end
+      else
+        header_value = tostring(claim_value)
+      end
+      
       -- Set the header for upstream service
-      kong.service.request.set_header(header_name, tostring(claim_value))
-      kong.log.debug("Set header: " .. header_name .. " = " .. tostring(claim_value))
+      kong.service.request.set_header(header_name, header_value)
+      kong.log.debug("Set header: " .. header_name .. " = " .. header_value)
     else
       kong.log.debug("Claim '" .. claim_name .. "' not found in JWT")
     end
