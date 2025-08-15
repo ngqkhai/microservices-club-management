@@ -84,7 +84,7 @@ export function ClubCard({ club }: ClubCardProps) {
   }
 
   // Get cover image URL with fallback to category-based placeholder
-  const getImageUrl = () => {
+  const getCoverImageUrl = () => {
     // First priority: use cover_url if available
     if (club.cover_url) return club.cover_url
     
@@ -95,12 +95,15 @@ export function ClubCard({ club }: ClubCardProps) {
       "Cộng đồng": "https://images.unsplash.com/photo-1663478595761-26d99b2e29f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       "Thể thao": "https://images.unsplash.com/photo-1571019613540-b866c46ba65d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       "Công nghệ": "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      "Tình nguyện": "https://images.unsplash.com/photo-1663478595761-26d99b2e29f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      "Kinh doanh": "https://images.unsplash.com/photo-1556761175-b413da4baf72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       // English versions for backward compatibility
       Arts: "https://images.unsplash.com/photo-1566439934134-6e1aafac9750?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       Technology: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       Sports: "https://images.unsplash.com/photo-1571019613540-b866c46ba65d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       Academic: "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
       Service: "https://images.unsplash.com/photo-1663478595761-26d99b2e29f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
+      Business: "https://images.unsplash.com/photo-1556761175-b413da4baf72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300",
     }
     
     return imageMap[club.category as keyof typeof imageMap] || "https://images.unsplash.com/photo-1562774053-701939374585?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&h=300"
@@ -116,7 +119,7 @@ export function ClubCard({ club }: ClubCardProps) {
       <CardHeader className="p-0 relative">
         <div className="aspect-video overflow-hidden">
           <ImageWithFallback
-            src={getImageUrl()}
+            src={getCoverImageUrl()}
             alt={club.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />

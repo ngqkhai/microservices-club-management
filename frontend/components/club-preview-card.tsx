@@ -37,13 +37,31 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
       "Học thuật": "bg-blue-100 text-blue-800",
       "Nghệ thuật": "bg-purple-100 text-purple-800", 
       "Cộng đồng": "bg-green-100 text-green-800",
+      "Thể thao": "bg-green-100 text-green-800",
+      "Công nghệ": "bg-blue-100 text-blue-800",
+      "Tình nguyện": "bg-orange-100 text-orange-800",
+      "Kinh doanh": "bg-yellow-100 text-yellow-800",
+      // English versions for backward compatibility
       Arts: "bg-purple-100 text-purple-800",
       Technology: "bg-blue-100 text-blue-800",
       Sports: "bg-green-100 text-green-800",
       Academic: "bg-blue-100 text-blue-800",
-      Service: "bg-green-100 text-green-800",
+      Service: "bg-orange-100 text-orange-800",
+      Business: "bg-yellow-100 text-yellow-800",
     }
     return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
+  }
+
+  const getCategoryLabel = (category: string) => {
+    const labels = {
+      Arts: "Nghệ thuật",
+      Technology: "Công nghệ",
+      Sports: "Thể thao",
+      Academic: "Học thuật",
+      Service: "Tình nguyện",
+      Business: "Kinh doanh",
+    }
+    return labels[category as keyof typeof labels] || category
   }
 
   const getAvatarColor = (category: string) => {
@@ -51,13 +69,19 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
       "Học thuật": "bg-blue-500",
       "Nghệ thuật": "bg-purple-500",
       "Cộng đồng": "bg-green-500",
+      "Thể thao": "bg-green-500",
+      "Công nghệ": "bg-blue-500",
+      "Tình nguyện": "bg-orange-500",
+      "Kinh doanh": "bg-yellow-500",
+      // English versions for backward compatibility
       Arts: "bg-purple-500",
       Technology: "bg-blue-500",
       Sports: "bg-green-500", 
       Academic: "bg-blue-500",
-      Service: "bg-green-500",
+      Service: "bg-orange-500",
+      Business: "bg-yellow-500",
     }
-    return colors[category as keyof typeof colors] || "bg-primary"
+    return colors[category as keyof typeof colors] || "bg-blue-500"
   }
 
   return (
@@ -70,7 +94,7 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
       <CardHeader className="p-0 relative">
         <div className="aspect-video overflow-hidden">
           <ImageWithFallback
-            src={club.image || club.cover_url || "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwZGViYXRlJTIwY2x1YnxlbnwxfHx8fDE3NTUxNjY1NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080"}
+            src={club.cover_url || club.image || "https://images.unsplash.com/photo-1614793319738-bde496bbe85e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwZGViYXRlJTIwY2x1YnxlbnwxfHx8fDE3NTUxNjY1NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080"}
             alt={club.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
@@ -79,7 +103,7 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
         {/* Overlay content */}
         <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
           <Badge className={getCategoryColor(club.category)}>
-            {club.category}
+            {getCategoryLabel(club.category)}
           </Badge>
           {club.isPopular && (
             <Badge variant="destructive" className="bg-red-500">
@@ -92,7 +116,7 @@ export function ClubPreviewCard({ club }: ClubPreviewCardProps) {
         {/* Club Avatar */}
         <div className="absolute -bottom-6 left-6">
           <Avatar className="h-12 w-12 border-4 border-white shadow-lg">
-            <AvatarImage src={club.logo_url || club.cover_url || "/placeholder.svg"} alt={club.name} />
+            <AvatarImage src={club.logo_url || "/assets/default-club-logo.png"} alt={club.name} className="object-cover" />
             <AvatarFallback className={`${getAvatarColor(club.category)} text-white font-bold`}>
               {getInitials(club.name)}
             </AvatarFallback>

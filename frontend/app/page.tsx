@@ -368,8 +368,9 @@ export default function HomePage() {
                     key={club.club_id} 
                     club={{
                       ...club,
-                      image: club.logo_url || (club as any).cover_url || getClubImage(club.name),
-                      cover_url: (club as any).cover_url,
+                      image: club.cover_url || getClubImage(club.name),
+                      cover_url: club.cover_url,
+                      logo_url: club.logo_url,
                       isPopular: isPopularClub(club.name)
                     }} 
                   />

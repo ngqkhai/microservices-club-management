@@ -7,6 +7,7 @@ export interface ClubForComponent {
   name: string;
   description: string;
   logo_url: string;
+  cover_url?: string;
   members: number;
   category: string;
 }
@@ -40,6 +41,7 @@ const adaptClubForComponent = (apiClub: Club): ClubForComponent => ({
   name: apiClub.name,
   description: apiClub.description || '',
   logo_url: apiClub.logo_url || '',
+  cover_url: apiClub.cover_url || '',
   members: apiClub.member_count,
   category: apiClub.category
 });
