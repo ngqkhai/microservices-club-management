@@ -53,7 +53,7 @@ test.describe('Basic UI Tests', () => {
     
     // Check main sections are present
     await expect(page.locator('text=Câu lạc bộ nổi bật')).toBeVisible();
-    await expect(page.locator('text=Hoạt động gần đây')).toBeVisible();
+    await expect(page.locator('text=Hoạt động cộng đồng')).toBeVisible();
   });
 
   test('Clubs page loads and has search functionality', async ({ page }) => {
@@ -71,15 +71,15 @@ test.describe('Basic UI Tests', () => {
     await expect(categoryFilter).toBeVisible();
   });
 
-  test('Events page loads and has search functionality', async ({ page }) => {
+    test('Events page loads and has search functionality', async ({ page }) => {
     await page.goto('/events');
-    await page.waitForLoadState('networkidle');
-    
+    await page.waitForLoadState('domcontentloaded');
+
     // Check that the page loaded correctly
-    await expect(page.locator('text=Upcoming Events')).toBeVisible();
+    await expect(page.locator('text=Danh sách Sự kiện')).toBeVisible();
     
     // Check search input exists (might be hidden on desktop, visible on mobile)
-    const searchInput = page.locator('input[placeholder*="Search events"]');
+    const searchInput = page.locator('input[placeholder*="Tìm kiếm sự kiện"]');
     await expect(searchInput).toBeAttached(); // Check it exists in DOM
   });
 
