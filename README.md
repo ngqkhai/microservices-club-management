@@ -59,11 +59,14 @@ npm i && npm run dev
 ## 🧪 API Documentation
 - **Swagger UI**: http://localhost:3001/api/auth/docs
 
-## 📎 Links
-- **GitHub**: https://github.com/your-org/club-management-system
-- **Demo**: 
-- **Documentation**: Available in `docs/` folder
-- **Deployment Guides**: Vercel and Railway deployment guides available
+## 📋 Demo Accounts
+For testing purposes, you can use these pre-configured demo accounts:
+
+### Regular User & Club Manager Account
+- **Email**: quockhanh4104.kn@gmail.com
+- **Password**: Khanh1234@abc
+- **Role**: Club Manager & Regular User
+- **Permissions**: Create and manage clubs, organize events, manage members and join clubs, register for events
 
 ## 🔧 Architecture
 
