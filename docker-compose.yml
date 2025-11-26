@@ -48,11 +48,11 @@ services:
     container_name: club_management_club
     environment:
       PORT: 3002
-      NODE_ENV: test
+      NODE_ENV: ${NODE_ENV:-development}
       MOCK_DB: false
       MONGODB_URI: ${CLUB_MONGODB_URI}
       RABBITMQ_URL: ${AUTH_RABBITMQ_URL}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
     ports:
       - "3002:3002"
     volumes:
@@ -60,6 +60,11 @@ services:
       - /app/node_modules
     networks:
       - club_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3002/health || exit 1"]
       interval: 30s
@@ -81,10 +86,10 @@ services:
     container_name: club_management_event
     environment:
       PORT: 3003
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       MONGODB_URI: ${EVENT_MONGODB_URI}
       RABBITMQ_URL: ${AUTH_RABBITMQ_URL}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
     ports:
       - "3003:3003"
     volumes:
@@ -92,6 +97,11 @@ services:
       - /app/node_modules
     networks:
       - club_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3003/health || exit 1"]
       interval: 30s
@@ -113,23 +123,23 @@ services:
     environment:
       DATABASE_URL: ${AUTH_DATABASE_URL}
       RABBITMQ_URL: ${AUTH_RABBITMQ_URL}
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3001
       DB_DIALECT: postgres
-      DB_SSL: true
+      DB_SSL: ${DB_SSL:-false}
       JWT_ALGORITHM: RS256
-      JWT_EXPIRES_IN: 15m
-      REFRESH_TOKEN_SECRET: auth-refresh-secret-change-in-production-min-32-chars
-      REFRESH_TOKEN_EXPIRES_IN: 7d
-      BCRYPT_ROUNDS: 12
-      MAX_LOGIN_ATTEMPTS: 5
-      ACCOUNT_LOCK_TIME_MS: 1800000
-      RATE_LIMIT_WINDOW_MS: 0
-      RATE_LIMIT_MAX_REQUESTS: 0
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-local-dev-refresh-secret-minimum-32-characters-long}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
+      MAX_LOGIN_ATTEMPTS: ${MAX_LOGIN_ATTEMPTS:-5}
+      ACCOUNT_LOCK_TIME_MS: ${ACCOUNT_LOCK_TIME_MS:-1800000}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-0}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-0}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
-      FRONTEND_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
-      AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-false}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
+      AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-true}
     ports:
       - "3001:3001"
     volumes:
@@ -137,6 +147,11 @@ services:
       - /app/node_modules
     networks:
       - club_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       # Use basic status endpoint that doesn't require authentication
@@ -167,9 +182,9 @@ services:
       EVENT_SERVICE_URL: ${EVENT_SERVICE_URL:-http://event-service:3003}
       NOTIFY_SERVICE_URL: ${NOTIFY_SERVICE_URL:-http://notify-service:3005}
       IMAGE_SERVICE_URL: ${IMAGE_SERVICE_URL:-http://image-service:3004}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
       # CORS Configuration
-      KONG_CORS_ORIGINS: '["http://localhost:3000", "https://club-frontend-hq5d.onrender.com"]'
+      KONG_CORS_ORIGINS: ${KONG_CORS_ORIGINS:-'["http://localhost:3000"]'}
       # JWT Public Key
       JWT_RSA_PUBLIC_KEY: |
         -----BEGIN PUBLIC KEY-----
@@ -208,14 +223,26 @@ services:
     container_name: club_management_image
     environment:
       PORT: 3004
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       RABBITMQ_URL: ${IMAGE_RABBITMQ_URL}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      # Storage provider: auto, cloudinary, minio
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-auto}
+      # Cloudinary (leave empty to use MinIO)
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      # MinIO/S3 configuration
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin_local_dev}
+      MINIO_BUCKET: ${MINIO_BUCKET:-club-management}
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      # Upload limits
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
       MAX_FILES: ${MAX_FILES:-10}
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
       CLUB_SERVICE_URL: http://club-service:3002
       EVENT_SERVICE_URL: http://event-service:3003
     ports:
@@ -225,6 +252,11 @@ services:
       - /app/node_modules
     networks:
       - club_network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3004/health || exit 1"]
@@ -239,13 +271,11 @@ services:
       context: ./services/notify
       dockerfile: Dockerfile
     container_name: club_management_notify
-    env_file:
-      - ./services/notify/.env
     environment:
-      # Keep notify-service using default guest creds unless overridden
-      RABBITMQ_URL: ${NOTIFY_RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}
+      RABBITMQ_URL: ${NOTIFY_RABBITMQ_URL:-amqp://rabbitmq:rabbitmq_local_dev@rabbitmq:5672}
       PORT: 3005
-      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-test-secret-e2e}
+      NODE_ENV: ${NODE_ENV:-development}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
     ports:
       - "3005:3005"
     volumes:
@@ -254,6 +284,9 @@ services:
       - notify_logs:/app/logs
     networks:
       - club_network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3005/health || exit 1"]

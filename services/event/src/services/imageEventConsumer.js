@@ -1,4 +1,6 @@
 import amqp from 'amqplib';
+import config from '../config/configManager.js';
+import logger from '../config/logger.js';
 
 class ImageEventConsumer {
   constructor() {
@@ -8,7 +10,8 @@ class ImageEventConsumer {
 
   async connect() {
     try {
-      this.connection = await amqp.connect(process.env.RABBITMQ_URL);
+      const rabbitmqConfig = config.getRabbitMQConfig();
+      this.connection = await amqp.connect(rabbitmqConfig.url);
       this.channel = await this.connection.createChannel();
       
       // Declare exchange
@@ -22,13 +25,13 @@ class ImageEventConsumer {
       await this.channel.bindQueue(queueResult.queue, 'image_events', 'image.event_image');
       await this.channel.bindQueue(queueResult.queue, 'image_events', 'image.event_logo');
       
-      console.log('✅ Event service connected to RabbitMQ image events');
+      logger.info('Event service connected to RabbitMQ image events');
       
       // Start consuming messages
       this.consumeMessages(queueResult.queue);
       
     } catch (error) {
-      console.error('❌ Failed to connect to RabbitMQ:', error.message);
+      logger.error('Failed to connect to RabbitMQ', { error: error.message });
       throw error;
     }
   }
@@ -39,7 +42,7 @@ class ImageEventConsumer {
         if (msg) {
           try {
             const content = JSON.parse(msg.content.toString());
-            console.log('📥 Received image event:', content.event_type);
+            logger.info('Received image event', { eventType: content.event_type });
             
             // Handle different event types
             if (content.event_type === 'image_uploaded') {
@@ -50,61 +53,61 @@ class ImageEventConsumer {
             this.channel.ack(msg);
             
           } catch (error) {
-            console.error('❌ Error processing message:', error.message);
+            logger.error('Error processing message', { error: error.message });
             // Reject the message and requeue
             this.channel.nack(msg, false, true);
           }
         }
       });
       
-      console.log('👂 Event service listening for image events...');
+      logger.info('Event service listening for image events...');
       
     } catch (error) {
-      console.error('❌ Error consuming messages:', error.message);
+      logger.error('Error consuming messages', { error: error.message });
     }
   }
 
   async handleImageUploaded(imageData) {
     try {
-      console.log('🖼️ Processing event image upload:', imageData);
+      logger.info('Processing event image upload', { imageData });
       
       const { entity_id, entity_type, type, url } = imageData;
       
       // Only process if this is for an event
       if (entity_type !== 'event' || !entity_id) {
-        console.log('⏭️ Skipping non-event image event');
+        logger.debug('Skipping non-event image event');
         return;
       }
       
       const { Event } = await import('../models/event.js');
       
       if (type === 'event_image') {
-        console.log(`📝 Updating event ${entity_id} main image: ${url}`);
+        logger.info('Updating event main image', { eventId: entity_id, url });
         await Event.findByIdAndUpdate(entity_id, { 
           event_image_url: url,
           updated_at: new Date()
         });
-        console.log('✅ Event main image updated successfully');
+        logger.info('Event main image updated successfully', { eventId: entity_id });
         
       } else if (type === 'event_logo') {
-        console.log(`📝 Updating event ${entity_id} logo: ${url}`);
+        logger.info('Updating event logo', { eventId: entity_id, url });
         await Event.findByIdAndUpdate(entity_id, { 
           event_logo_url: url,
           updated_at: new Date()
         });
-        console.log('✅ Event logo updated successfully');
+        logger.info('Event logo updated successfully', { eventId: entity_id });
         
       } else if (type === 'event') {
-        console.log(`📝 Adding gallery image to event ${entity_id}: ${url}`);
+        logger.info('Adding gallery image to event', { eventId: entity_id, url });
         await Event.findByIdAndUpdate(entity_id, { 
           $push: { images: url },
           updated_at: new Date()
         });
-        console.log('✅ Event gallery image added successfully');
+        logger.info('Event gallery image added successfully', { eventId: entity_id });
       }
       
     } catch (error) {
-      console.error('❌ Error handling event image upload:', error.message);
+      logger.error('Error handling event image upload', { error: error.message });
       // Don't throw - let RabbitMQ handle retry logic
     }
   }
@@ -113,9 +116,9 @@ class ImageEventConsumer {
     try {
       if (this.channel) await this.channel.close();
       if (this.connection) await this.connection.close();
-      console.log('🔌 Event service RabbitMQ connection closed');
+      logger.info('Event service RabbitMQ connection closed');
     } catch (error) {
-      console.error('❌ Error closing RabbitMQ connection:', error.message);
+      logger.error('Error closing RabbitMQ connection', { error: error.message });
     }
   }
 }

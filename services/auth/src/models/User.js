@@ -45,13 +45,13 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     role: {
-      type: DataTypes.ENUM('user', 'admin'),
-      defaultValue: 'user',
+      type: DataTypes.ENUM('USER', 'ADMIN'),
+      defaultValue: 'USER',
       allowNull: false,
       validate: {
         isIn: {
-          args: [['user', 'admin']],
-          msg: 'Role must be either user or admin'
+          args: [['USER', 'ADMIN']],
+          msg: 'Role must be either USER or ADMIN'
         }
       }
     },
@@ -108,12 +108,12 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     gender: {
-      type: DataTypes.ENUM('Nam', 'Nữ', 'Khác', 'Không muốn nói'),
+      type: DataTypes.ENUM('male', 'female', 'other', 'prefer_not_to_say'),
       allowNull: true,
       validate: {
         isIn: {
-          args: [['Nam', 'Nữ', 'Khác', 'Không muốn nói']],
-          msg: 'Gender must be one of: Nam, Nữ, Khác, Không muốn nói'
+          args: [['male', 'female', 'other', 'prefer_not_to_say']],
+          msg: 'Gender must be one of: male, female, other, prefer_not_to_say'
         }
       }
     },
@@ -228,7 +228,7 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   User.createUser = async function(userData) {
-    const { email, full_name, password, role = 'user' } = userData;
+    const { email, full_name, password, role = 'USER' } = userData;
     
     return this.create({
       email: email.toLowerCase(),

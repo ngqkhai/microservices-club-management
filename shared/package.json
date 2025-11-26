@@ -1,9 +1,0 @@
-{
-  "name": "club-management-shared",
-  "version": "1.0.0",
-  "description": "Shared utilities and middleware for club management system",
-  "main": "index.js",
-  "dependencies": {
-    "winston": "^3.17.0"
-  }
-} 

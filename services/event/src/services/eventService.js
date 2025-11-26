@@ -1,11 +1,12 @@
 import { getEventsFromMock, createEventInDB, findEventById, updateEventInDB, deleteEventFromDB } from '../repositories/eventRepository.js';
-import { generateRSVPQRCode } from '../utils/logger.js';
+import { generateRSVPQRCode } from '../utils/qrCodeGenerator.js';
 
 import { Registration } from '../models/registration.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import { Event } from '../models/event.js';
+import logger from '../utils/logger.js';
 
 export async function getFilteredEvents(dto) {
   const result = await getEventsFromMock({
@@ -86,27 +87,31 @@ export async function rsvpToEvent(event_id, status, user_id) {
 }
 
 export async function joinEventService(eventId, userContext) {
+  // Extract user info early so it's available in catch block
+  const userId = userContext?.userId || (typeof userContext === 'string' ? userContext : undefined);
+  const userEmail = userContext?.userEmail;
+  const userFullName = userContext?.userFullName;
+  
   try {
-    const { userId, userEmail, userFullName } = typeof userContext === 'object' ? userContext : { userId: userContext };
-    console.log('joinEventService called with:', { eventId, userId });
+    logger.debug('joinEventService called', { eventId, userId });
     
     // Validate eventId format (MongoDB ObjectId)
     if (!eventId || !eventId.match(/^[0-9a-fA-F]{24}$/)) {
-      console.log('Invalid eventId format:', eventId);
+      logger.debug('Invalid eventId format', { eventId });
       throw new Error('Event not found');
     }
 
     // Check database connection
     if (!mongoose.connection.readyState) {
-      console.error('Database not connected');
+      logger.error('Database not connected');
       throw new Error('Database connection unavailable');
     }
 
-    console.log('Searching for event with ID:', eventId);
+    logger.debug('Searching for event', { eventId });
     
     // Check if event exists
     const event = await Event.findById(eventId);
-    console.log('Event found:', event ? 'Yes' : 'No');
+    logger.debug('Event lookup result', { eventId, found: !!event });
     
     if (!event) {
       throw new Error('Event not found');
@@ -170,10 +175,9 @@ export async function joinEventService(eventId, userContext) {
     };
   } catch (error) {
     // Log the actual error for debugging
-    console.error('joinEventService error:', {
+    logger.error('joinEventService error', {
       message: error.message,
       name: error.name,
-      stack: error.stack,
       eventId,
       userId,
       dbState: mongoose.connection.readyState
@@ -216,25 +220,25 @@ export async function joinEventService(eventId, userContext) {
 
 export async function leaveEventService(eventId, userId) {
   try {
-    console.log('leaveEventService called with:', { eventId, userId });
+    logger.debug('leaveEventService called', { eventId, userId });
     
     // Validate eventId format (MongoDB ObjectId)
     if (!eventId || !eventId.match(/^[0-9a-fA-F]{24}$/)) {
-      console.log('Invalid eventId format:', eventId);
+      logger.debug('Invalid eventId format', { eventId });
       throw new Error('Event not found');
     }
 
     // Check database connection
     if (!mongoose.connection.readyState) {
-      console.error('Database not connected');
+      logger.error('Database not connected');
       throw new Error('Database connection unavailable');
     }
 
-    console.log('Searching for event with ID:', eventId);
+    logger.debug('Searching for event', { eventId });
     
     // Check if event exists
     const event = await Event.findById(eventId);
-    console.log('Event found:', event ? 'Yes' : 'No');
+    logger.debug('Event lookup result', { eventId, found: !!event });
     
     if (!event) {
       throw new Error('Event not found');
@@ -270,10 +274,9 @@ export async function leaveEventService(eventId, userId) {
     };
   } catch (error) {
     // Log the actual error for debugging
-    console.error('leaveEventService error:', {
+    logger.error('leaveEventService error', {
       message: error.message,
       name: error.name,
-      stack: error.stack,
       eventId,
       userId,
       dbState: mongoose.connection.readyState
@@ -580,7 +583,7 @@ export const deleteEventService = async (eventId) => {
   if (registrationCount > 0) {
     // Optional: You can either prevent deletion or allow it with cascade deletion
     // For now, let's allow deletion but clean up related data
-    console.log(`Deleting event with ${registrationCount} active registrations. Related data will be cleaned up.`);
+    logger.info('Deleting event with active registrations', { eventId, registrationCount });
     
     // Clean up related registration records
     await Registration.deleteMany({ event_id: eventId });
@@ -817,7 +820,7 @@ export const getEventByIdService = async (eventId, userId = null) => {
       user_status: userStatus
     };
   } catch (error) {
-    console.error('getEventByIdService error:', error);
+    logger.error('getEventByIdService error', { eventId, error: error.message });
     throw error;
   }
 };
@@ -847,7 +850,7 @@ export const getUserEventStatusService = async (eventId, userId) => {
       can_register: canRegister
     };
   } catch (error) {
-    console.error('getUserEventStatusService error:', error);
+    logger.error('getUserEventStatusService error', { eventId, userId, error: error.message });
     throw error;
   }
 };
@@ -878,7 +881,7 @@ export const toggleEventFavoriteService = async (eventId, userId) => {
       return { is_favorited: true };
     }
   } catch (error) {
-    console.error('toggleEventFavoriteService error:', error);
+    logger.error('toggleEventFavoriteService error', { eventId, userId, error: error.message });
     throw error;
   }
 };
@@ -915,7 +918,7 @@ export const getUserFavoriteEventsService = async (userId, { page = 1, limit = 1
       }
     };
   } catch (error) {
-    console.error('getUserFavoriteEventsService error:', error);
+    logger.error('getUserFavoriteEventsService error', { userId, error: error.message });
     throw error;
   }
 };
@@ -958,7 +961,7 @@ export const getEventRegistrationsService = async (eventId, { page = 1, limit = 
       }
     };
   } catch (error) {
-    console.error('getEventRegistrationsService error:', error);
+    logger.error('getEventRegistrationsService error', { eventId, error: error.message });
     throw error;
   }
 };
@@ -989,7 +992,7 @@ export const updateEventRegistrationStatusService = async (eventId, registration
 
     return updated;
   } catch (error) {
-    console.error('updateEventRegistrationStatusService error:', error);
+    logger.error('updateEventRegistrationStatusService error', { eventId, registrationId, error: error.message });
     throw error;
   }
 };
@@ -1005,7 +1008,7 @@ export const getMyEventsService = async (userId) => {
     const events = await Event.find({ _id: { $in: eventIds } }).lean();
     return events;
   } catch (error) {
-    console.error('getMyEventsService error:', error);
+    logger.error('getMyEventsService error', { userId, error: error.message });
     throw error;
   }
 };

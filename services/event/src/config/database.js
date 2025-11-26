@@ -1,28 +1,30 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-// Use MongoDB connection string from environment variable
-const MONGODB_URI = process.env.MONGODB_URI || 
-                    process.env.MONGO_URI ||
-                    'mongodb://localhost:27017/event_service';
+import config from './configManager.js';
+import logger from './logger.js';
 
 export const connectToDatabase = async () => {
   try {
+    const mongoConfig = config.getMongoDBConfig();
+    const MONGODB_URI = mongoConfig.uri;
+    
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // Connection timeout: 5 seconds
-      socketTimeoutMS: 45000, // Socket timeout: 45 seconds
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      minPoolSize: 1, // Maintain at least 1 connection
-      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-      maxConnecting: 2, // Maximum number of connections that can be in the "connecting" state
+      ...mongoConfig.options,
+      bufferCommands: false
     });
-    console.log('✅ Connected to MongoDB Atlas - Event Service Database');
-    console.log('🔗 Database:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+    
+    // Mask password in log
+    const maskedUri = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+    logger.info('Connected to MongoDB - Event Service Database', { database: maskedUri });
+    
     return true;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
+    logger.error('MongoDB connection error', { error: error.message });
+    
+    if (config.isDevelopment()) {
+      logger.warn('Running in development mode without database connection');
+      return false;
+    }
+    
     return false;
   }
 };
@@ -30,21 +32,21 @@ export const connectToDatabase = async () => {
 export const disconnectFromDatabase = async () => {
   try {
     await mongoose.disconnect();
-    console.log('🔌 Disconnected from MongoDB');
+    logger.info('Disconnected from MongoDB');
   } catch (error) {
-    console.error('Error disconnecting from MongoDB:', error.message);
+    logger.error('Error disconnecting from MongoDB', { error: error.message });
   }
 };
 
 // Handle connection events
 mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to MongoDB');
+  logger.debug('Mongoose connected to MongoDB');
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('Mongoose connection error:', err);
+  logger.error('Mongoose connection error', { error: err.message });
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('Mongoose disconnected');
+  logger.debug('Mongoose disconnected');
 });

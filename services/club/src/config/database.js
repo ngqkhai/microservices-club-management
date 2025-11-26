@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const config = require('./index');
+const logger = require('./logger');
 
 // Define schemas outside the connection function
 // Define Club schema based on the updated schema requirements
@@ -109,7 +111,7 @@ const clubSchema = new mongoose.Schema({
       }
     },
     default: {},
-    _id: false  // Prevent automatic _id generation
+    _id: false
   },
   settings: {
     type: {
@@ -121,18 +123,16 @@ const clubSchema = new mongoose.Schema({
       is_public: true,
       requires_approval: true
     },
-    _id: false  // Prevent automatic _id generation
+    _id: false
   },
-  // Member count field
   member_count: {
     type: Number,
     default: 1,
     min: 0,
     required: true
   },
-  // Deprecated fields (keeping for backward compatibility)
-  type: { type: String }, // Will be migrated to category
-  size: { type: Number }, // Will use membership count instead
+  type: { type: String },
+  size: { type: Number },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   status: { 
     type: String, 
@@ -143,7 +143,6 @@ const clubSchema = new mongoose.Schema({
     type: String, 
     required: true
   },
-  // Manager information (snapshot at creation time)
   manager: {
     type: {
       user_id: { 
@@ -170,17 +169,20 @@ const clubSchema = new mongoose.Schema({
       }
     },
     required: true,
-    _id: false  // Prevent automatic _id generation
+    _id: false
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   deleted_at: { type: Date }
 });
 
-// Text index on club name for search functionality
 clubSchema.index({ name: 'text' });
+clubSchema.index({ category: 1 });
+clubSchema.index({ status: 1 });
+clubSchema.index({ 'manager.user_id': 1 });
+clubSchema.index({ created_at: -1 });
 
-// Define Membership schema (enhanced to match schema requirements)
+// Define Membership schema
 const membershipSchema = new mongoose.Schema({
   club_id: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -209,6 +211,16 @@ const membershipSchema = new mongoose.Schema({
     trim: true,
     maxLength: 255
   },
+  user_profile_picture_url: {
+    type: String,
+    maxLength: 500,
+    validate: {
+      validator: function(v) {
+        return !v || /^https?:\/\/.+/.test(v);
+      },
+      message: 'Profile picture URL must be a valid HTTP/HTTPS URL'
+    }
+  },
   campaign_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'RecruitmentCampaign',
@@ -217,7 +229,7 @@ const membershipSchema = new mongoose.Schema({
   role: { 
     type: String, 
     required: true,
-    enum: ['member', 'organizer',  'club_manager'],
+    enum: ['member', 'organizer', 'club_manager'],
     default: 'member'
   },
   status: {
@@ -231,11 +243,32 @@ const membershipSchema = new mongoose.Schema({
     maxLength: 1000
   },
   application_answers: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
+    type: [{
+      question_id: { 
+        type: String, 
+        required: true,
+        maxLength: 100
+      },
+      question_text: { 
+        type: String, 
+        required: true,
+        maxLength: 500
+      },
+      answer_value: { 
+        type: String, 
+        required: true,
+        maxLength: 2000
+      },
+      answer_type: { 
+        type: String, 
+        enum: ['text', 'textarea', 'select', 'checkbox'],
+        default: 'text'
+      }
+    }],
+    default: []
   },
   approved_by: {
-    type: String // UUID from Auth Service
+    type: String
   },
   approved_at: {
     type: Date
@@ -255,14 +288,13 @@ const membershipSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Create compound index for user_id and club_id to ensure uniqueness
 membershipSchema.index({ club_id: 1, user_id: 1 }, { unique: true });
 membershipSchema.index({ club_id: 1, status: 1 });
 membershipSchema.index({ user_id: 1, status: 1 });
 membershipSchema.index({ campaign_id: 1 });
 membershipSchema.index({ joined_at: 1 });
 
-// Define RecruitmentCampaign schema (renamed from RecruitmentRound)
+// Define RecruitmentCampaign schema
 const recruitmentCampaignSchema = new mongoose.Schema({
   club_id: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -324,14 +356,42 @@ const recruitmentCampaignSchema = new mongoose.Schema({
       pending_applications: 0,
       last_updated: new Date()
     },
-    _id: false  // Prevent automatic _id generation
+    _id: false
   },
-  // Backward compatibility fields
-  criteria: { type: String }, // Deprecated, use requirements instead
-  review_criteria: { type: mongoose.Schema.Types.Mixed, default: {} }, // Deprecated
-  quota: { type: Number }, // Deprecated, use max_applications instead
-  start_at: { type: Date }, // Deprecated, use start_date instead
-  end_at: { type: Date }, // Deprecated, use end_date instead
+  criteria: { type: String },
+  review_criteria: {
+    type: [{
+      criterion_id: { 
+        type: String, 
+        required: true,
+        maxLength: 100
+      },
+      name: { 
+        type: String, 
+        required: true,
+        maxLength: 200
+      },
+      description: { 
+        type: String,
+        maxLength: 500
+      },
+      weight: { 
+        type: Number, 
+        min: 0, 
+        max: 100,
+        default: 1
+      },
+      max_score: { 
+        type: Number, 
+        min: 1,
+        default: 10
+      }
+    }],
+    default: []
+  },
+  quota: { type: Number },
+  start_at: { type: Date },
+  end_at: { type: Date },
   created_by: { 
     type: String,
     required: true
@@ -340,7 +400,6 @@ const recruitmentCampaignSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Instance Methods for RecruitmentCampaign
 recruitmentCampaignSchema.methods.toPublicJSON = function() {
   const clubName = this.club_id?.name || null;
   const clubId = this.club_id?._id || this.club_id;
@@ -386,46 +445,32 @@ recruitmentCampaignSchema.index({ club_id: 1, status: 1 });
 recruitmentCampaignSchema.index({ start_date: 1, end_date: 1 });
 recruitmentCampaignSchema.index({ created_by: 1 });
 
-
-
 // Create models
 const Club = mongoose.model('Club', clubSchema);
 const Membership = mongoose.model('Membership', membershipSchema);
 const RecruitmentCampaign = mongoose.model('RecruitmentCampaign', recruitmentCampaignSchema);
-
-// Backward compatibility alias
 const RecruitmentRound = RecruitmentCampaign;
 
 const connectToDatabase = async () => {
   try {
-    // Use MongoDB connection string from environment variable
-    const MONGO_URI = process.env.MONGODB_URI || 
-                      process.env.MONGO_URI ||
-                      'mongodb://localhost:27017/club_service';
-                      
-    // Add connection options for MongoDB Atlas
+    const mongoConfig = config.getMongoDBConfig();
+    const MONGO_URI = mongoConfig.uri;
+    
     await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Connection timeout: 5 seconds
-      socketTimeoutMS: 45000, // Socket timeout: 45 seconds
-      bufferCommands: false, // Disable mongoose buffering
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      minPoolSize: 1, // Maintain at least 1 connection
-      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-      maxConnecting: 2, // Maximum number of connections that can be in the "connecting" state
+      ...mongoConfig.options,
+      bufferCommands: false
     });
     
-    console.log('✅ Connected to MongoDB Atlas - Club Service Database');
-    console.log('🔗 Database:', MONGO_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
-    console.log('📊 MongoDB schemas initialized');
+    // Mask password in log
+    const maskedUri = MONGO_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+    logger.info('Connected to MongoDB - Club Service Database', { database: maskedUri });
+    
     return true;
   } catch (error) {
-    console.error('❌ Database connection error:', error.message);
+    logger.error('Database connection error', { error: error.message });
     
-    // Check if we're in development mode
-    if (process.env.NODE_ENV === 'development' || process.env.MOCK_DB === 'true') {
-      console.warn('⚠️ Running in development mode without database connection');
+    if (config.isDevelopment()) {
+      logger.warn('Running in development mode without database connection');
       return false;
     }
     
@@ -438,5 +483,5 @@ module.exports = {
   Club,
   Membership,
   RecruitmentCampaign,
-  RecruitmentRound // Backward compatibility
+  RecruitmentRound
 };

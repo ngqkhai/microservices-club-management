@@ -1,4 +1,6 @@
 const amqp = require('amqplib');
+const config = require('./index');
+const logger = require('./logger');
 
 class RabbitMQService {
   constructor() {
@@ -8,16 +10,17 @@ class RabbitMQService {
 
   async connect() {
     try {
-      this.connection = await amqp.connect(process.env.RABBITMQ_URL);
+      const rabbitmqConfig = config.getRabbitMQConfig();
+      this.connection = await amqp.connect(rabbitmqConfig.url);
       this.channel = await this.connection.createChannel();
       
       // Declare exchange for image events
       await this.channel.assertExchange('image_events', 'topic', { durable: true });
       
-      console.log('✅ Connected to RabbitMQ');
+      logger.info('Connected to RabbitMQ');
       return this.channel;
     } catch (error) {
-      console.error('❌ RabbitMQ connection error:', error.message);
+      logger.error('RabbitMQ connection error', { error: error.message });
       throw error;
     }
   }
@@ -44,10 +47,10 @@ class RabbitMQService {
         { persistent: true }
       );
 
-      console.log(`📤 Published image event: ${routingKey}`);
+      logger.info('Published image event', { routingKey });
       return true;
     } catch (error) {
-      console.error('❌ Failed to publish image event:', error.message);
+      logger.error('Failed to publish image event', { error: error.message });
       throw error;
     }
   }
@@ -56,9 +59,9 @@ class RabbitMQService {
     try {
       if (this.channel) await this.channel.close();
       if (this.connection) await this.connection.close();
-      console.log('🔌 RabbitMQ connection closed');
+      logger.info('RabbitMQ connection closed');
     } catch (error) {
-      console.error('❌ Error closing RabbitMQ connection:', error.message);
+      logger.error('Error closing RabbitMQ connection', { error: error.message });
     }
   }
 }

@@ -1,212 +1,214 @@
-# 🎯 Event Service - Complete Guide
+# Event Service
 
-Event Management microservice with MongoDB Atlas integration, supporting US-014 (Join Event) and US-015 (Leave Event) APIs.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green)
 
-## 🚀 Quick Start
+> **Event Management microservice** - Handles event CRUD operations, user registrations, QR ticket generation, check-ins, and event status automation for the Club Management System.
 
-### Docker (Recommended)
-```bash
-# Start Event Service (connects to MongoDB Atlas automatically)
-docker-compose up -d event-service
+---
 
-# Test APIs
-curl http://localhost:3003/health
-curl -X POST http://localhost:3003/api/events/507f1f77bcf86cd799439012/join \
-  -H "X-User-ID: test-user-123" \
-  -H "X-User-Email: test@example.com" \
-  -H "X-User-Role: USER"
-```
+## 📋 Table of Contents
 
-### Local Development
+- [Tech Stack](#-tech-stack)
+- [Key Endpoints](#-key-endpoints)
+- [Environment Variables](#-environment-variables)
+- [Event-Driven Architecture](#-event-driven-architecture)
+- [Run with Docker](#-run-with-docker)
+- [Database Migrations](#-database-migrations)
+- [Health Checks](#-health-checks)
+
+---
+
+## 🛠 Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| **Runtime** | Node.js 18+ |
+| **Framework** | Express.js 5.x |
+| **Module System** | ES Modules (`"type": "module"`) |
+| **Database** | MongoDB 8.0+ |
+| **ODM** | Mongoose 8.x |
+| **Message Queue** | RabbitMQ (amqplib) |
+| **Validation** | Joi |
+| **Logging** | Winston + Daily Rotate |
+| **Migrations** | migrate-mongo |
+| **QR Codes** | qrcode |
+| **Scheduling** | node-cron |
+
+---
+
+## 🔗 Key Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/events` | List events with filtering/pagination |
+| `GET` | `/api/events/:id` | Get event details by ID |
+| `POST` | `/api/events` | Create a new event (Club Manager/Organizer) |
+| `PUT` | `/api/events/:id` | Update event details |
+| `DELETE` | `/api/events/:id` | Delete an event |
+| `GET` | `/api/clubs/:id/events` | Get events for a specific club |
+| `POST` | `/api/events/:id/join` | Register for an event |
+| `DELETE` | `/api/events/:id/leave` | Cancel registration |
+| `GET` | `/api/events/:id/ticket` | Get QR ticket for registered event |
+| `POST` | `/api/events/:id/check-in` | Check-in attendee (scan QR) |
+| `GET` | `/api/events/my` | Get user's registered events |
+| `GET` | `/health` | Service health check |
+
+### Query Parameters for `/api/events`
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `filter` | Filter type | `?filter=upcoming` |
+| `club_id` | Filter by club | `?club_id=60a...` |
+| `status` | Event status | `?status=published` |
+| `category` | Event category | `?category=Workshop` |
+| `search` | Full-text search | `?search=hackathon` |
+| `start_from` | Start date filter | `?start_from=2024-01-01` |
+| `page` | Page number | `?page=1` |
+| `limit` | Items per page | `?limit=10` |
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file based on `env.example`:
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `NODE_ENV` | Environment (development/test/production) | No | `development` |
+| `PORT` | Service port | No | `3003` |
+| **Database** ||||
+| `MONGODB_URI` | 🔒 MongoDB connection string | **Yes** | - |
+| **RabbitMQ** ||||
+| `RABBITMQ_URL` | RabbitMQ connection URL | No | `amqp://localhost:5672` |
+| `RABBITMQ_EXCHANGE` | Exchange name | No | `club_events` |
+| **Service URLs** ||||
+| `AUTH_SERVICE_URL` | Auth service base URL | No | `http://auth-service:3001` |
+| `CLUB_SERVICE_URL` | Club service base URL | No | `http://club-service:3002` |
+| **Security** ||||
+| `API_GATEWAY_SECRET` | 🔒 Secret for gateway validation (min 16 chars) | **Yes** | - |
+| **Features** ||||
+| `ENABLE_CRON_JOBS` | Enable automatic status updates | No | `true` |
+| **Logging** ||||
+| `LOG_LEVEL` | Log level (error/warn/info/debug) | No | `info` |
+
+> 🔒 = Sensitive variable - never commit to version control
+
+---
+
+## 📨 Event-Driven Architecture
+
+### Events Published (to RabbitMQ)
+
+| Event | Routing Key | Description | Consumers |
+|-------|-------------|-------------|-----------|
+| Event Created | `event.created` | When a new event is created | notify-service |
+| Event Updated | `event.updated` | When event details change | notify-service |
+| Event Cancelled | `event.cancelled` | When event is cancelled | notify-service |
+| Registration Created | `event.registration.created` | User registers for event | notify-service |
+| Registration Cancelled | `event.registration.cancelled` | User cancels registration | notify-service |
+| Attendee Checked In | `event.attendee.checked_in` | QR scan check-in | notify-service |
+
+### Events Consumed
+
+| Event | Routing Key | Description | Publisher |
+|-------|-------------|-------------|-----------|
+| User Created | `user.created` | Log new user (optional caching) | auth-service |
+| User Updated | `user.updated` | Update user data in registrations | auth-service |
+| User Deleted | `user.deleted` | Cancel registrations for deleted user | auth-service |
+| Image Uploaded | `image.uploaded` | Update event cover image | image-service |
+| Club Updated | `club.updated` | Update embedded club info | club-service |
+
+---
+
+## 🐳 Run with Docker
+
+### Build the Image
+
 ```bash
 cd services/event
-npm install
-cp .env.example .env  # Edit with your MongoDB Atlas URI
-npm run dev
+docker build -t club-management/event-service:latest .
 ```
 
----
+### Run the Container
 
-## 📋 API Endpoints
-
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| `GET` | `/health` | Service health check | ✅ |
-| `POST` | `/api/events/{id}/join` | **US-014: Join Event** | ✅ |
-| `DELETE` | `/api/events/{id}/leave` | **US-015: Leave Event** | ✅ |
-
-### Authentication
-- **Method**: API Gateway headers (Kong)
-- **Required Headers**: `X-User-ID`, `X-User-Email`, `X-User-Role`
-- **No JWT verification** in service
-
----
-
-## 🧪 Testing
-
-### Automated Tests (100% Pass Rate)
 ```bash
-# Setup test data first
-cd tests
-node setup-test-data-quick.js
-
-# Run all tests
-node test-all-events.js
-
-# Individual tests
-node test-join-event.js   # US-014 tests
-node test-leave-event.js  # US-015 tests
+docker run -d \
+  --name event-service \
+  -p 3003:3003 \
+  -e NODE_ENV=production \
+  -e MONGODB_URI=mongodb://user:pass@host:27017/event_db \
+  -e API_GATEWAY_SECRET=your-secret-min-16-characters \
+  -e RABBITMQ_URL=amqp://rabbitmq:5672 \
+  club-management/event-service:latest
 ```
 
-### Manual Testing
+### Docker Compose (Recommended)
+
 ```bash
-# Join Event
-curl -X POST http://localhost:3003/api/events/507f1f77bcf86cd799439012/join \
-  -H "X-User-ID: test-user-123" \
-  -H "X-User-Email: test@example.com" \
-  -H "X-User-Role: USER"
-
-# Leave Event  
-curl -X DELETE http://localhost:3003/api/events/507f1f77bcf86cd799439011/leave \
-  -H "X-User-ID: test-user-123" \
-  -H "X-User-Email: test@example.com" \
-  -H "X-User-Role: USER"
-```
-
-### Postman Collections
-- `tests/postman/US-014-Join-Event.postman_collection.json`
-- `tests/postman/US-015-Leave-Event.postman_collection.json`
-
----
-
-## 🗄️ Database
-
-### MongoDB Atlas Configuration
-```bash
-# Current setup (.env)
-MONGODB_URI=
-PORT=3003
-NODE_ENV=development
-```
-
-### Collections
-- **`events`**: Event information
-- **`participants`**: User participation records
-
-### Access Database
-- **Atlas Dashboard**: https://cloud.mongodb.com
-- **MongoDB Compass**: Use connection string from .env
-- **mongosh**: `mongosh "mongodb+srv://cluster0.leew142.mongodb.net/event_service" --username phatk222`
-
----
-
-## 🐳 Docker
-
-### Dockerfile Features
-- Multi-stage build (dev/production)
-- Node.js 18 Alpine base
-- Health checks
-- Non-root user for security
-
-### Docker Commands
-```bash
-# Development
-docker build --target development -t event-service:dev .
-docker run -p 3003:3003 --env-file .env event-service:dev
-
-# Production
-docker build --target production -t event-service:prod .
-
-# With docker-compose
-docker-compose up -d event-service
-docker-compose logs -f event-service
+# From project root
+docker-compose up event-service
 ```
 
 ---
 
-## 📊 API Response Examples
+## 🗄 Database Migrations
 
-### Join Event Success (201)
+This service uses `migrate-mongo` for MongoDB migrations.
+
+```bash
+# Run all pending migrations
+npm run migrate:up
+
+# Undo last migration
+npm run migrate:down
+
+# Check migration status
+npm run migrate:status
+
+# Create new migration
+npm run migrate:create -- add-new-index
+
+# Seed demo data
+npm run seed
+
+# Undo seeds
+npm run seed:undo
+```
+
+---
+
+## ⏰ Cron Jobs
+
+The service includes automatic status updates via cron jobs:
+
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| Event Status Update | Every hour | Updates events from `upcoming` → `ongoing` → `completed` based on dates |
+
+Disable with `ENABLE_CRON_JOBS=false`.
+
+---
+
+## ❤️ Health Checks
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Basic health check |
+| `GET /ready` | Kubernetes readiness probe (checks MongoDB) |
+| `GET /live` | Kubernetes liveness probe |
+
+### Health Check Response
+
 ```json
 {
-  "status": "success",
-  "message": "Joined event successfully",
-  "data": {
-    "eventId": "507f1f77bcf86cd799439012",
-    "userId": "test-user-123",
-    "joinedAt": "2025-07-04T10:30:00.000Z",
-    "eventTitle": "Test Event for Join",
-    "eventStartAt": "2025-07-05T14:00:00.000Z"
-  }
+  "status": "ok",
+  "service": "event-service",
+  "version": "1.0.0",
+  "environment": "production",
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
-```
-
-### Leave Event Success (200)
-```json
-{
-  "status": "success",
-  "message": "Left event successfully",
-  "data": {
-    "eventId": "507f1f77bcf86cd799439011",
-    "userId": "test-user-123", 
-    "leftAt": "2025-07-04T10:30:00.000Z",
-    "eventTitle": "Sample Event",
-    "eventStartAt": "2025-07-05T14:00:00.000Z"
-  }
-}
-```
-
-### Error Responses
-```json
-// Already Joined (400)
-{"status": 400, "error": "ALREADY_JOINED", "message": "You have already joined this event"}
-
-// Not Joined (400)  
-{"status": 400, "error": "NOT_JOINED", "message": "You have not joined this event"}
-
-// Event Not Found (404)
-{"status": 404, "error": "EVENT_NOT_FOUND", "message": "Event not found"}
-
-// Missing Auth (401)
-{"status": 401, "error": "AUTH_REQUIRED", "message": "Authentication headers required"}
-```
-
----
-
-## 🔧 Troubleshooting
-
-### Service Won't Start
-```bash
-# Check logs
-docker-compose logs event-service
-
-# Rebuild
-docker-compose build --no-cache event-service
-```
-
-### Database Connection Issues
-```bash
-# Test connection
-docker-compose exec event-service node -e "
-require('dotenv').config();
-const mongoose = require('mongoose');
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Atlas connected'))
-  .catch(err => console.error('❌ Connection failed:', err.message));
-"
-
-# Check Atlas status: https://status.mongodb.com
-# Verify IP whitelist in Atlas dashboard
-```
-
-### Test Failures
-```bash
-# Reset test data
-cd tests
-node setup-test-data-quick.js
-
-# Check service is running
-curl http://localhost:3003/health
 ```
 
 ---
@@ -216,210 +218,95 @@ curl http://localhost:3003/health
 ```
 services/event/
 ├── src/
-│   ├── controllers/eventController.js    # API logic
-│   ├── services/eventService.js          # Business logic  
-│   ├── routes/eventRoutes.js             # Route definitions
-│   ├── models/event.js                   # Event schema
-│   ├── models/participant.js             # Participant schema
-│   ├── middlewares/authMiddleware.js     # Auth validation
-│   ├── config/database.js               # MongoDB connection
-│   └── index.js                         # App entry point
-├── tests/
-│   ├── test-all-events.js               # Integration tests
-│   ├── test-join-event.js               # US-014 tests
-│   ├── test-leave-event.js              # US-015 tests
-│   ├── setup-test-data-quick.js         # Test data setup
-│   └── postman/                         # Postman collections
-├── Dockerfile                           # Docker configuration
-├── .dockerignore                        # Docker build optimization
-├── package.json                         # Dependencies
-└── README.md                            # This file
+│   ├── config/           # Configuration management
+│   │   ├── configManager.js  # Joi-validated config (ES Module)
+│   │   ├── database.js       # MongoDB connection
+│   │   ├── index.js          # Exports
+│   │   └── logger.js         # Winston logger
+│   ├── controllers/      # Request handlers
+│   ├── dtos/             # Data transfer objects
+│   ├── middlewares/      # Auth, validation, errors
+│   ├── migrations/       # migrate-mongo migrations
+│   ├── models/           # Mongoose models
+│   ├── repositories/     # Data access layer
+│   ├── routes/           # Express routes
+│   ├── seeders/          # Demo data
+│   ├── services/         # Business logic
+│   │   ├── eventService.js
+│   │   ├── statusUpdateService.js
+│   │   ├── imageEventConsumer.js
+│   │   └── userEventConsumer.js
+│   └── utils/            # Helpers
+│       ├── cronJobManager.js
+│       └── qrCodeGenerator.js
+├── migrate-mongo-config.js
+├── Dockerfile
+├── package.json
+└── env.example
 ```
 
 ---
 
-## ✅ Production Checklist
+## 📊 Data Models
 
-- [x] MongoDB Atlas integration
-- [x] API Gateway authentication  
-- [x] Comprehensive error handling
-- [x] Input validation
-- [x] Health checks
-- [x] Docker containerization
-- [x] Automated tests (100% pass rate)
-- [x] API documentation
-- [x] Security best practices
+### Event
+
+```javascript
+{
+  club_id: ObjectId,       // Reference to club
+  title: String,
+  description: String,
+  short_description: String,
+  category: String,        // 'Workshop', 'Seminar', 'Competition', etc.
+  event_type: String,      // 'in_person', 'online', 'hybrid'
+  visibility: String,      // 'public', 'members_only', 'private'
+  location: {
+    venue_name: String,
+    address: String,
+    city: String,
+    room: String
+  },
+  online_url: String,
+  start_date: Date,
+  end_date: Date,
+  registration_deadline: Date,
+  capacity: Number,
+  registration_count: Number,
+  ticket_price: Number,
+  is_free: Boolean,
+  status: String,          // 'draft', 'upcoming', 'ongoing', 'completed', 'cancelled'
+  created_by: String,      // UUID from auth-service
+  created_at: Date,
+  updated_at: Date
+}
+```
+
+### Registration
+
+```javascript
+{
+  event_id: ObjectId,
+  user_id: String,         // UUID from auth-service
+  user_email: String,      // Denormalized
+  user_name: String,       // Denormalized
+  ticket_id: String,       // UUID for QR code
+  status: String,          // 'registered', 'cancelled', 'attended', 'no_show'
+  registration_data: {
+    answers: [{
+      question_id: String,
+      question_text: String,
+      answer_value: String,
+      answer_type: String
+    }]
+  },
+  payment_info: {
+    amount: Number,
+    status: String
+  },
+  registered_at: Date
+}
+```
 
 ---
 
-## 🎉 Success Metrics
-
-- ✅ **US-014 & US-015** fully implemented
-- ✅ **100% test pass rate** achieved
-- ✅ **Production-ready** Docker setup
-- ✅ **MongoDB Atlas** cloud integration
-- ✅ **Complete documentation**
-
-The Event Service is ready for frontend integration and production deployment! 🚀
-
-# Production mode
-npm start
-```
-
-## 📊 Database Schema
-
-The service uses the following MongoDB collections:
-
-### Events
-- **Collection**: `events`
-- **Purpose**: Store event details
-- **Key Fields**: `club_id`, `title`, `description`, `location`, `start_at`, `end_at`, `fee`, `status`
-
-### Organizers
-- **Collection**: `organizers`
-- **Purpose**: Map users to events they organize
-- **Key Fields**: `event_id`, `user_id`
-
-### Registrations
-- **Collection**: `registrations`
-- **Purpose**: Track user registrations for events
-- **Key Fields**: `event_id`, `user_id`, `ticket_id`, `payment_id`, `status`
-
-### Event Interests
-- **Collection**: `event_interests`
-- **Purpose**: Track user interests in events
-- **Key Fields**: `event_id`, `user_id`
-
-### Event Tasks
-- **Collection**: `event_tasks`
-- **Purpose**: Manage tasks related to event organization
-- **Key Fields**: `event_id`, `title`, `status`, `assignee_id`, `due_date`
-
-### Participants
-- **Collection**: `participants`
-- **Purpose**: Track event participants (for join functionality)
-- **Key Fields**: `event_id`, `user_id`, `joined_at`
-
-## 🛠️ Available Scripts
-
-```bash
-npm start          # Start the production server
-npm run dev        # Start development server with nodemon
-npm run seed       # Seed database with sample data
-```
-
-## 🔌 API Endpoints
-
-### Events
-- `GET /api/events` - Get filtered events
-- `POST /api/events/:id/join` - Join an event
-
-### RSVP
-- `POST /api/events/:event_id/rsvp` - RSVP to an event
-
-### Health Check
-- `GET /health` - Service health check
-
-## 🧪 Sample Data
-
-The seeding script creates:
-- 5 sample events across different clubs
-- 7 organizer relationships
-- 5 event registrations
-- 7 event interests
-- 5 event tasks with different statuses
-- 5 participants for join functionality testing
-
-## 🔧 Environment Variables
-
-```env
-# MongoDB Atlas Configuration
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/event_service
-
-# Server Configuration
-PORT=3003
-NODE_ENV=development
-
-# External Services
-AUTH_SERVICE_URL=http://localhost:3001
-CLUB_SERVICE_URL=http://localhost:3002
-FINANCE_SERVICE_URL=http://localhost:3003
-```
-
-## 🧪 Testing the Join Event Endpoint
-
-```bash
-# Join an event (success)
-curl -X POST http://localhost:3003/api/events/<event_id>/join
-
-# Try to join the same event again (already joined error)
-curl -X POST http://localhost:3003/api/events/<event_id>/join
-
-# Try to join non-existent event (not found error)
-curl -X POST http://localhost:3003/api/events/invalid/join
-```
-
-## 🚨 Troubleshooting
-
-### Database Connection Issues
-
-If you see connection errors like `ECONNREFUSED ::1:27017`:
-
-1. **Check Environment Variable**: Ensure `MONGODB_URI` (not `MONGO_URI`) is set in your `.env` file
-2. **Verify MongoDB Atlas Connection**: Make sure your MongoDB Atlas cluster is running and accessible
-3. **Check Network Access**: Ensure your IP is whitelisted in MongoDB Atlas Network Access
-4. **Verify Credentials**: Double-check username and password in connection string
-
-### Common Fixes
-
-```bash
-# Verify environment variables are loaded
-node -e "require('dotenv').config(); console.log(process.env.MONGODB_URI)"
-
-# Test MongoDB connection
-node -e "
-const mongoose = require('mongoose');
-require('dotenv').config();
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ Connected!'))
-  .catch(err => console.error('❌ Failed:', err.message));
-"
-```
-
-### Port Configuration
-The service runs on port **3003** (as configured in `.env`), not 3000 as mentioned in some examples.
-
-## 📦 Dependencies
-
-- **express**: Web framework
-- **mongoose**: MongoDB ODM
-- **dotenv**: Environment variable management
-- **uuid**: Generate unique identifiers
-- **qrcode**: QR code generation
-- **nodemon**: Development auto-reload
-
-## 🏗️ Project Structure
-
-```
-src/
-├── config/
-│   ├── database.js      # MongoDB connection
-│   └── index.js         # Config exports
-├── models/
-│   ├── event.js         # Event model
-│   ├── organizer.js     # Organizer model
-│   ├── registration.js  # Registration model
-│   ├── eventInterest.js # Interest model
-│   ├── eventTask.js     # Task model
-│   ├── participant.js   # Participant model
-│   └── index.js         # Model exports
-├── routes/
-│   └── eventRoutes.js   # API routes
-├── controllers/
-│   └── eventController.js # Route handlers
-├── services/
-│   └── eventService.js  # Business logic
-├── scripts/
-│   └── seedData.js      # Database seeding
-└── index.js             # Application entry point
-```
+*Last Updated: November 2024*

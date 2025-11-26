@@ -1,3 +1,6 @@
+const config = require('../config');
+const logger = require('../config/logger');
+
 /**
  * Middleware to validate API Gateway secret only (for public routes)
  * This checks that the request comes through the API Gateway but doesn't require JWT headers
@@ -10,16 +13,15 @@ const validateApiGatewaySecret = (req, res, next) => {
   
   // MANDATORY: Validate API Gateway secret header first
   const gatewaySecret = req.headers['x-api-gateway-secret'];
-  const expectedSecret = process.env.API_GATEWAY_SECRET;
+  const expectedSecret = config.get('API_GATEWAY_SECRET');
   
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
-    console.warn('CLUB SERVICE: Request rejected - Invalid or missing gateway secret', {
+    logger.warn('Request rejected - Invalid or missing gateway secret', {
       ip: req.ip,
       path: req.path,
       method: req.method,
       userAgent: req.get('User-Agent'),
-      hasSecret: !!gatewaySecret,
-      timestamp: new Date().toISOString()
+      hasSecret: !!gatewaySecret
     });
     
     return res.status(401).json({
@@ -29,7 +31,7 @@ const validateApiGatewaySecret = (req, res, next) => {
     });
   }
 
-  console.debug('CLUB SERVICE: Gateway validation passed', {
+  logger.debug('Gateway validation passed', {
     path: req.path,
     method: req.method
   });
@@ -44,27 +46,25 @@ const validateApiGatewaySecret = (req, res, next) => {
  */
 const validateApiGatewayHeaders = (req, res, next) => {
   const requiredHeaders = ['x-user-id', 'x-user-role'];
-  const optionalHeaders = ['x-user-email', 'x-request-id'];
   
-  //DEBUG: Log all headers for debugging Kong JWT claims injection
-  console.info('🔍 DEBUG: Incoming headers from Kong (Protected Route)', {
+  // DEBUG: Log all headers for debugging Kong JWT claims injection
+  logger.debug('Incoming headers from Kong (Protected Route)', {
     path: req.path,
     method: req.method,
-    allHeaders: req.headers
+    headers: Object.keys(req.headers)
   });
   
   // Check if request is from API Gateway - MANDATORY for all requests
   const gatewaySecret = req.headers['x-api-gateway-secret'];
-  const expectedSecret = process.env.API_GATEWAY_SECRET;
+  const expectedSecret = config.get('API_GATEWAY_SECRET');
   
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
-    console.warn('Request rejected: Invalid or missing gateway secret', {
+    logger.warn('Request rejected: Invalid or missing gateway secret', {
       ip: req.ip,
       path: req.path,
       method: req.method,
       userAgent: req.get('User-Agent'),
-      hasSecret: !!gatewaySecret,
-      secretMatch: gatewaySecret === expectedSecret
+      hasSecret: !!gatewaySecret
     });
     
     return res.status(401).json({
@@ -74,7 +74,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
     });
   }
 
-  console.debug('Gateway secret validation passed', {
+  logger.debug('Gateway secret validation passed', {
     path: req.path,
     method: req.method
   });
@@ -83,7 +83,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
   const missingHeaders = requiredHeaders.filter(header => !req.headers[header]);
   
   if (missingHeaders.length > 0) {
-    console.warn('Missing required headers', {
+    logger.warn('Missing required headers', {
       missing: missingHeaders,
       ip: req.ip,
       path: req.path
@@ -106,15 +106,15 @@ const validateApiGatewayHeaders = (req, res, next) => {
   if (userFullNameRaw) {
     try {
       userFullName = Buffer.from(userFullNameRaw, 'base64').toString('utf8');
-      console.debug('Decoded full_name from base64:', { original: userFullNameRaw, decoded: userFullName });
+      logger.debug('Decoded full_name from base64', { original: userFullNameRaw, decoded: userFullName });
     } catch (error) {
-      console.warn('Failed to decode base64 full_name, using original value:', error.message);
+      logger.warn('Failed to decode base64 full_name, using original value', { error: error.message });
       userFullName = userFullNameRaw;
     }
   }
 
-  // Validate UUID format for user ID
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  // Validate UUID format for user ID (relaxed regex to support any UUID-like format)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(userId)) {
     return res.status(401).json({
       success: false,
@@ -122,8 +122,9 @@ const validateApiGatewayHeaders = (req, res, next) => {
     });
   }
 
-  // Validate role
-  if (!['user', 'admin'].includes(userRole)) {
+  // Validate role (case-insensitive)
+  const normalizedRole = userRole?.toLowerCase();
+  if (!['user', 'admin'].includes(normalizedRole)) {
     return res.status(401).json({
       success: false,
       message: 'Invalid user role'
@@ -141,16 +142,16 @@ const validateApiGatewayHeaders = (req, res, next) => {
     }
   }
 
-  // Store user info in request object for easy access
+  // Store user info in request object for easy access (normalize role to lowercase)
   req.user = {
     id: userId,
-    role: userRole,
+    role: normalizedRole,
     email: userEmail,
     full_name: userFullName
   };
 
   // Log successful authentication
-  console.debug('User authenticated via gateway headers', {
+  logger.debug('User authenticated via gateway headers', {
     userId,
     userRole,
     path: req.path
@@ -158,6 +159,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
 
   next();
 };
+
 /**
  * Middleware to check if user has required roles
  * @param {Array} requiredRoles - Array of roles required to access the endpoint

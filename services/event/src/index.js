@@ -1,21 +1,21 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
 import { eventRoutes } from './routes/eventRoutes.js';
 import { adminRoutes } from './routes/adminRoutes.js';
 import { connectToDatabase } from './config/database.js';
+import { config, logger } from './config/index.js';
 import cronJobManager from './utils/cronJobManager.js';
 import imageEventConsumer from './services/imageEventConsumer.js';
-
-// Load environment variables
-dotenv.config();
-
-console.log('🚀 Starting Event Service...');
-console.log('📁 Environment:', process.env.NODE_ENV);
-console.log('🔌 Port:', process.env.PORT || 3000);
+import userEventConsumer from './services/userEventConsumer.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.get('PORT');
+
+logger.info('Starting Event Service...', {
+  environment: config.get('NODE_ENV'),
+  port: PORT,
+  version: config.get('SERVICE_VERSION')
+});
 
 // Middleware
 app.use(bodyParser.json());
@@ -24,64 +24,90 @@ app.use(bodyParser.json());
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
-    service: 'event-service',
+    service: config.get('SERVICE_NAME'),
+    version: config.get('SERVICE_VERSION'),
+    environment: config.get('NODE_ENV'),
     timestamp: new Date().toISOString()
   });
+});
+
+// Readiness probe for Kubernetes
+app.get('/ready', async (req, res) => {
+  const isReady = mongoose.connection.readyState === 1;
+  res.status(isReady ? 200 : 503).json({ ready: isReady });
+});
+
+// Liveness probe for Kubernetes
+app.get('/live', (req, res) => {
+  res.status(200).json({ alive: true });
 });
 
 // Routes
 app.use(eventRoutes);
 app.use(adminRoutes);
 
+// Import mongoose for readiness check
+import mongoose from 'mongoose';
+
 // Start server
 const startServer = async () => {
   try {
-    console.log('🔄 Attempting to connect to database...');
+    logger.info('Attempting to connect to database...');
+    
     // Connect to MongoDB
     const dbConnected = await connectToDatabase();
     
-    console.log('📊 Database connection result:', dbConnected);
+    logger.info('Database connection result', { connected: dbConnected });
     
-    if (!dbConnected && process.env.NODE_ENV !== 'development') {
-      console.error('Could not connect to MongoDB. Exiting application.');
+    if (!dbConnected && !config.isDevelopment()) {
+      logger.error('Could not connect to MongoDB. Exiting application.');
       process.exit(1);
     }
     
-    // Initialize RabbitMQ image consumer
-    if (process.env.RABBITMQ_URL) {
-      try {
-        await imageEventConsumer.connect();
-        console.log('📥 Event service listening for image events');
-      } catch (error) {
-        console.warn('⚠️ Could not connect to RabbitMQ for image events:', error.message);
-      }
+    // Initialize RabbitMQ consumers (non-blocking - service starts even if RabbitMQ fails)
+    const rabbitmqConfig = config.getRabbitMQConfig();
+    if (rabbitmqConfig.url) {
+      // Image events consumer
+      imageEventConsumer.connect()
+        .then(() => logger.info('📥 Event service listening for image events'))
+        .catch(err => logger.warn('Image event consumer failed to connect', { error: err.message }));
+      
+      // User events consumer (for user data sync) - start in background
+      userEventConsumer.startConsuming()
+        .then(() => logger.info('📥 Event service listening for user events'))
+        .catch(err => logger.warn('User event consumer failed to connect', { error: err.message }));
     }
     
     app.listen(PORT, () => {
-      console.log(`🚀 Event service running on http://localhost:${PORT}`);
+      logger.info(`🚀 Event service started successfully`, {
+        port: PORT,
+        environment: config.get('NODE_ENV'),
+        version: config.get('SERVICE_VERSION')
+      });
+      
       if (!dbConnected) {
-        console.warn('⚠️ Running with limited functionality due to database connection issues');
-      } else {
+        logger.warn('Running with limited functionality due to database connection issues');
+      } else if (config.get('ENABLE_CRON_JOBS')) {
         // Start cron jobs only if database is connected
-        console.log('🔄 Starting cron jobs...');
+        logger.info('Starting cron jobs...');
         cronJobManager.startJobs();
       }
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', { error: error.message, stack: error.stack });
     process.exit(1);
   }
 };
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('📞 SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   cronJobManager.stopJobs();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('📞 SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   cronJobManager.stopJobs();
   process.exit(0);
 });

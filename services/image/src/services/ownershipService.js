@@ -1,4 +1,5 @@
 const cloudinary = require('../config/cloudinary');
+const logger = require('../config/logger');
 
 class OwnershipService {
   /**
@@ -34,7 +35,7 @@ class OwnershipService {
       
       return false;
     } catch (error) {
-      console.error('❌ Ownership verification failed:', error.message);
+      logger.error('Ownership verification failed', { publicId, error: error.message });
       
       // If we can't verify ownership (e.g., image doesn't exist), deny access
       return false;
@@ -106,11 +107,11 @@ class OwnershipService {
       return membershipData.role === 'club_manager' || membershipData.role === 'organizer';
       
     } catch (error) {
-      console.error('❌ Club manager verification failed:', error.message);
+      logger.error('Club manager verification failed', { clubId, userId, error: error.message });
       
       // If club service is unreachable, deny access for safety
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-        console.error('⚠️ Club service unreachable - denying access for safety');
+        logger.warn('Club service unreachable - denying access for safety');
         return false;
       }
       
@@ -169,11 +170,11 @@ class OwnershipService {
       return false;
       
     } catch (error) {
-      console.error('❌ Event access verification failed:', error.message);
+      logger.error('Event access verification failed', { eventId, userId, error: error.message });
       
       // If event service is unreachable, deny access for safety
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-        console.error('⚠️ Event service unreachable - denying access for safety');
+        logger.warn('Event service unreachable - denying access for safety');
         return false;
       }
       

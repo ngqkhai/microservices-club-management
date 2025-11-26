@@ -3,7 +3,7 @@ const jwtUtil = require('../utils/jwt');
 const publisher = require('../events/publisher');
 const logger = require('../config/logger');
 const config = require('../config');
-const userSyncService = require('./userSyncService');
+// userSyncService replaced with RabbitMQ events - see publisher.publishUserCreated/Updated
 const {
   AppError,
   NotFoundError,
@@ -149,27 +149,9 @@ class AuthService {
         email_verified_at: new Date()
       });
 
-      // Sync user creation with user service after email verification
-      const syncResult = await userSyncService.syncUserCreation({
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone || null,
-        avatar_url: user.avatar_url || null
-      });
-
-      if (syncResult.success !== false) {
-        logger.info('User synced with user service after email verification', {
-          userId: user.id,
-          email: user.email
-        });
-      } else {
-        logger.warn('Failed to sync user with user service, but email verification succeeded', {
-          userId: user.id,
-          email: user.email,
-          syncError: syncResult.error
-        });
-      }
+      // Publish user.created event to RabbitMQ
+      // Club-service and event-service will consume this to cache user data
+      await publisher.publishUserCreated(user);
 
       logger.info('Email verified successfully', {
         userId: user.id,
@@ -673,6 +655,9 @@ class AuthService {
       // Soft delete user (marks as deleted but keeps record for audit)
       await user.destroy();
 
+      // Publish user.deleted event
+      await publisher.publishUserDeleted(userId);
+
       return { message: 'Account deleted successfully' };
     } catch (error) {
       logger.error('Account deletion failed:', error, { userId });
@@ -709,6 +694,9 @@ class AuthService {
 
       // Soft delete user
       await user.destroy();
+
+      // Publish user.deleted event
+      await publisher.publishUserDeleted(targetUserId);
 
       return { message: 'User account deleted successfully' };
     } catch (error) {
@@ -789,13 +777,9 @@ class AuthService {
         }
       });
 
-      // Sync with user service if needed (can be removed after full consolidation)
-      try {
-        await userSyncService.syncUserUpdate(updatedUser);
-      } catch (syncError) {
-        logger.warn('User sync failed during profile update:', syncError);
-        // Don't fail the request if sync fails
-      }
+      // Publish user.updated event to RabbitMQ
+      // Club-service and event-service will consume this to update cached user data
+      await publisher.publishUserUpdated(updatedUser, Object.keys(updateData));
 
       logger.info('User profile updated', { userId, updatedFields: Object.keys(updateData) });
       return updatedUser;

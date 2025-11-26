@@ -1,6 +1,7 @@
 const Club = require('../models/club');
 const authServiceClient = require('../utils/authServiceClient');
 const eventServiceClient = require('../utils/eventServiceClient');
+const logger = require('../utils/logger');
 
 class ClubService {
   
@@ -78,7 +79,7 @@ class ClubService {
               upcoming_events: eventStats.upcoming_events // subset of published
             };
           } catch (error) {
-            console.error(`Error fetching event stats for club ${club.id}:`, error);
+            logger.error('Error fetching event stats for club', { clubId: club.id, error: error.message });
             // Return club data with zero event counts if stats fail
             return {
               ...club,
@@ -108,7 +109,7 @@ class ClubService {
         }
       };
     } catch (error) {
-      console.error('Error in getClubs service:', error);
+      logger.error('Error in getClubs service', { error: error.message, stack: error.stack });
       throw error;
     }
   }
@@ -258,7 +259,7 @@ class ClubService {
       }
       
       // Log manager validation success
-      console.log('✅ Manager user validated:', {
+      logger.info('Manager user validated', {
         user_id: manager_user_id,
         email: managerUser.data?.user?.email || managerUser.email,
         full_name: managerUser.data?.user?.full_name || managerUser.full_name,
@@ -282,7 +283,7 @@ class ClubService {
       }
       
     } catch (authError) {
-      console.error('❌ Manager validation failed:', authError.message);
+      logger.error('Manager validation failed', { error: authError.message });
       
       if (authError.name === 'USER_NOT_FOUND') {
         throw authError;
@@ -354,10 +355,10 @@ class ClubService {
     sanitizedClubData.type = type || category;
     
     try {
-      console.log('Creating club with data:', JSON.stringify(sanitizedClubData, null, 2));
+      logger.debug('Creating club with data', { clubData: sanitizedClubData });
       
       // Log the required fields to ensure they're all present
-      console.log('MongoDB Schema Required Fields Check:', {
+      logger.debug('MongoDB Schema Required Fields Check', {
         name: !!sanitizedClubData.name,
         category: !!sanitizedClubData.category,
         status: !!sanitizedClubData.status,
@@ -365,27 +366,9 @@ class ClubService {
         created_by: !!sanitizedClubData.created_by
       });
       
-      console.log('Optional Fields Present:', {
-        description: !!sanitizedClubData.description,
-        location: !!sanitizedClubData.location,
-        contact_email: !!sanitizedClubData.contact_email,
-        contact_phone: !!sanitizedClubData.contact_phone,
-        logo_url: !!sanitizedClubData.logo_url,
-        website_url: !!sanitizedClubData.website_url,
-        social_links: !!sanitizedClubData.social_links,
-        settings: !!sanitizedClubData.settings
-      });
-      
-      console.log('Manager Object Details:', {
-        user_id: !!sanitizedClubData.manager?.user_id,
-        full_name: !!sanitizedClubData.manager?.full_name,
-        email: !!sanitizedClubData.manager?.email,
-        assigned_at: !!sanitizedClubData.manager?.assigned_at
-      });
-      
       const newClub = await Club.create(sanitizedClubData);
       
-      console.log('✅ Club created successfully:', {
+      logger.info('Club created successfully', {
         club_id: newClub.id,
         name: newClub.name,
         category: newClub.category,
@@ -418,28 +401,27 @@ class ClubService {
           joined_at: new Date()
         };
         
-        console.log('Creating membership with data:', {
+        logger.debug('Creating membership for club creator', {
           club_id: clubId,
           user_id: userContext.userId,
-          role: 'club_manager',
-          status: 'active'
+          role: 'club_manager'
         });
         
         const membership = await Membership.create(membershipData);
         
-        console.log('✅ Membership created for club creator:', {
+        logger.info('Membership created for club creator', {
           membership_id: membership._id || membership.id,
           club_id: clubId,
           user_id: userContext.userId,
-          role: 'club_manager',
-          status: 'active'
+          role: 'club_manager'
         });
         
       } catch (membershipError) {
-        console.error('❌ Error creating membership for club creator:', membershipError);
-        console.error('Club object fields:', Object.keys(newClub));
-        console.error('newClub._id:', newClub._id);
-        console.error('newClub.id:', newClub.id);
+        logger.error('Error creating membership for club creator', {
+          error: membershipError.message,
+          clubFields: Object.keys(newClub),
+          clubId: newClub._id || newClub.id
+        });
         // Don't throw error here as club was created successfully
         // This is a secondary operation that shouldn't fail the main flow
       }
@@ -459,17 +441,11 @@ class ClubService {
       }
       
       if (error.name === 'MongoServerError' && error.message.includes('Document failed validation')) {
-        console.error('❌ MongoDB validation failed:', {
+        logger.error('MongoDB validation failed', {
           error: error.message,
           errInfo: error.errInfo,
-          schemaRulesNotSatisfied: error.errInfo?.details?.schemaRulesNotSatisfied,
-          data: sanitizedClubData
+          schemaRulesNotSatisfied: error.errInfo?.details?.schemaRulesNotSatisfied
         });
-        
-        // Log detailed schema validation errors
-        if (error.errInfo?.details?.schemaRulesNotSatisfied) {
-          console.error('Schema validation details:', JSON.stringify(error.errInfo.details.schemaRulesNotSatisfied, null, 2));
-        }
         
         const validationError = new Error('Club data validation failed. Please check required fields.');
         validationError.status = 400;
@@ -478,7 +454,7 @@ class ClubService {
         throw validationError;
       }
       
-      console.error('❌ Error creating club:', error);
+      logger.error('Error creating club', { error: error.message, stack: error.stack });
       throw error;
     }
   }
@@ -586,7 +562,7 @@ class ClubService {
         data: categories
       };
     } catch (error) {
-      console.error('Error getting categories:', error);
+      logger.error('Error getting categories', { error: error.message });
       throw error;
     }
   }
@@ -605,7 +581,7 @@ class ClubService {
         data: locations
       };
     } catch (error) {
-      console.error('Error getting locations:', error);
+      logger.error('Error getting locations', { error: error.message });
       throw error;
     }
   }
@@ -624,7 +600,7 @@ class ClubService {
         data: stats
       };
     } catch (error) {
-      console.error('Error getting stats:', error);
+      logger.error('Error getting stats', { error: error.message });
       throw error;
     }
   }
@@ -653,13 +629,13 @@ class ClubService {
     try {
       await Club.updateMemberCount(clubId, memberCount);
       
-      console.log('✅ Club member count updated:', {
+      logger.info('Club member count updated', {
         club_id: clubId,
         member_count: memberCount
       });
       
     } catch (error) {
-      console.error('❌ Error updating member count:', error);
+      logger.error('Error updating member count', { clubId, error: error.message });
       throw error;
     }
   }
@@ -696,7 +672,7 @@ class ClubService {
         throw error;
       }
       
-      console.log('✅ Club status updated:', {
+      logger.info('Club status updated', {
         club_id: clubId,
         new_status: status,
         updated_by: userContext.userId
@@ -716,7 +692,7 @@ class ClubService {
         throw castError;
       }
       
-      console.error('❌ Error updating club status:', error);
+      logger.error('Error updating club status', { clubId, error: error.message });
       throw error;
     }
   }
@@ -741,7 +717,7 @@ class ClubService {
         status: 'active'
       });
 
-      console.log(`Found ${memberships.length} memberships for user ${userId}`);
+      logger.debug('Found memberships for user', { userId, count: memberships.length });
       
       const roles = [];
       
@@ -757,13 +733,13 @@ class ClubService {
               role: membership.role,
               joinedAt: membership.joined_at
             });
-            console.log(`✅ Found club: ${club.name} for user ${userId}`);
+            logger.debug('Found club for user', { clubName: club.name, userId });
           } else {
             // Club not found, log but don't fail
-            console.warn(`⚠️  Club with ID ${membership.club_id} not found for user ${userId}`);
+            logger.warn('Club not found for user membership', { clubId: membership.club_id, userId });
           }
         } catch (clubError) {
-          console.error(`❌ Error fetching club ${membership.club_id}:`, clubError);
+          logger.error('Error fetching club', { clubId: membership.club_id, error: clubError.message });
           // Continue processing other memberships
         }
       }
@@ -774,7 +750,7 @@ class ClubService {
         data: roles
       };
     } catch (error) {
-      console.error('Error getting user club roles:', error);
+      logger.error('Error getting user club roles', { userId, error: error.message });
       throw error;
     }
   }
@@ -815,7 +791,7 @@ class ClubService {
         data: members
       };
     } catch (error) {
-      console.error('Error getting club members:', error);
+      logger.error('Error getting club members', { clubId, error: error.message });
       throw error;
     }
   }
@@ -878,7 +854,7 @@ class ClubService {
         duplicateError.name = 'DUPLICATE_ERROR';
         throw duplicateError;
       }
-      console.error('Error adding club member:', error);
+      logger.error('Error adding club member', { clubId, error: error.message });
       throw error;
     }
   }
@@ -929,7 +905,7 @@ class ClubService {
         data: membership
       };
     } catch (error) {
-      console.error('Error updating member role:', error);
+      logger.error('Error updating member role', { clubId, userId, error: error.message });
       throw error;
     }
   }
@@ -983,7 +959,7 @@ class ClubService {
         data: membership
       };
     } catch (error) {
-      console.error('Error removing member:', error);
+      logger.error('Error removing member', { clubId, userId, error: error.message });
       throw error;
     }
   }
@@ -1007,7 +983,7 @@ class ClubService {
 
       return !!membership;
     } catch (error) {
-      console.error('Permission check failed:', error);
+      logger.error('Permission check failed', { clubId, userId, error: error.message });
       return false;
     }
   }
@@ -1111,7 +1087,7 @@ class ClubService {
         status: 'active'
       }));
     } catch (error) {
-      console.error('Error getting current recruitments:', error);
+      logger.error('Error getting current recruitments', { clubId, error: error.message });
       return [];
     }
   }
@@ -1141,7 +1117,7 @@ class ClubService {
         active_recruitments: activeCount
       };
     } catch (error) {
-      console.error('Error getting recruitment statistics:', error);
+      logger.error('Error getting recruitment statistics', { clubId, error: error.message });
       return {
         total_recruitments: 0,
         active_recruitments: 0
@@ -1189,7 +1165,7 @@ class ClubService {
         updated_at: event.updated_at
       }));
     } catch (error) {
-      console.error('Error getting published events:', error);
+      logger.error('Error getting published events', { clubId, error: error.message });
       return [];
     }
   }
@@ -1221,7 +1197,7 @@ class ClubService {
         status: event.status || 'completed'
       }));
     } catch (error) {
-      console.error('Error getting completed events:', error);
+      logger.error('Error getting completed events', { clubId, error: error.message });
       return [];
     }
   }
@@ -1248,7 +1224,7 @@ class ClubService {
         past_events: eventStats.past_events || 0 // Backward compatibility
       };
     } catch (error) {
-      console.error('Error getting event statistics:', error);
+      logger.error('Error getting event statistics', { clubId, error: error.message });
       return {
         total_events: 0,
         published_events: 0,

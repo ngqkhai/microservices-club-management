@@ -1,0 +1,1427 @@
+{
+  "info": {
+    "name": "Club Management System",
+    "description": "Complete API collection for Club Management System microservices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clubId",
+      "value": "000000000000000000000001",
+      "type": "string"
+    },
+    {
+      "key": "eventId",
+      "value": "000000000000000000000101",
+      "type": "string"
+    },
+    {
+      "key": "campaignId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth Service",
+      "item": [
+        {
+          "name": "Health & Status",
+          "item": [
+            {
+              "name": "Health Check",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/health"
+              }
+            },
+            {
+              "name": "Liveness Probe",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/liveness"
+              }
+            },
+            {
+              "name": "Readiness Probe",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/readiness"
+              }
+            },
+            {
+              "name": "Version",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/version"
+              }
+            },
+            {
+              "name": "Public Key (JWKS)",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/.well-known/jwks.json"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Authentication",
+          "item": [
+            {
+              "name": "Register User",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data && response.data.user) {",
+                      "        pm.collectionVariables.set('userId', response.data.user.id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/register",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"full_name\": \"New Test User\",\n  \"gender\": \"male\",\n  \"date_of_birth\": \"1995-05-15\",\n  \"phone_number\": \"+84901234567\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Login (Demo User)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data) {",
+                      "        pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                      "        pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                      "        if (response.data.user) {",
+                      "            pm.collectionVariables.set('userId', response.data.user.id);",
+                      "        }",
+                      "    }",
+                      "    pm.test('Login successful', function() {",
+                      "        pm.expect(response.success).to.be.true;",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/login",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@clubmanagement.com\",\n  \"password\": \"UserPassword123!\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Login (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data) {",
+                      "        pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                      "        pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                      "        if (response.data.user) {",
+                      "            pm.collectionVariables.set('userId', response.data.user.id);",
+                      "        }",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/login",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@clubmanagement.com\",\n  \"password\": \"AdminPassword123!\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Login (Club Manager)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data) {",
+                      "        pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                      "        pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                      "        if (response.data.user) {",
+                      "            pm.collectionVariables.set('userId', response.data.user.id);",
+                      "        }",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/login",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"manager@clubmanagement.com\",\n  \"password\": \"ManagerPassword123!\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Refresh Token",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data) {",
+                      "        pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                      "        if (response.data.refreshToken) {",
+                      "            pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                      "        }",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/refresh",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/logout",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Password Management",
+          "item": [
+            {
+              "name": "Forgot Password",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/forgot-password",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@clubmanagement.com\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Reset Password",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/reset-password",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"reset-token-here\",\n  \"password\": \"NewSecurePassword123!\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/change-password",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"UserPassword123!\",\n  \"newPassword\": \"NewUserPassword123!\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Profile",
+          "item": [
+            {
+              "name": "Get Current User",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/me",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/profile",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/api/auth/profile",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Updated User Name\",\n  \"phone_number\": \"+84909876543\",\n  \"date_of_birth\": \"1995-01-15\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Update Profile Picture",
+              "request": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/api/auth/profile/picture",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"profile_picture_url\": \"https://example.com/new-avatar.jpg\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin Operations",
+          "item": [
+            {
+              "name": "Get All Users",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/users?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "users"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Get User By ID",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/auth/users/{{userId}}",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Delete User (Admin)",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/auth/users/{{userId}}",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Cleanup (Admin)",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/auth/cleanup",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏢 Club Service",
+      "item": [
+        {
+          "name": "Health & Metadata",
+          "item": [
+            {
+              "name": "Health Check",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/health"
+              }
+            },
+            {
+              "name": "Version",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/version"
+              }
+            },
+            {
+              "name": "Get Categories",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/categories"
+              }
+            },
+            {
+              "name": "Get Locations",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/locations"
+              }
+            },
+            {
+              "name": "Get Stats",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/stats"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clubs",
+          "item": [
+            {
+              "name": "Get All Clubs",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/clubs?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "clubs"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" },
+                    { "key": "category", "value": "", "disabled": true },
+                    { "key": "status", "value": "", "disabled": true },
+                    { "key": "search", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Club By ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    pm.test('Club retrieved successfully', function() {",
+                      "        pm.expect(response.success).to.be.true;",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}"
+              }
+            },
+            {
+              "name": "Create Club",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data && response.data._id) {",
+                      "        pm.collectionVariables.set('clubId', response.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/clubs",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Test Tech Club\",\n  \"description\": \"A club for technology enthusiasts\",\n  \"category\": \"Công nghệ\",\n  \"location\": \"Building A, Room 101\",\n  \"contact_email\": \"techclub@example.com\",\n  \"contact_phone\": \"+84901234567\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Update Club Status",
+              "request": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/status",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"active\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Members",
+          "item": [
+            {
+              "name": "Get Club Members",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/members",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Get Member Details",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/members/{{userId}}",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Add Member",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/members",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"role\": \"member\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Update Member Role",
+              "request": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/members/{{userId}}/role",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"co-manager\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Remove Member",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/members/{{userId}}",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Get User Club Roles",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/users/{{userId}}/club-roles",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recruitment Campaigns",
+          "item": [
+            {
+              "name": "Get Published Campaigns",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/campaigns/published?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "campaigns", "published"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Campaign By ID",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/campaigns/{{campaignId}}"
+              }
+            },
+            {
+              "name": "Get Club Campaigns (Manager)",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Create Campaign",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data && response.data._id) {",
+                      "        pm.collectionVariables.set('campaignId', response.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Fall 2025 Recruitment\",\n  \"description\": \"Join our amazing club!\",\n  \"start_date\": \"2025-12-01T00:00:00.000Z\",\n  \"end_date\": \"2025-12-31T23:59:59.000Z\",\n  \"max_participants\": 50,\n  \"requirements\": [\"Be a student\", \"Have passion for technology\"],\n  \"application_form\": [\n    {\n      \"field_name\": \"motivation\",\n      \"field_type\": \"textarea\",\n      \"required\": true,\n      \"label\": \"Why do you want to join?\"\n    }\n  ]\n}"
+                }
+              }
+            },
+            {
+              "name": "Publish Campaign",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/publish",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Apply to Campaign",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "// First get the campaign to know the questions",
+                      "// The answers format should be: [{question_id: 'q1', answer: 'your answer'}, ...]"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/campaigns/{{campaignId}}/apply",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"answers\": [\n    {\"question_id\": \"q1\", \"answer\": \"I am very passionate about technology!\"},\n    {\"question_id\": \"q2\", \"answer\": \"JavaScript, Python, Node.js\"},\n    {\"question_id\": \"q3\", \"answer\": \"Web Development\"}\n  ]\n}"
+                }
+              }
+            },
+            {
+              "name": "Get Campaign Applications",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/campaigns/{{campaignId}}/applications",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📅 Event Service",
+      "item": [
+        {
+          "name": "Health & Metadata",
+          "item": [
+            {
+              "name": "Health Check",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/health"
+              }
+            },
+            {
+              "name": "Get Categories",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/categories"
+              }
+            },
+            {
+              "name": "Get Locations",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/locations"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Events",
+          "item": [
+            {
+              "name": "Get All Events",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/events?page=1&limit=10&filter=all",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "events"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" },
+                    { "key": "filter", "value": "all" },
+                    { "key": "status", "value": "", "disabled": true },
+                    { "key": "category", "value": "", "disabled": true },
+                    { "key": "club_id", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Event By ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const response = pm.response.json();",
+                      "    pm.test('Event retrieved successfully', function() {",
+                      "        pm.expect(response.success).to.be.true;",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/{{eventId}}"
+              }
+            },
+            {
+              "name": "Get Club Events",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/clubs/{{clubId}}/events"
+              }
+            },
+            {
+              "name": "Get My Events",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/my",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Create Event",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const response = pm.response.json();",
+                      "    if (response.data && response.data._id) {",
+                      "        pm.collectionVariables.set('eventId', response.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/events",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Test Workshop Event\",\n  \"description\": \"An amazing workshop for learning new skills\",\n  \"short_description\": \"Learn new skills\",\n  \"category\": \"Workshop\",\n  \"club_id\": \"{{clubId}}\",\n  \"start_date\": \"2025-12-15T09:00:00.000Z\",\n  \"end_date\": \"2025-12-15T17:00:00.000Z\",\n  \"registration_deadline\": \"2025-12-14T23:59:59.000Z\",\n  \"location\": {\n    \"address\": \"Building B\",\n    \"room\": \"Room 201\",\n    \"location_type\": \"physical\"\n  },\n  \"max_participants\": 30,\n  \"visibility\": \"public\",\n  \"tags\": [\"workshop\", \"learning\", \"technology\"]\n}"
+                }
+              }
+            },
+            {
+              "name": "Update Event",
+              "request": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/api/events/{{eventId}}",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Updated Workshop Event\",\n  \"description\": \"Updated description for the workshop\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Event",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/events/{{eventId}}",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Interactions",
+          "item": [
+            {
+              "name": "Get User Event Status",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/user-status",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "RSVP to Event",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/rsvp",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"attending\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Join Event",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/join",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Leave Event",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/leave",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Toggle Favorite",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/favorite",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Get Favorite Events",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/users/favorite-events",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Get Event Ticket",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/ticket",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Event Management",
+          "item": [
+            {
+              "name": "Get Event Registrations",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/registrations",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Check-in Attendee",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/api/events/{{eventId}}/check-in",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"qr_code\": \"event-ticket-qr-code\"\n}"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🖼️ Image Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/images/health"
+          }
+        },
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/images/upload",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "entity_type",
+                  "value": "profile",
+                  "type": "text"
+                },
+                {
+                  "key": "entity_id",
+                  "value": "{{userId}}",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Multiple Images",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/images/upload/bulk",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "entity_type",
+                  "value": "event",
+                  "type": "text"
+                },
+                {
+                  "key": "entity_id",
+                  "value": "{{eventId}}",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Image Info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/images/sample-public-id",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Delete Image",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/images/sample-public-id",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notify Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/notify/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧪 Test Flows",
+      "item": [
+        {
+          "name": "1. Login as Demo User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "    pm.collectionVariables.set('userId', response.data.user.id);",
+                  "    pm.test('Login successful', () => pm.expect(response.success).to.be.true);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@clubmanagement.com\",\"password\":\"UserPassword123!\"}"
+            }
+          }
+        },
+        {
+          "name": "2. Get User Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Profile retrieved', () => {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/profile",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "3. Get All Clubs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Clubs retrieved', () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    if (response.data && response.data.clubs && response.data.clubs.length > 0) {",
+                  "        pm.collectionVariables.set('clubId', response.data.clubs[0]._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/clubs?page=1&limit=10"
+          }
+        },
+        {
+          "name": "4. Get All Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Events retrieved', () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    if (response.data && response.data.events && response.data.events.length > 0) {",
+                  "        pm.collectionVariables.set('eventId', response.data.events[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/events?page=1&limit=10"
+          }
+        },
+        {
+          "name": "5. Join Event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Event join attempted', () => {",
+                  "    pm.expect([200, 201, 400, 409]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/events/{{eventId}}/join",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}
+

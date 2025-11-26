@@ -1,4 +1,6 @@
 const amqp = require('amqplib');
+const config = require('../config');
+const logger = require('../config/logger');
 
 class ImageEventConsumer {
   constructor() {
@@ -8,7 +10,8 @@ class ImageEventConsumer {
 
   async connect() {
     try {
-      this.connection = await amqp.connect(process.env.RABBITMQ_URL);
+      const rabbitmqConfig = config.getRabbitMQConfig();
+      this.connection = await amqp.connect(rabbitmqConfig.url);
       this.channel = await this.connection.createChannel();
       
       // Declare exchange
@@ -21,13 +24,13 @@ class ImageEventConsumer {
       await this.channel.bindQueue(queueResult.queue, 'image_events', 'image.logo');
       await this.channel.bindQueue(queueResult.queue, 'image_events', 'image.cover');
       
-      console.log('✅ Club service connected to RabbitMQ image events');
+      logger.info('Connected to RabbitMQ image events');
       
       // Start consuming messages
       this.consumeMessages(queueResult.queue);
       
     } catch (error) {
-      console.error('❌ Failed to connect to RabbitMQ:', error.message);
+      logger.error('Failed to connect to RabbitMQ', { error: error.message });
       throw error;
     }
   }
@@ -38,7 +41,7 @@ class ImageEventConsumer {
         if (msg) {
           try {
             const content = JSON.parse(msg.content.toString());
-            console.log('📥 Received image event:', content.event_type);
+            logger.info('Received image event', { eventType: content.event_type });
             
             // Handle different event types
             if (content.event_type === 'image_uploaded') {
@@ -49,53 +52,53 @@ class ImageEventConsumer {
             this.channel.ack(msg);
             
           } catch (error) {
-            console.error('❌ Error processing message:', error.message);
+            logger.error('Error processing message', { error: error.message });
             // Reject the message and requeue
             this.channel.nack(msg, false, true);
           }
         }
       });
       
-      console.log('👂 Club service listening for image events...');
+      logger.info('Club service listening for image events...');
       
     } catch (error) {
-      console.error('❌ Error consuming messages:', error.message);
+      logger.error('Error consuming messages', { error: error.message });
     }
   }
 
   async handleImageUploaded(imageData) {
     try {
-      console.log('🖼️ Processing club image upload:', imageData);
+      logger.info('Processing club image upload', { imageData });
       
       const { entity_id, entity_type, type, url } = imageData;
       
       // Only process if this is for a club
       if (entity_type !== 'club' || !entity_id) {
-        console.log('⏭️ Skipping non-club image event');
+        logger.debug('Skipping non-club image event');
         return;
       }
       
       const { Club } = require('../config/database');
       
       if (type === 'logo') {
-        console.log(`📝 Updating club ${entity_id} logo: ${url}`);
+        logger.info('Updating club logo', { clubId: entity_id, url });
         await Club.findByIdAndUpdate(entity_id, { 
           logo_url: url,
           updated_at: new Date()
         });
-        console.log('✅ Club logo updated successfully');
+        logger.info('Club logo updated successfully', { clubId: entity_id });
         
       } else if (type === 'cover') {
-        console.log(`📝 Updating club ${entity_id} cover: ${url}`);
+        logger.info('Updating club cover', { clubId: entity_id, url });
         await Club.findByIdAndUpdate(entity_id, { 
           cover_url: url,
           updated_at: new Date()
         });
-        console.log('✅ Club cover updated successfully');
+        logger.info('Club cover updated successfully', { clubId: entity_id });
       }
       
     } catch (error) {
-      console.error('❌ Error handling club image upload:', error.message);
+      logger.error('Error handling club image upload', { error: error.message });
       // Don't throw - let RabbitMQ handle retry logic
     }
   }
@@ -104,9 +107,9 @@ class ImageEventConsumer {
     try {
       if (this.channel) await this.channel.close();
       if (this.connection) await this.connection.close();
-      console.log('🔌 Club service RabbitMQ connection closed');
+      logger.info('Club service RabbitMQ connection closed');
     } catch (error) {
-      console.error('❌ Error closing RabbitMQ connection:', error.message);
+      logger.error('Error closing RabbitMQ connection', { error: error.message });
     }
   }
 }

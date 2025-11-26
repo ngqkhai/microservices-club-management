@@ -1,326 +1,235 @@
-# Authentication Service
+# Auth Service
 
-A production-ready Node.js microservice for authentication and user management using Express.js, Sequelize ORM, and PostgreSQL.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green)
 
-## 🚀 Features
+> **Authentication and User Management microservice** - Handles user registration, login, JWT token management, password reset, email verification, and user profile operations for the Club Management System.
 
-- **User Registration & Authentication**
-- **JWT Token Management** (delegated to API Gateway)
-- **Password Reset Flow** with email notifications
-- **Role-Based Access Control** (USER, ADMIN)
-- **Account Security** (failed login attempts, account locking)
-- **Token Refresh Mechanism** with HTTP-only cookies
-- **Event Publishing** via RabbitMQ
-- **Comprehensive Logging** with Winston
-- **API Documentation** with Swagger/OpenAPI
-- **Rate Limiting** with different limits per endpoint
-- **Security Headers** and request sanitization
-- **Health Checks** and monitoring endpoints
-- **Production-Ready** error handling and graceful shutdown
+---
 
-## 🏗️ Architecture
+## 📋 Table of Contents
 
-This service is designed to work within a microservices architecture where:
-- **API Gateway** handles JWT verification and injects user headers
-- **Authentication Service** focuses on user management and token generation
-- **Event-driven communication** through RabbitMQ for inter-service coordination
+- [Tech Stack](#-tech-stack)
+- [Key Endpoints](#-key-endpoints)
+- [Environment Variables](#-environment-variables)
+- [Event-Driven Architecture](#-event-driven-architecture)
+- [Run with Docker](#-run-with-docker)
+- [Database Migrations](#-database-migrations)
+- [Health Checks](#-health-checks)
 
-## 📋 Prerequisites
+---
 
-- Node.js 18+
-- PostgreSQL 12+
-- RabbitMQ 3.8+ (optional but recommended)
-- SMTP server for email notifications
+## 🛠 Tech Stack
 
-## ⚡ Quick Start
+| Category | Technology |
+|----------|------------|
+| **Runtime** | Node.js 18+ |
+| **Framework** | Express.js 4.x |
+| **Database** | PostgreSQL 14+ |
+| **ORM** | Sequelize 6.x |
+| **Message Queue** | RabbitMQ (amqplib) |
+| **Authentication** | JWT (RS256 asymmetric) |
+| **Password Hashing** | bcryptjs |
+| **Validation** | Joi |
+| **Logging** | Winston + Daily Rotate |
+| **API Docs** | Swagger (swagger-jsdoc) |
+| **Security** | Helmet, express-rate-limit |
 
-### 1. Environment Setup
+---
+
+## 🔗 Key Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/auth/register` | Register a new user account |
+| `POST` | `/api/auth/login` | Authenticate user and return JWT tokens |
+| `POST` | `/api/auth/refresh` | Refresh access token using refresh token |
+| `POST` | `/api/auth/verify-email` | Verify user email with token |
+| `POST` | `/api/auth/forgot-password` | Request password reset email |
+| `POST` | `/api/auth/reset-password` | Reset password with token |
+| `GET` | `/api/auth/me` | Get current user profile |
+| `PUT` | `/api/auth/profile` | Update user profile |
+| `GET` | `/api/auth/users` | List all users (Admin only) |
+| `GET` | `/api/auth/health` | Service health check |
+
+**Swagger Documentation:** Available at `/api-docs` when running in development mode.
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file based on `env.example`:
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `NODE_ENV` | Environment (development/test/production) | No | `development` |
+| `PORT` | Service port | No | `3001` |
+| **Database** ||||
+| `DATABASE_URL` | PostgreSQL connection string | Yes* | - |
+| `DB_HOST` | Database host (if not using DATABASE_URL) | Yes* | `localhost` |
+| `DB_PORT` | Database port | No | `5432` |
+| `DB_NAME` | Database name | Yes* | - |
+| `DB_USERNAME` | Database username | Yes* | - |
+| `DB_PASSWORD` | 🔒 Database password | Yes* | - |
+| `DB_SSL` | Enable SSL for database | No | `false` |
+| **JWT & Security** ||||
+| `JWT_ALGORITHM` | JWT signing algorithm | No | `RS256` |
+| `JWT_EXPIRES_IN` | Access token expiry | No | `15m` |
+| `REFRESH_TOKEN_SECRET` | 🔒 Secret for refresh tokens (min 32 chars) | **Yes** | - |
+| `REFRESH_TOKEN_EXPIRES_IN` | Refresh token expiry | No | `7d` |
+| `BCRYPT_ROUNDS` | Password hashing rounds | No | `12` |
+| **RabbitMQ** ||||
+| `RABBITMQ_URL` | RabbitMQ connection URL | No | `amqp://localhost:5672` |
+| `RABBITMQ_EXCHANGE` | Exchange name | No | `club_events` |
+| **Frontend** ||||
+| `FRONTEND_BASE_URL` | Frontend URL for email links | No | `http://localhost:3000` |
+| **Rate Limiting** ||||
+| `RATE_LIMIT_WINDOW_MS` | Rate limit window (ms) | No | `900000` |
+| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | No | `100` |
+| **Logging** ||||
+| `LOG_LEVEL` | Log level (error/warn/info/debug) | No | `info` |
+
+> 🔒 = Sensitive variable - never commit to version control  
+> \* = Required if `DATABASE_URL` is not provided
+
+---
+
+## 📨 Event-Driven Architecture
+
+### Events Published (to RabbitMQ)
+
+| Event | Routing Key | Description | Consumers |
+|-------|-------------|-------------|-----------|
+| User Created | `user.created` | When a user verifies their email | club-service, event-service |
+| User Updated | `user.updated` | When user profile is updated | club-service, event-service |
+| User Deleted | `user.deleted` | When user account is deleted | club-service, event-service |
+| Email Verification | `send.email.verification` | Request to send verification email | notify-service |
+| Password Reset | `send.email.password.reset` | Request to send password reset email | notify-service |
+
+### Events Consumed
+
+| Event | Routing Key | Description | Publisher |
+|-------|-------------|-------------|-----------|
+| Image Uploaded | `image.uploaded` | Update user profile picture | image-service |
+
+---
+
+## 🐳 Run with Docker
+
+### Build the Image
 
 ```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit environment variables
-nano .env
+cd services/auth
+docker build -t club-management/auth-service:latest .
 ```
 
-### 2. Database Setup
+### Run the Container
 
 ```bash
-# Install dependencies
-npm install
+docker run -d \
+  --name auth-service \
+  -p 3001:3001 \
+  -e NODE_ENV=production \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/db \
+  -e REFRESH_TOKEN_SECRET=your-secret-min-32-characters-long \
+  -e RABBITMQ_URL=amqp://rabbitmq:5672 \
+  -e FRONTEND_BASE_URL=https://your-frontend.com \
+  club-management/auth-service:latest
+```
 
-# Run database migrations
+### Docker Compose (Recommended)
+
+```bash
+# From project root
+docker-compose up auth-service
+```
+
+---
+
+## 🗄 Database Migrations
+
+```bash
+# Run all pending migrations
 npm run migrate
 
-# Optional: Seed test data
+# Undo last migration
+npm run migrate:undo
+
+# Check migration status
+npm run migrate:status
+
+# Seed demo data
 npm run seed
+
+# Undo seeds
+npm run seed:undo
 ```
 
-### 3. Start the Service
+---
 
-```bash
-# Development mode
-npm run dev
+## ❤️ Health Checks
 
-# Production mode
-npm start
-```
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Full health check (DB + RabbitMQ status) |
+| `GET /api/auth/liveness` | Kubernetes liveness probe |
+| `GET /api/auth/readiness` | Kubernetes readiness probe |
 
-The service will be available at `http://localhost:3001`
+### Health Check Response
 
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `NODE_ENV` | Environment (development/production) | `development` | No |
-| `PORT` | Server port | `3001` | No |
-| `DB_HOST` | PostgreSQL host | `localhost` | Yes |
-| `DB_PORT` | PostgreSQL port | `5432` | No |
-| `DB_NAME` | Database name | `club_management_auth` | Yes |
-| `DB_USERNAME` | Database username | `postgres` | Yes |
-| `DB_PASSWORD` | Database password | | Yes |
-| `JWT_SECRET` | JWT signing secret | | Yes |
-| `REFRESH_TOKEN_SECRET` | Refresh token secret | | Yes |
-| `EMAIL_USER` | SMTP username | | Yes |
-| `EMAIL_PASSWORD` | SMTP password | | Yes |
-| `RABBITMQ_URL` | RabbitMQ connection URL | `amqp://localhost:5672` | No |
-| `API_GATEWAY_SECRET` | Shared secret with API Gateway | | Yes |
-
-### Database Configuration
-
-The service uses Sequelize ORM with PostgreSQL. Database configuration supports:
-- Connection pooling
-- SSL connections for production
-- Automatic migration management
-- Soft deletes with paranoid tables
-
-## 📚 API Documentation
-
-### Interactive Documentation
-Visit `http://localhost:3001/api/auth/docs` for Swagger UI documentation.
-
-### Core Endpoints
-
-#### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `POST /api/auth/refresh` - Refresh access token
-
-#### Password Management
-- `POST /api/auth/forgot-password` - Request password reset
-- `POST /api/auth/reset-password` - Reset password with token
-- `POST /api/auth/change-password` - Change user password
-
-#### User Management
-- `GET /api/auth/me` - Get current user information
-
-#### Health & Monitoring
-- `GET /api/auth/health` - Service health check
-- `GET /api/auth/liveness` - Kubernetes liveness probe
-- `GET /api/auth/readiness` - Kubernetes readiness probe
-
-#### Administration
-- `POST /api/auth/cleanup` - Cleanup expired tokens (Admin only)
-
-## 🔐 Security Features
-
-### API Gateway Integration
-- Trusts `x-user-id` and `x-user-role` headers from API Gateway
-- Validates gateway signature via `x-gateway-secret` header
-- No JWT verification within this service (delegated to gateway)
-
-### Password Security
-- bcrypt hashing with configurable rounds
-- Strong password requirements
-- Password history prevention
-- Account locking after failed attempts
-
-### Token Management
-- HTTP-only refresh token cookies
-- Token rotation on refresh
-- Automatic token cleanup
-- Device tracking for tokens
-
-### Rate Limiting
-- Different limits per endpoint type
-- IP and user-based limiting
-- Progressive penalties for violations
-- Whitelist support for trusted IPs
-
-### Request Security
-- CORS configuration
-- Security headers (Helmet.js)
-- Request sanitization
-- SQL injection prevention
-- XSS protection
-
-## 📊 Monitoring & Observability
-
-### Health Checks
-```bash
-# Basic health check
-curl http://localhost:3001/api/auth/health
-
-# Liveness probe
-curl http://localhost:3001/api/auth/liveness
-
-# Readiness probe
-curl http://localhost:3001/api/auth/readiness
-```
-
-### Logging
-- Structured JSON logging with Winston
-- Log rotation and retention
-- Different log levels for environments
-- Request/response correlation IDs
-
-### Metrics
-- Service uptime tracking
-- Database connection monitoring
-- RabbitMQ connection status
-- Token cleanup statistics
-
-## 🧪 Testing
-
-### Running Tests
-```bash
-# Run all tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run tests in watch mode
-npm run test:watch
-```
-
-### Test Structure
-- **Unit Tests**: Service logic, utilities, validators
-- **Integration Tests**: API endpoints, database operations
-- **Mock Services**: Email, RabbitMQ for isolated testing
-
-## 🚀 Deployment
-
-### Docker
-```bash
-# Build image
-docker build -t auth-service .
-
-# Run container
-docker run -p 3001:3001 --env-file .env auth-service
-```
-
-### Kubernetes
-```bash
-# Apply manifests
-kubectl apply -f k8s/
-
-# Check deployment
-kubectl get pods -l app=auth-service
-```
-
-### Health Checks
-Configure health checks in your orchestrator:
-- **Liveness**: `GET /api/auth/liveness`
-- **Readiness**: `GET /api/auth/readiness`
-
-## 🔄 Event Publishing
-
-The service publishes events to RabbitMQ for:
-- User registration
-- User login/logout
-- Password changes
-- Account lockouts
-
-### Event Schema
 ```json
 {
-  "id": "user-uuid",
-  "type": "user.registered",
-  "userId": "user-uuid",
-  "email": "user@example.com",
+  "service": "auth-service",
+  "version": "1.0.0",
+  "status": "healthy",
   "timestamp": "2024-01-01T00:00:00.000Z",
-  "metadata": {
-    "source": "auth-service",
-    "version": "1.0.0"
-  }
+  "uptime": 3600,
+  "database": { "status": "connected" },
+  "rabbitmq": { "connected": true }
 }
 ```
 
-## 🛠️ Database Management
+---
 
-### Migrations
-```bash
-# Create new migration
-npm run create:migration -- --name add-new-field
+## 📁 Project Structure
 
-# Run migrations
-npm run migrate
-
-# Rollback last migration
-npm run migrate:undo
+```
+services/auth/
+├── src/
+│   ├── config/           # Configuration management
+│   │   ├── index.js      # Joi-validated config
+│   │   ├── database.js   # Sequelize connection
+│   │   ├── rabbitmq.js   # RabbitMQ setup
+│   │   └── logger.js     # Winston logger
+│   ├── controllers/      # Request handlers
+│   ├── events/           # RabbitMQ publishers
+│   ├── middlewares/      # Auth, rate limiting, security
+│   ├── migrations/       # Sequelize migrations
+│   ├── models/           # Sequelize models
+│   ├── routes/           # Express routes
+│   ├── seeders/          # Demo data
+│   ├── services/         # Business logic
+│   └── utils/            # JWT, validation helpers
+├── Dockerfile
+├── package.json
+└── env.example
 ```
 
-### Seeders
-```bash
-# Create new seeder
-npm run create:seed -- --name demo-users
+---
 
-# Run seeders
-npm run seed
+## 🔑 JWT Key Generation
+
+The service uses RS256 (asymmetric) JWT signing. Generate keys:
+
+```bash
+# Generate private key
+openssl genrsa -out src/config/keys/private.pem 2048
+
+# Generate public key
+openssl rsa -in src/config/keys/private.pem -pubout -out src/config/keys/public.pem
 ```
 
-## 🐛 Troubleshooting
+---
 
-### Common Issues
-
-#### Database Connection Failed
-- Check PostgreSQL is running
-- Verify connection credentials
-- Ensure database exists
-- Check network connectivity
-
-#### RabbitMQ Connection Issues
-- Service continues without RabbitMQ
-- Check RabbitMQ server status
-- Verify connection URL
-- Review network policies
-
-#### Email Delivery Problems
-- Check SMTP configuration
-- Verify email credentials
-- Test with email service provider
-- Review spam/security settings
-
-### Debug Mode
-```bash
-# Enable debug logging
-LOG_LEVEL=debug npm run dev
-
-# Database query logging
-DB_LOGGING=true npm run dev
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
-## 📧 Support
-
-For support and questions:
-- Email: support@clubmanagement.com
-- Documentation: `/api/auth/docs`
-- Issues: GitHub Issues 
+*Last Updated: November 2024*

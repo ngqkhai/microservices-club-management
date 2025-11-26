@@ -56,18 +56,17 @@ class RabbitMQConfig {
   }
 
   /**
-   * Setup email queues that the notification service expects
+   * Setup all queues that other services expect
    */
   async setupEmailQueues() {
     try {
-      // Queue names use underscores, routing keys use dots
+      // Email queues (Queue names use underscores, routing keys use dots)
       const emailQueues = [
         { queue: 'send_email_verification', routingKey: 'send.email.verification' },
         { queue: 'send_email_password_reset', routingKey: 'send.email.password.reset' }
       ];
 
       for (const { queue, routingKey } of emailQueues) {
-        // Assert queue
         await this.channel.assertQueue(queue, { 
           durable: true,
           arguments: {
@@ -75,22 +74,37 @@ class RabbitMQConfig {
             'x-max-retries': 3
           }
         });
-
-        // Bind queue to exchange with routing key
         await this.channel.bindQueue(queue, this.exchange, routingKey);
-        
         logger.info(`Email queue setup completed: ${queue} -> ${routingKey}`);
       }
 
+      // User event queues for club-service and event-service
+      const userEventQueues = [
+        { queue: 'club_user_sync_queue', routingKeys: ['user.created', 'user.updated', 'user.deleted'] },
+        { queue: 'event_user_sync_queue', routingKeys: ['user.created', 'user.updated', 'user.deleted'] }
+      ];
+
+      for (const { queue, routingKeys } of userEventQueues) {
+        await this.channel.assertQueue(queue, { 
+          durable: true,
+          arguments: {
+            'x-message-ttl': 86400000, // 24 hours TTL
+            'x-dead-letter-exchange': `${this.exchange}.dlx` // Dead letter exchange
+          }
+        });
+        for (const routingKey of routingKeys) {
+          await this.channel.bindQueue(queue, this.exchange, routingKey);
+        }
+        logger.info(`User sync queue setup completed: ${queue}`);
+      }
+
       // Also setup the general auth events queue for backwards compatibility
-      await this.channel.assertQueue(this.queue, { 
-        durable: true 
-      });
+      await this.channel.assertQueue(this.queue, { durable: true });
       await this.channel.bindQueue(this.queue, this.exchange, 'auth.*');
       
       logger.info(`Auth events queue setup completed: ${this.queue}`);
     } catch (error) {
-      logger.error('Failed to setup email queues:', error);
+      logger.error('Failed to setup queues:', error);
       throw error;
     }
   }

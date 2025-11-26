@@ -1,331 +1,302 @@
 # Notification Service
 
-A comprehensive microservice for handling all notification delivery in the Club Management System. This service processes email notifications via RabbitMQ message queues and supports multiple email types with beautiful, responsive templates.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green)
 
-## Features
+> **Notification microservice** - Handles email notifications for user verification, password resets, event reminders, and announcements for the Club Management System.
 
-- **Multi-Channel Support**: Email notifications with extensible architecture for SMS and Push notifications
-- **Message Queue Integration**: RabbitMQ-based message consumption with retry logic and dead letter handling
-- **Beautiful Email Templates**: Responsive HTML/text templates with Handlebars templating
-- **Production Ready**: Comprehensive logging, health checks, monitoring, and graceful shutdown
-- **Security First**: Rate limiting, input sanitization, CORS, and security headers
-- **Highly Configurable**: Environment-based configuration with validation
+---
 
-## Architecture
+## 📋 Table of Contents
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Auth Service  │    │  Event Service  │    │  Other Services │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          │ Publish Events       │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-                          ┌──────▼──────┐
-                          │  RabbitMQ   │
-                          │  Exchange   │
-                          └──────┬──────┘
-                                 │
-                    ┌────────────┼────────────┐
-                    │            │            │
-              ┌─────▼─────┐ ┌────▼────┐ ┌─────▼─────┐
-              │email.     │ │email.   │ │email.     │
-              │verification│ │password.│ │rsvp       │
-              │           │ │reset    │ │           │
-              └─────┬─────┘ └────┬────┘ └─────┬─────┘
-                    │            │            │
-                    └────────────┼────────────┘
-                                 │
-                        ┌────────▼────────┐
-                        │  Notification   │
-                        │    Service      │
-                        │                 │
-                        │ ┌─────────────┐ │
-                        │ │   Email     │ │
-                        │ │  Service    │ │
-                        │ └─────────────┘ │
-                        └─────────────────┘
-                                 │
-                        ┌────────▼────────┐
-                        │  SMTP Server    │
-                        │  (Gmail, etc.)  │
-                        └─────────────────┘
-```
+- [Tech Stack](#-tech-stack)
+- [Key Endpoints](#-key-endpoints)
+- [Environment Variables](#-environment-variables)
+- [Event-Driven Architecture](#-event-driven-architecture)
+- [Run with Docker](#-run-with-docker)
+- [Email Templates](#-email-templates)
+- [Health Checks](#-health-checks)
 
-## Supported Email Types
+---
 
-### 1. Email Verification
-- **Queue**: `send.email.verification`
-- **Purpose**: User registration email verification
-- **Template**: Professional verification with security warnings
+## 🛠 Tech Stack
 
-### 2. Password Reset
-- **Queue**: `send.email.password.reset`
-- **Purpose**: Password recovery emails
-- **Template**: Security-focused with password tips
+| Category | Technology |
+|----------|------------|
+| **Runtime** | Node.js 18+ |
+| **Framework** | Express.js 4.x |
+| **Message Queue** | RabbitMQ (amqplib) |
+| **Email** | Nodemailer |
+| **Templates** | Handlebars |
+| **Validation** | Joi |
+| **Logging** | Winston + Daily Rotate |
+| **Security** | Helmet, express-rate-limit |
 
-### 3. RSVP Invitations (Future)
-- **Queue**: `send.email.rsvp`
-- **Purpose**: Event invitations with RSVP buttons
-- **Template**: Rich event details with interactive elements
+---
 
-### 4. Announcements (Future)
-- **Queue**: `send.email.announcement`
-- **Purpose**: Bulk announcements to members
-- **Template**: Rich content with unsubscribe options
+## 🔗 Key Endpoints
 
-## Quick Start
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Service health check |
+| `GET` | `/health/detailed` | Detailed health (SMTP + RabbitMQ) |
+| `GET` | `/ready` | Kubernetes readiness probe |
+| `GET` | `/live` | Kubernetes liveness probe |
 
-### 1. Environment Setup
+> **Note:** This service is primarily event-driven. It consumes messages from RabbitMQ queues and sends emails. HTTP endpoints are mainly for health checks.
 
-Copy the environment template:
-```bash
-cp .env.example .env
-```
+---
 
-Configure your email settings in `.env`:
+## 🔐 Environment Variables
+
+Create a `.env` file based on `env.example`:
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `NODE_ENV` | Environment (development/test/production) | No | `development` |
+| `PORT` | Service port | No | `3005` |
+| **RabbitMQ** ||||
+| `RABBITMQ_URL` | RabbitMQ connection URL | No | `amqp://localhost:5672` |
+| `RABBITMQ_EXCHANGE` | Exchange name | No | `club_events` |
+| `RABBITMQ_EMAIL_VERIFICATION_QUEUE` | Queue for email verification | No | `send_email_verification` |
+| `RABBITMQ_PASSWORD_RESET_QUEUE` | Queue for password reset | No | `send_email_password_reset` |
+| `MAX_RETRY_ATTEMPTS` | Max retries for failed messages | No | `3` |
+| **SMTP Configuration** ||||
+| `SMTP_HOST` | 🔒 SMTP server host | **Yes** | - |
+| `SMTP_PORT` | SMTP server port | No | `587` |
+| `SMTP_SECURE` | Use TLS (true for 465, false for 587) | No | `false` |
+| `SMTP_USER` | 🔒 SMTP username | **Yes** | - |
+| `SMTP_PASS` | 🔒 SMTP password/app password | **Yes** | - |
+| `SENDER_EMAIL` | From email address | **Yes** | - |
+| `SENDER_NAME` | From name | No | `Club Management` |
+| **Frontend URLs** ||||
+| `FRONTEND_BASE_URL` | Frontend URL for email links | No | `http://localhost:3000` |
+| **Security** ||||
+| `API_GATEWAY_SECRET` | 🔒 Secret for gateway validation | No | - |
+| **Logging** ||||
+| `LOG_LEVEL` | Log level (error/warn/info/debug) | No | `info` |
+
+> 🔒 = Sensitive variable - never commit to version control
+
+### Gmail App Password Setup
+
+1. Enable 2-Factor Authentication on your Google account
+2. Go to Google Account → Security → App passwords
+3. Create a new app password for "Mail"
+4. Use this password as `SMTP_PASS`
+
 ```env
-# Email Configuration
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-EMAIL_FROM=Club Management <your-email@gmail.com>
-
-# RabbitMQ Configuration
-RABBITMQ_URL=amqp://localhost:5672
-RABBITMQ_EXCHANGE=club_events
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Start the Service
-
-Development mode:
-```bash
-npm run dev
-```
-
-Production mode:
-```bash
-npm start
-```
-
-### 4. Health Check
-
-Check if the service is running:
-```bash
-curl http://localhost:3005/health
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `NODE_ENV` | Environment (development/production) | development | No |
-| `PORT` | HTTP server port | 3005 | No |
-| `HOST` | HTTP server host | 0.0.0.0 | No |
-| `EMAIL_SERVICE` | Email service provider | gmail | Yes |
-| `EMAIL_USER` | Email username | | Yes |
-| `EMAIL_PASSWORD` | Email password/app password | | Yes |
-| `EMAIL_FROM` | From email address | | Yes |
-| `RABBITMQ_URL` | RabbitMQ connection URL | amqp://localhost:5672 | Yes |
-| `LOG_LEVEL` | Logging level | info | No |
-| `RATE_LIMIT_MAX_REQUESTS` | Rate limit per window | 100 | No |
-
-### Email Provider Setup
-
-#### Gmail Setup
-1. Enable 2-factor authentication
-2. Generate an App Password
-3. Use your Gmail address as `EMAIL_USER`
-4. Use the App Password as `EMAIL_PASSWORD`
-
-#### Custom SMTP
-```env
-EMAIL_SERVICE=custom
-SMTP_HOST=smtp.yourdomain.com
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_SECURE=false
-EMAIL_USER=notifications@yourdomain.com
-EMAIL_PASSWORD=your-password
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-16-char-app-password
+SENDER_EMAIL=your-email@gmail.com
 ```
 
-## Message Schemas
+---
 
-### Email Verification
+## 📨 Event-Driven Architecture
+
+### Events Consumed (from RabbitMQ)
+
+| Event | Routing Key | Queue | Description |
+|-------|-------------|-------|-------------|
+| Email Verification | `send.email.verification` | `send_email_verification` | Send verification email to new users |
+| Password Reset | `send.email.password.reset` | `send_email_password_reset` | Send password reset link |
+| RSVP Confirmation | `send.email.rsvp` | `send_email_rsvp` | Confirm event registration |
+| Announcement | `send.email.announcement` | `send_email_announcement` | Club/event announcements |
+
+### Message Payload Example (`send.email.verification`)
+
 ```json
 {
+  "id": "message-uuid",
   "type": "send.email.verification",
+  "timestamp": "2024-01-01T00:00:00.000Z",
   "userId": "user-uuid",
   "email": "user@example.com",
-  "link": "https://app.com/verify/token",
   "fullName": "John Doe",
-  "timestamp": "2024-01-15T10:30:00Z"
+  "link": "http://localhost:3000/verify-email?token=abc123"
 }
 ```
 
-### Password Reset
-```json
-{
-  "type": "send.email.password.reset",
-  "userId": "user-uuid",
-  "email": "user@example.com", 
-  "link": "https://app.com/reset/token",
-  "fullName": "John Doe",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
+### Message Processing
 
-## API Endpoints
+1. Message received from queue
+2. Validate payload structure
+3. Load appropriate email template
+4. Render template with data
+5. Send email via SMTP
+6. ACK message on success
+7. Retry with exponential backoff on failure
+8. Dead-letter after max retries
 
-### Health Checks
-- `GET /health` - Basic health status
-- `GET /health/detailed` - Detailed component health
-- `GET /health/readiness` - Kubernetes readiness probe
-- `GET /health/liveness` - Kubernetes liveness probe
-- `GET /health/stats` - Service statistics
+---
 
-### Admin Endpoints
-- `POST /health/admin/consumers/restart` - Restart RabbitMQ consumers
-- `POST /health/admin/stats/reset` - Reset statistics
-- `POST /health/admin/templates/reload` - Reload email templates
-- `POST /health/admin/email/test` - Send test email
+## 🐳 Run with Docker
 
-## Development
+### Build the Image
 
-### Running Tests
 ```bash
-npm test
-npm run test:watch
-npm run test:coverage
+cd services/notify
+docker build -t club-management/notify-service:latest .
 ```
 
-### Linting
+### Run the Container
+
 ```bash
-npm run lint
-npm run lint:fix
+docker run -d \
+  --name notify-service \
+  -p 3005:3005 \
+  -e NODE_ENV=production \
+  -e RABBITMQ_URL=amqp://rabbitmq:5672 \
+  -e SMTP_HOST=smtp.gmail.com \
+  -e SMTP_PORT=587 \
+  -e SMTP_USER=your-email@gmail.com \
+  -e SMTP_PASS=your-app-password \
+  -e SENDER_EMAIL=your-email@gmail.com \
+  -e FRONTEND_BASE_URL=https://your-app.com \
+  club-management/notify-service:latest
 ```
 
-### Template Development
+### Docker Compose (Recommended)
 
-Email templates are located in `src/templates/`:
+```bash
+# From project root
+docker-compose up notify-service
+```
+
+---
+
+## 📧 Email Templates
+
+Templates are stored in `src/templates/` using Handlebars:
+
 ```
 src/templates/
 ├── email-verification/
 │   ├── index.html        # HTML template
-│   ├── index.txt         # Plain text template
-│   └── meta.json         # Template metadata
+│   ├── index.txt         # Plain text fallback
+│   └── meta.json         # Subject line, etc.
 └── password-reset/
     ├── index.html
     ├── index.txt
     └── meta.json
 ```
 
-Template variables use Handlebars syntax:
-```html
-<h1>Hello {{fullName}}</h1>
-<a href="{{verificationLink}}">Verify Email</a>
+### Template Variables
+
+| Template | Available Variables |
+|----------|---------------------|
+| `email-verification` | `fullName`, `verificationLink`, `frontendUrl` |
+| `password-reset` | `fullName`, `resetLink`, `expiryTime`, `frontendUrl` |
+| `rsvp` | `fullName`, `eventTitle`, `eventDate`, `eventLocation` |
+| `announcement` | `title`, `content`, `clubName`, `actionUrl` |
+
+### Adding a New Template
+
+1. Create folder: `src/templates/your-template/`
+2. Add `index.html`, `index.txt`, and `meta.json`
+3. Update the handler in `src/handlers/notificationHandler.js`
+
+---
+
+## ❤️ Health Checks
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Basic health check |
+| `GET /health/detailed` | Detailed status (SMTP + RabbitMQ) |
+| `GET /ready` | Kubernetes readiness probe |
+| `GET /live` | Kubernetes liveness probe |
+
+### Detailed Health Response
+
+```json
+{
+  "status": "healthy",
+  "service": "notification-service",
+  "version": "1.0.0",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "checks": {
+    "rabbitmq": {
+      "connected": true,
+      "queues": ["send_email_verification", "send_email_password_reset"]
+    },
+    "smtp": {
+      "configured": true,
+      "host": "smtp.gmail.com",
+      "port": 587
+    }
+  }
+}
 ```
 
-## Monitoring
+---
 
-### Logging
+## 📁 Project Structure
 
-The service provides structured logging with multiple transports:
-- Console (development)
-- Rotating files (production)
-- Error-specific logs
-- Email operation logs
-
-### Metrics
-
-Key metrics available via `/health/stats`:
-- Messages processed/failed
-- Email delivery statistics
-- Consumer health and uptime
-- System resource usage
-
-### Health Checks
-
-Multiple health check endpoints for different monitoring needs:
-- Basic health for load balancers
-- Detailed health for monitoring systems
-- Kubernetes-specific probes
-
-## Deployment
-
-### Docker (Future)
-```bash
-docker build -t notification-service .
-docker run -p 3005:3005 --env-file .env notification-service
+```
+services/notify/
+├── src/
+│   ├── config/           # Configuration
+│   │   ├── email.js      # SMTP configuration
+│   │   ├── logger.js     # Winston logger
+│   │   └── rabbitmq.js   # RabbitMQ setup
+│   ├── handlers/         # Message handlers
+│   │   └── notificationHandler.js
+│   ├── middlewares/      # Auth middleware
+│   ├── routes/           # Health check routes
+│   ├── services/         # Business logic
+│   │   ├── consumerService.js  # RabbitMQ consumers
+│   │   └── emailService.js     # Email sending
+│   ├── templates/        # Email templates
+│   │   ├── email-verification/
+│   │   └── password-reset/
+│   ├── app.js            # Express app
+│   └── server.js         # Entry point
+├── Dockerfile
+├── package.json
+└── env.example
 ```
 
-### Process Manager
-```bash
-# Using PM2
-pm2 start src/server.js --name notification-service
+---
 
-# Using systemd
-sudo systemctl start notification-service
-```
+## 🔄 Retry Logic
 
-## Troubleshooting
+Failed messages are retried with exponential backoff:
 
-### Common Issues
+| Attempt | Delay |
+|---------|-------|
+| 1 | 2 seconds |
+| 2 | 4 seconds |
+| 3 | 8 seconds |
+| 4+ | Dead-letter queue |
 
-1. **Email not sending**
-   - Check email credentials in `.env`
-   - Verify SMTP settings
-   - Check firewall/security groups
+Messages include `x-retry-count` header to track attempts.
 
-2. **RabbitMQ connection failed**
-   - Verify RabbitMQ is running
-   - Check connection URL format
-   - Verify network connectivity
+---
 
-3. **Templates not loading**
-   - Check template file permissions
-   - Verify template directory path
-   - Check for syntax errors in templates
+## 🧪 Testing Email Locally
 
-### Debug Mode
+For local development without a real SMTP server, use:
 
-Enable debug logging:
-```env
-LOG_LEVEL=debug
-NODE_ENV=development
-```
+1. **Mailhog** (Docker):
+   ```bash
+   docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog
+   ```
+   Set `SMTP_HOST=localhost` and `SMTP_PORT=1025`. View emails at `http://localhost:8025`.
 
-### Testing Email Delivery
+2. **Ethereal** (Free testing service):
+   ```bash
+   # Get temporary credentials at https://ethereal.email/
+   SMTP_HOST=smtp.ethereal.email
+   SMTP_PORT=587
+   SMTP_USER=your-ethereal-user
+   SMTP_PASS=your-ethereal-pass
+   ```
 
-Send a test email:
-```bash
-curl -X POST http://localhost:3005/health/admin/email/test \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "type": "verification"}'
-```
+---
 
-## Contributing
-
-1. Follow the existing code style
-2. Add tests for new features
-3. Update documentation
-4. Ensure all health checks pass
-
-## Security
-
-- All inputs are sanitized
-- Rate limiting prevents abuse
-- CORS configured for frontend access
-- Security headers applied
-- No sensitive data in logs
-
-## License
-
-MIT License - see LICENSE file for details 
+*Last Updated: November 2024*

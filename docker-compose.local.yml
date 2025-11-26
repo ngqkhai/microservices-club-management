@@ -1,0 +1,188 @@
+# =============================================================================
+# LOCAL DEVELOPMENT DOCKER COMPOSE
+# =============================================================================
+# This file provides local database containers for development.
+# No cloud credentials needed - everything runs locally.
+#
+# Usage:
+#   docker-compose -f docker-compose.local.yml up -d
+#
+# Or combine with main compose file:
+#   docker-compose -f docker-compose.local.yml -f docker-compose.yml up -d
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # DATABASES
+  # ===========================================================================
+
+  # PostgreSQL for Auth Service
+  postgres:
+    image: postgres:16-alpine
+    container_name: club_management_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_local_dev
+      POSTGRES_DB: auth_service_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database_script/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - club_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_service_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # MongoDB for Club and Event Services
+  mongodb:
+    image: mongo:7.0
+    container_name: club_management_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo_local_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./database_script/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - club_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # RabbitMQ for Message Queuing
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: club_management_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbitmq
+      RABBITMQ_DEFAULT_PASS: rabbitmq_local_dev
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - club_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # MinIO - S3-Compatible Object Storage (Cloudinary Alternative)
+  minio:
+    image: minio/minio:latest
+    container_name: club_management_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_local_dev
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # MinIO Console (Web UI)
+    volumes:
+      - minio_data:/data
+    networks:
+      - club_network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # MinIO Client - Initialize buckets on startup
+  minio-init:
+    image: minio/mc:latest
+    container_name: club_management_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin_local_dev;
+      mc mb myminio/club-management --ignore-existing;
+      mc anonymous set download myminio/club-management;
+      mc mb myminio/club-management-private --ignore-existing;
+      echo 'MinIO buckets initialized successfully!';
+      exit 0;
+      "
+    networks:
+      - club_network
+
+  # ===========================================================================
+  # OPTIONAL: Database Admin Tools
+  # ===========================================================================
+
+  # pgAdmin for PostgreSQL management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: club_management_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin_local_dev
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - club_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    profiles:
+      - tools  # Only starts with: docker-compose --profile tools up
+
+  # Mongo Express for MongoDB management (optional)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: club_management_mongo_express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: mongo
+      ME_CONFIG_MONGODB_ADMINPASSWORD: mongo_local_dev
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:mongo_local_dev@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin_local_dev
+    ports:
+      - "8081:8081"
+    networks:
+      - club_network
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    profiles:
+      - tools  # Only starts with: docker-compose --profile tools up
+
+volumes:
+  postgres_data:
+    name: club_management_postgres_data
+  mongodb_data:
+    name: club_management_mongodb_data
+  rabbitmq_data:
+    name: club_management_rabbitmq_data
+  minio_data:
+    name: club_management_minio_data
+  pgadmin_data:
+    name: club_management_pgadmin_data
+
+networks:
+  club_network:
+    driver: bridge
+

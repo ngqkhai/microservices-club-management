@@ -76,6 +76,11 @@ eventRoutes.get('/api/events/categories', validateApiGatewaySecret, getEventCate
  */
 eventRoutes.get('/api/events/locations', validateApiGatewaySecret, getEventLocations);
 
+// Health check route - declare BEFORE :id to avoid matching 'health' as ID
+eventRoutes.get('/api/events/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'event-service' });
+});
+
 // My events for authenticated user - declare BEFORE :id to avoid matching 'my' as ID
 eventRoutes.get('/api/events/my', authMiddleware, requireUser, getMyEvents);
 eventRoutes.get('/api/events/:id', validateApiGatewaySecret, getEventById);

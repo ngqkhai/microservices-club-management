@@ -537,7 +537,7 @@ router.post('/reset-password', validateApiGatewaySecret, authLimiter, validateRe
  *             schema:
  *               $ref: '#/components/schemas/HealthResponse'
  */
-router.get('/health', validateApiGatewaySecret, authController.health);
+router.get('/health', authController.health); // No auth required for health checks
 
 /**
  * @swagger
@@ -560,7 +560,7 @@ router.get('/health', validateApiGatewaySecret, authController.health);
  *                   type: string
  *                   format: date-time
  */
-router.get('/liveness', validateApiGatewaySecret, authController.liveness);
+router.get('/liveness', authController.liveness); // No auth required for K8s probes
 
 /**
  * @swagger
@@ -592,7 +592,7 @@ router.get('/liveness', validateApiGatewaySecret, authController.liveness);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/readiness', validateApiGatewaySecret, authController.readiness);
+router.get('/readiness', authController.readiness); // No auth required for K8s probes
 
 /**
  * @swagger

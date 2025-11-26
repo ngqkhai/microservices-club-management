@@ -2,6 +2,15 @@ const rabbitmqConfig = require('../config/rabbitmq');
 const logger = require('../config/logger');
 const { v4: uuidv4 } = require('uuid');
 
+// Event type constants (inline to avoid shared module complexity)
+const EventTypes = {
+  USER_CREATED: 'user.created',
+  USER_UPDATED: 'user.updated',
+  USER_DELETED: 'user.deleted',
+  USER_EMAIL_VERIFIED: 'user.email.verified',
+  USER_PROFILE_PICTURE_UPDATED: 'user.profile.picture.updated',
+};
+
 /**
  * Event Publisher for RabbitMQ messaging
  * Handles all event publishing for the auth service
@@ -9,21 +18,124 @@ const { v4: uuidv4 } = require('uuid');
 class EventPublisher {
   constructor() {
     this.rabbitmq = rabbitmqConfig;
+    this.serviceName = 'auth-service';
   }
 
   /**
-   * Publish user-related events to RabbitMQ
+   * Create a standardized event payload
+   * @param {string} eventType - Event type
+   * @param {Object} data - Event data
+   * @param {string} [correlationId] - Optional correlation ID
+   * @returns {Object} Standardized event payload
+   */
+  createEventPayload(eventType, data, correlationId = null) {
+    return {
+      id: uuidv4(),
+      type: eventType,
+      source: this.serviceName,
+      timestamp: new Date().toISOString(),
+      correlationId: correlationId || uuidv4(),
+      data,
+      metadata: {
+        version: '1.0',
+        environment: process.env.NODE_ENV || 'development'
+      }
+    };
+  }
+
+  /**
+   * Publish user created event (after email verification)
+   * This event is consumed by club-service and event-service to cache user data
+   * @param {Object} user - User object
+   */
+  async publishUserCreated(user) {
+    try {
+      const payload = this.createEventPayload(EventTypes.USER_CREATED, {
+        userId: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        phone: user.phone || null,
+        profilePictureUrl: user.profile_picture_url || null,
+        role: user.role,
+        createdAt: user.created_at
+      });
+
+      await this.rabbitmq.publishEvent(EventTypes.USER_CREATED, payload);
+
+      logger.info('User created event published', { 
+        eventId: payload.id,
+        userId: user.id,
+        email: user.email 
+      });
+    } catch (error) {
+      logger.error('Failed to publish user created event:', error, { userId: user.id });
+    }
+  }
+
+  /**
+   * Publish user updated event (after profile update)
+   * @param {Object} user - Updated user object
+   * @param {string[]} [changedFields] - List of changed fields
+   */
+  async publishUserUpdated(user, changedFields = []) {
+    try {
+      const payload = this.createEventPayload(EventTypes.USER_UPDATED, {
+        userId: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        phone: user.phone || null,
+        profilePictureUrl: user.profile_picture_url || null,
+        changedFields,
+        updatedAt: user.updated_at || new Date().toISOString()
+      });
+
+      await this.rabbitmq.publishEvent(EventTypes.USER_UPDATED, payload);
+
+      logger.info('User updated event published', { 
+        eventId: payload.id,
+        userId: user.id,
+        changedFields 
+      });
+    } catch (error) {
+      logger.error('Failed to publish user updated event:', error, { userId: user.id });
+    }
+  }
+
+  /**
+   * Publish user deleted event
+   * @param {string} userId - Deleted user ID
+   */
+  async publishUserDeleted(userId) {
+    try {
+      const payload = this.createEventPayload(EventTypes.USER_DELETED, {
+        userId,
+        deletedAt: new Date().toISOString()
+      });
+
+      await this.rabbitmq.publishEvent(EventTypes.USER_DELETED, payload);
+
+      logger.info('User deleted event published', { 
+        eventId: payload.id,
+        userId 
+      });
+    } catch (error) {
+      logger.error('Failed to publish user deleted event:', error, { userId });
+    }
+  }
+
+  /**
+   * Publish user-related events to RabbitMQ (legacy method - kept for compatibility)
    * @param {string} eventType - Type of event (e.g., 'user.registered', 'user.logged_in')
    * @param {Object} eventData - Event data
    */
   async publishUserEvent(eventType, eventData) {
     try {
-      await this.rabbitmq.publishEvent(eventType, {
-        id: uuidv4(),
-        type: eventType,
+      const payload = this.createEventPayload(eventType, {
         userId: eventData.userId,
         ...eventData
       });
+
+      await this.rabbitmq.publishEvent(eventType, payload);
 
       logger.debug('User event published successfully', { 
         eventType, 

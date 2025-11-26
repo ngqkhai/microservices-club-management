@@ -1,3 +1,5 @@
+import logger from '../utils/logger.js';
+
 /**
  * Error handling middleware
  * @param {Error} err - Error object
@@ -6,7 +8,12 @@
  * @param {Function} next - Express next middleware function
  */
 export const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
+  logger.error('Request error', { 
+    error: err.message, 
+    stack: err.stack,
+    path: req.path,
+    method: req.method 
+  });
   
   // Handle MongoDB duplicate key error
   if (err.name === 'MongoServerError' && err.code === 11000) {

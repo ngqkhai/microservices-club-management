@@ -1,6 +1,7 @@
 const RecruitmentCampaignModel = require('../models/recruitmentCampaign');
 const { Club, RecruitmentCampaign } = require('../config/database');
 const CampaignEventPublisher = require('../utils/campaignEventPublisher');
+const logger = require('../utils/logger');
 
 class RecruitmentCampaignService {
   
@@ -459,7 +460,7 @@ class RecruitmentCampaignService {
       return !!membership;
     } catch (error) {
       // In case of error, deny permission
-      console.error('Permission check failed:', error.message);
+      logger.error('Permission check failed', { clubId, userId, error: error.message });
       return false;
     }
   }
@@ -470,9 +471,9 @@ class RecruitmentCampaignService {
    */
   static async updateCampaignStatuses() {
     try {
-      console.log('✅ Campaign status update completed (draft/published system)');
+      logger.info('Campaign status update completed (draft/published system)');
     } catch (error) {
-      console.error('❌ Failed to update campaign statuses:', error.message);
+      logger.error('Failed to update campaign statuses', { error: error.message });
     }
   }
 
@@ -489,7 +490,7 @@ class RecruitmentCampaignService {
       const { user_id, user_email, user_full_name, answers, ...otherData } = applicationData;
 
       // Validate required fields
-      console.log('📋 Submitting application data:', applicationData);
+      logger.debug('Submitting application data', { userId: user_id, campaignId });
       if (!user_id || !user_email || !user_full_name || !answers) {
         throw new Error('User ID, email, full name, and answers are required');
       }
@@ -545,6 +546,17 @@ class RecruitmentCampaignService {
         throw new Error(`Invalid answers: ${validationResult.errors.join(', ')}`);
       }
 
+      // Transform answers to match schema format
+      const formattedAnswers = answers.map(answer => {
+        const question = campaign.application_questions.find(q => q.id === answer.question_id);
+        return {
+          question_id: answer.question_id,
+          question_text: question ? question.question : 'Unknown question',
+          answer_value: typeof answer.answer === 'string' ? answer.answer : JSON.stringify(answer.answer),
+          answer_type: question ? question.type : 'text'
+        };
+      });
+
       // Create membership application directly
       const membership = await Membership.create({
         club_id: campaign.club_id,
@@ -555,11 +567,7 @@ class RecruitmentCampaignService {
         role: 'member',
         status: 'pending',
         application_message: `Application submitted through recruitment campaign: ${campaign.title}`,
-        application_answers: {
-          answers: answers,
-          submitted_at: new Date(),
-          ...otherData
-        },
+        application_answers: formattedAnswers,
         joined_at: new Date()
       });
 
@@ -675,11 +683,17 @@ class RecruitmentCampaignService {
       // Prepare update data for membership
       const membershipUpdate = {};
       if (updateData.answers) {
-        membershipUpdate.application_answers = {
-          ...membership.application_answers,
-          answers: updateData.answers,
-          updated_at: new Date()
-        };
+        // Transform answers to match schema format
+        const formattedAnswers = updateData.answers.map(answer => {
+          const question = campaign.application_questions.find(q => q.id === answer.question_id);
+          return {
+            question_id: answer.question_id,
+            question_text: question ? question.question : 'Unknown question',
+            answer_value: typeof answer.answer === 'string' ? answer.answer : JSON.stringify(answer.answer),
+            answer_type: question ? question.type : 'text'
+          };
+        });
+        membershipUpdate.application_answers = formattedAnswers;
       }
       if (updateData.message) {
         membershipUpdate.application_message = updateData.message;
@@ -1175,7 +1189,7 @@ class RecruitmentCampaignService {
 
       await RecruitmentCampaignModel.updateStatistics(campaignId, stats);
     } catch (error) {
-      console.error('Failed to update campaign statistics:', error.message);
+      logger.error('Failed to update campaign statistics', { campaignId, error: error.message });
     }
   }
 

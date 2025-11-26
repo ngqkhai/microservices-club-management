@@ -34,7 +34,26 @@ const registrationSchema = new mongoose.Schema({
   registration_data: {
     type: {
       answers: [{
-        type: mongoose.Schema.Types.Mixed
+        question_id: { 
+          type: String, 
+          required: true,
+          maxLength: 100
+        },
+        question_text: { 
+          type: String, 
+          required: true,
+          maxLength: 500
+        },
+        answer_value: { 
+          type: String, 
+          required: true,
+          maxLength: 2000
+        },
+        answer_type: { 
+          type: String, 
+          enum: ['text', 'textarea', 'select', 'checkbox', 'number', 'date'],
+          default: 'text'
+        }
       }],
       special_requirements: {
         type: String,

@@ -1,6 +1,7 @@
 const http = require('http');
 const https = require('https');
 const config = require('../config');
+const logger = require('./logger');
 
 class EventServiceClient {
   constructor() {
@@ -15,7 +16,9 @@ class EventServiceClient {
     this.port = url.port || undefined;
     this.timeout = 5000;
     
-    console.log(`Event service configured: ${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}`);
+    logger.info('Event service configured', { 
+      url: `${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}` 
+    });
   }
 
   /**
@@ -34,7 +37,9 @@ class EventServiceClient {
       
       const fullPath = queryString ? `${path}?${queryString}` : path;
       
-      console.log(`Making request to: ${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}${fullPath}`);
+      logger.debug('Making request to event service', { 
+        url: `${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}${fullPath}` 
+      });
       
       const options = {
         hostname: this.hostname,
@@ -75,7 +80,7 @@ class EventServiceClient {
       });
 
       req.on('error', (error) => {
-        console.error(`Request error: ${error.message}`);
+        logger.error('Event service request error', { error: error.message });
         reject(error);
       });
 
@@ -93,12 +98,12 @@ class EventServiceClient {
    */
   async testConnection() {
     try {
-      console.log('Testing connection to event service...');
+      logger.debug('Testing connection to event service...');
       const response = await this._makeRequest('/health');
-      console.log('Event service is reachable:', response);
+      logger.info('Event service is reachable', { response });
       return true;
     } catch (error) {
-      console.error('Event service is NOT reachable:', error.message);
+      logger.error('Event service is NOT reachable', { error: error.message });
       return false;
     }
   }
@@ -108,7 +113,7 @@ class EventServiceClient {
    */
   async getPublishedClubEvents(clubId, options = {}) {
     try {
-      console.log(`Fetching published events for club: ${clubId}`);
+      logger.debug('Fetching published events for club', { clubId });
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
         status: 'published',
         limit: 10,
@@ -116,7 +121,7 @@ class EventServiceClient {
       });
       return response?.data || [];
     } catch (error) {
-      console.error('Error fetching published club events:', error.message);
+      logger.error('Error fetching published club events', { clubId, error: error.message });
       return [];
     }
   }
@@ -126,7 +131,7 @@ class EventServiceClient {
    */
   async getUpcomingClubEvents(clubId, requestContext = {}) {
     try {
-      console.log(`Fetching upcoming events for club: ${clubId}`);
+      logger.debug('Fetching upcoming events for club', { clubId });
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
         status: 'published',
         limit: 10
@@ -141,7 +146,7 @@ class EventServiceClient {
         return eventDate > currentDate;
       });
     } catch (error) {
-      console.error('Error fetching upcoming club events:', error.message);
+      logger.error('Error fetching upcoming club events', { clubId, error: error.message });
       return [];
     }
   }
@@ -151,7 +156,7 @@ class EventServiceClient {
    */
   async getEventStatistics(clubId, requestContext = {}) {
     try {
-      console.log(`Fetching event statistics for club: ${clubId}`);
+      logger.debug('Fetching event statistics for club', { clubId });
       
       // Get published and completed events separately since cron job maintains correct statuses
       const [publishedResponse, completedResponse] = await Promise.all([
@@ -191,7 +196,7 @@ class EventServiceClient {
         past_events: completed_events // Maintain backward compatibility
       };
     } catch (error) {
-      console.error('Error fetching event statistics:', error.message);
+      logger.error('Error fetching event statistics', { clubId, error: error.message });
       return {
         total_events: 0,
         published_events: 0,
@@ -210,7 +215,7 @@ class EventServiceClient {
    */
   async getCompletedClubEvents(clubId, options = {}) {
     try {
-      console.log(`Fetching completed events for club: ${clubId}`);
+      logger.debug('Fetching completed events for club', { clubId });
       
       // Get completed events by status - cron job maintains accurate statuses
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
@@ -221,7 +226,7 @@ class EventServiceClient {
       
       return response?.data || [];
     } catch (error) {
-      console.error('Error fetching completed club events:', error.message);
+      logger.error('Error fetching completed club events', { clubId, error: error.message });
       return [];
     }
   }

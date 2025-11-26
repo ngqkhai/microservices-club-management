@@ -1,5 +1,7 @@
 const http = require('http');
 const https = require('https');
+const config = require('../config');
+const logger = require('../config/logger');
 
 /**
  * Simple HTTP client without external dependencies
@@ -75,9 +77,11 @@ class SimpleHttpClient {
  */
 class AuthServiceClient {
   constructor() {
-    // Use environment variables for service URLs
-    this.baseURL = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
-    this.apiGatewaySecret = process.env.API_GATEWAY_SECRET || 'club-mgmt-internal-secret-2024';
+    const servicesConfig = config.getServicesConfig();
+    const securityConfig = config.getSecurityConfig();
+    
+    this.baseURL = servicesConfig.authService.baseURL;
+    this.apiGatewaySecret = securityConfig.apiGatewaySecret;
     
     // Create HTTP client instance
     this.client = new SimpleHttpClient(this.baseURL);
@@ -104,11 +108,9 @@ class AuthServiceClient {
         return null; // User not found
       }
       
-      // Log the error for debugging
-      console.error('Auth Service Error:', {
+      logger.error('Auth Service Error', {
         message: error.message,
         status: error.response?.status,
-        data: error.response?.data,
         userId
       });
       
@@ -140,10 +142,9 @@ class AuthServiceClient {
         throw notFoundError;
       }
       
-      console.error('Auth Service Error:', {
+      logger.error('Auth Service Error', {
         message: error.message,
         status: error.response?.status,
-        data: error.response?.data,
         userId
       });
       
@@ -178,10 +179,9 @@ class AuthServiceClient {
       const response = await this.client.get(`/api/auth/users?${params.toString()}`, { headers });
       return response.data;
     } catch (error) {
-      console.error('Auth Service Error:', {
+      logger.error('Auth Service Error', {
         message: error.message,
         status: error.response?.status,
-        data: error.response?.data,
         options
       });
       
@@ -202,7 +202,7 @@ class AuthServiceClient {
       const response = await this.client.get('/api/auth/health', { headers });
       return response.status === 200;
     } catch (error) {
-      console.error('Auth Service Health Check Failed:', error.message);
+      logger.error('Auth Service Health Check Failed', { error: error.message });
       return false;
     }
   }

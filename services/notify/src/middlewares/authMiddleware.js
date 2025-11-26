@@ -58,9 +58,10 @@ const authMiddleware = (req, res, next) => {
     // For notification service, user info is optional in some cases
     // (e.g., system-generated notifications), so we don't require all headers
     if (userId && userEmail && userRole) {
-      // Validate user role if provided
-      const validRoles = ['USER', 'ADMIN'];
-      if (!validRoles.includes(userRole)) {
+      // Validate user role if provided (case-insensitive)
+      const normalizedRole = userRole?.toLowerCase();
+      const validRoles = ['user', 'admin'];
+      if (!validRoles.includes(normalizedRole)) {
         logger.warn('Invalid user role from API Gateway', {
           userId,
           userRole,
@@ -75,11 +76,11 @@ const authMiddleware = (req, res, next) => {
         });
       }
 
-      // Attach user information to request object
+      // Attach user information to request object (normalize role to lowercase)
       req.user = {
         id: userId,
         email: userEmail,
-        role: userRole,
+        role: normalizedRole,
         full_name: userFullName
       };
 

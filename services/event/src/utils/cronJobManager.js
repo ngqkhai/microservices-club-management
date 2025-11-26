@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import StatusUpdateService from '../services/statusUpdateService.js';
+import logger from './logger.js';
 
 class CronJobManager {
   constructor() {
@@ -13,19 +14,19 @@ class CronJobManager {
    */
   startJobs() {
     if (!this.isEnabled) {
-      console.log('⏰ Cron jobs disabled by environment variable');
+      logger.info('Cron jobs disabled by environment variable');
       return;
     }
 
-    console.log(`⏰ Starting cron jobs with schedule: ${this.cronSchedule}`);
+    logger.info('Starting cron jobs', { schedule: this.cronSchedule });
     
     // Event status update job
     const statusUpdateJob = cron.schedule(this.cronSchedule, async () => {
       try {
-        console.log('🔄 Running scheduled event status update...');
+        logger.info('Running scheduled event status update...');
         await StatusUpdateService.updateEventStatuses();
       } catch (error) {
-        console.error('❌ Scheduled status update failed:', error);
+        logger.error('Scheduled status update failed', { error: error.message });
       }
     }, {
       scheduled: false,
@@ -35,16 +36,16 @@ class CronJobManager {
     this.jobs.set('statusUpdate', statusUpdateJob);
     statusUpdateJob.start();
 
-    console.log('✅ Cron jobs started successfully');
+    logger.info('Cron jobs started successfully');
 
     // Optional: Run once on startup to clean up any missed updates
     if (process.env.RUN_STATUS_UPDATE_ON_STARTUP !== 'false') {
       setTimeout(async () => {
         try {
-          console.log('🚀 Running initial status update on startup...');
+          logger.info('Running initial status update on startup...');
           await StatusUpdateService.updateEventStatuses();
         } catch (error) {
-          console.error('❌ Initial status update failed:', error);
+          logger.error('Initial status update failed', { error: error.message });
         }
       }, 5000); // Wait 5 seconds after startup
     }
@@ -54,10 +55,10 @@ class CronJobManager {
    * Stop all cron jobs
    */
   stopJobs() {
-    console.log('⏹️ Stopping all cron jobs...');
+    logger.info('Stopping all cron jobs...');
     this.jobs.forEach((job, name) => {
       job.stop();
-      console.log(`⏹️ Stopped job: ${name}`);
+      logger.info('Stopped job', { jobName: name });
     });
     this.jobs.clear();
   }
@@ -89,7 +90,7 @@ class CronJobManager {
     if (job) {
       job.stop();
       job.start();
-      console.log(`🔄 Restarted job: ${jobName}`);
+      logger.info('Restarted job', { jobName });
       return true;
     }
     return false;

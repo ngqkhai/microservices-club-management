@@ -1,7 +1,10 @@
+const config = require('../config');
+const logger = require('../config/logger');
+
 // API Gateway Secret validation middleware
 const validateApiGatewaySecret = (req, res, next) => {
   const gatewaySecret = req.headers['x-api-gateway-secret'];
-  const expectedSecret = process.env.API_GATEWAY_SECRET;
+  const expectedSecret = config.get('API_GATEWAY_SECRET');
 
   if (!expectedSecret) {
     return res.status(500).json({ 
@@ -10,6 +13,13 @@ const validateApiGatewaySecret = (req, res, next) => {
   }
 
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
+    logger.warn('Request rejected - Invalid or missing gateway secret', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+      hasSecret: !!gatewaySecret
+    });
+    
     return res.status(403).json({ 
       error: 'Access denied: Invalid or missing API Gateway secret' 
     });
@@ -31,9 +41,9 @@ const extractUserInfo = (req, res, next) => {
   if (userFullNameRaw) {
     try {
       userFullName = Buffer.from(userFullNameRaw, 'base64').toString('utf8');
-      console.debug('Decoded full_name from base64:', { original: userFullNameRaw, decoded: userFullName });
+      logger.debug('Decoded full_name from base64', { original: userFullNameRaw, decoded: userFullName });
     } catch (error) {
-      console.warn('Failed to decode base64 full_name, using original value:', error.message);
+      logger.warn('Failed to decode base64 full_name, using original value', { error: error.message });
       userFullName = userFullNameRaw;
     }
   }
@@ -44,11 +54,14 @@ const extractUserInfo = (req, res, next) => {
     });
   }
 
+  // Normalize role to lowercase for consistent comparison
+  const normalizedRole = userRole?.toLowerCase();
+
   // Attach user info to request for use in controllers
   req.user = {
     id: userId,
     email: userEmail,
-    role: userRole,
+    role: normalizedRole,
     full_name: userFullName
   };
 
@@ -131,7 +144,7 @@ const requireClubManagerOrAdmin = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('❌ Authorization error:', error.message);
+    logger.error('Authorization error', { error: error.message });
     res.status(500).json({ 
       error: 'Authorization check failed' 
     });

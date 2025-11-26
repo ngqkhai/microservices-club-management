@@ -1,4 +1,5 @@
 import { Event } from '../models/event.js';
+import logger from '../utils/logger.js';
 
 class StatusUpdateService {
   /**
@@ -9,29 +10,13 @@ class StatusUpdateService {
   static async updateEventStatuses() {
     try {
       const currentDate = new Date();
-      console.log(`🔄 Starting event status update at ${currentDate.toISOString()}`);
+      logger.info('Starting event status update', { timestamp: currentDate.toISOString() });
 
       // Debug: Check total events in database
       const totalEvents = await Event.countDocuments();
-      console.log(`📊 Total events in database: ${totalEvents}`);
-
-      // Debug: Check published events
       const publishedEvents = await Event.countDocuments({ status: 'published' });
-      console.log(`📊 Published events: ${publishedEvents}`);
-
-      // Debug: Check all event statuses
-      const allEventsWithStatus = await Event.find(
-        {},
-        { title: 1, status: 1, end_date: 1, _id: 1 }
-      );
-      console.log(`📊 All events with their statuses:`, allEventsWithStatus);
-
-      // Debug: Find published events with their end dates
-      const publishedEventsWithDates = await Event.find(
-        { status: 'published' },
-        { title: 1, end_date: 1, status: 1 }
-      ).limit(5);
-      console.log(`📊 Sample published events:`, publishedEventsWithDates);
+      
+      logger.debug('Event counts', { totalEvents, publishedEvents });
 
       // Update published events that have ended to completed
       const completedResult = await Event.updateMany(
@@ -47,15 +32,14 @@ class StatusUpdateService {
         }
       );
 
-      console.log(`✅ Updated ${completedResult.modifiedCount} events from 'published' to 'completed'`);
+      logger.info('Events marked as completed', { count: completedResult.modifiedCount });
 
       // Optional: Auto-publish events that have reached their start date
-      // (if you want to auto-publish draft events when they start)
       const publishResult = await Event.updateMany(
         {
           status: 'draft',
           start_date: { $lte: currentDate },
-          end_date: { $gt: currentDate } // Only if event hasn't ended yet
+          end_date: { $gt: currentDate }
         },
         {
           $set: { 
@@ -65,7 +49,7 @@ class StatusUpdateService {
         }
       );
 
-      console.log(`✅ Auto-published ${publishResult.modifiedCount} events from 'draft' to 'published'`);
+      logger.info('Events auto-published', { count: publishResult.modifiedCount });
 
       const summary = {
         timestamp: currentDate.toISOString(),
@@ -74,11 +58,11 @@ class StatusUpdateService {
         totalUpdated: completedResult.modifiedCount + publishResult.modifiedCount
       };
 
-      console.log('📊 Status update summary:', summary);
+      logger.info('Status update summary', summary);
       return summary;
 
     } catch (error) {
-      console.error('❌ Error updating event statuses:', error);
+      logger.error('Error updating event statuses', { error: error.message });
       throw error;
     }
   }
@@ -114,7 +98,7 @@ class StatusUpdateService {
         }
       };
     } catch (error) {
-      console.error('❌ Error getting events needing update:', error);
+      logger.error('Error getting events needing update', { error: error.message });
       throw error;
     }
   }
@@ -123,7 +107,7 @@ class StatusUpdateService {
    * Manual trigger for status updates (useful for API endpoint)
    */
   static async triggerManualUpdate() {
-    console.log('🔧 Manual event status update triggered');
+    logger.info('Manual event status update triggered');
     return await this.updateEventStatuses();
   }
 }

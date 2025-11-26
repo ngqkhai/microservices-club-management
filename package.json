@@ -3,22 +3,15 @@
   "version": "1.0.0",
   "description": "Club Management System - Microservices Architecture",
   "scripts": {
-    "dev": "docker-compose up",
+    "dev": "docker-compose -f docker-compose.local.yml -f docker-compose.yml --env-file .env.local up -d",
+    "dev:build": "docker-compose -f docker-compose.local.yml -f docker-compose.yml --env-file .env.local up -d --build",
+    "dev:logs": "docker-compose -f docker-compose.local.yml -f docker-compose.yml --env-file .env.local logs -f",
+    "dev:down": "docker-compose -f docker-compose.local.yml -f docker-compose.yml --env-file .env.local down",
+    "dev:reset": "docker-compose -f docker-compose.local.yml -f docker-compose.yml --env-file .env.local down -v",
     "build": "docker-compose build",
-    "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "npm run test:services",
-    "test:services": "cd services/auth && npm test && cd ../club && npm test && cd ../event && npm test",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "install:e2e": "npx playwright install",
-    "install:all": "npm run install:services && npm run install:e2e",
-    "install:services": "cd services/auth && npm install && cd ../club && npm install && cd ../event && npm install && cd ../notify && npm install && cd ../../frontend && npm install"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "@types/node": "^20.0.0",
-    "dotenv": "^17.2.1"
+    "start:db": "docker-compose -f docker-compose.local.yml --env-file .env.local up -d",
+    "stop:db": "docker-compose -f docker-compose.local.yml --env-file .env.local down",
+    "install:services": "cd services/auth && npm install && cd ../club && npm install && cd ../event && npm install && cd ../notify && npm install && cd ../image && npm install && cd ../../frontend && npm install"
   },
   "engines": {
     "node": ">=18.0.0"

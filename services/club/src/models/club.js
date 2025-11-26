@@ -1,5 +1,6 @@
 const { Club } = require('../config/database');
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 class ClubModel {
   static async findAll({ name, type, category, status, location, search, page, limit, sort }) {
@@ -130,7 +131,7 @@ class ClubModel {
         }))
       };
     } catch (error) {
-      console.error('Error in findAll clubs:', error);
+      logger.error('Error in findAll clubs', { error: error.message });
       throw error;
     }
   }
@@ -163,7 +164,7 @@ class ClubModel {
         size: club.member_count || 0 // Map member_count to size
       };
     } catch (error) {
-      console.error('Error finding club by ID:', error);
+      logger.error('Error finding club by ID', { error: error.message });
       throw error;
     }
   }
@@ -236,10 +237,10 @@ class ClubModel {
     } catch (error) {
       // Check for duplicate key error (MongoDB error code 11000)
       if (error.name === 'MongoServerError' && error.code === 11000) {
-        console.error('Duplicate club name error:', error.message);
+        logger.error('Duplicate club name error', { error: error.message });
         // Re-throw with original error to preserve the error code
       } else {
-        console.error('Error creating club:', error);
+        logger.error('Error creating club', { error: error.message });
       }
       throw error;
     }
@@ -296,7 +297,7 @@ class ClubModel {
         recruitments: formattedRecruitments
       };
     } catch (error) {
-      console.error('Error finding recruitments for club:', error);
+      logger.error('Error finding recruitments for club', { clubId, error: error.message });
       throw error;
     }
   }
@@ -318,7 +319,7 @@ class ClubModel {
       }
     } catch (error) {
       // Intentionally swallow error to prevent crashes for invalid IDs
-      console.error('Error updating club member count (gracefully handled):', error.message);
+      logger.warn('Error updating club member count (gracefully handled)', { clubId, error: error.message });
     }
   }
 
@@ -344,7 +345,7 @@ class ClubModel {
       
       return updatedClub;
     } catch (error) {
-      console.error('Error updating club status:', error);
+      logger.error('Error updating club status', { clubId, error: error.message });
       throw error;
     }
   }
@@ -366,7 +367,7 @@ class ClubModel {
       }
     } catch (error) {
       // Intentionally swallow error to prevent crashes for invalid IDs
-      console.error('Error updating club size (gracefully handled):', error.message);
+      logger.warn('Error updating club size (gracefully handled)', { clubId, error: error.message });
     }
   }
   
@@ -385,7 +386,7 @@ class ClubModel {
         joined_at: membership.joined_at
       };
     } catch (error) {
-      console.error('Error finding membership:', error);
+      logger.error('Error finding membership', { clubId, userId, error: error.message });
       throw error;
     }
   }
@@ -401,7 +402,7 @@ class ClubModel {
       });
       return categories.sort();
     } catch (error) {
-      console.error('Error getting categories:', error);
+      logger.error('Error getting categories', { error: error.message });
       throw error;
     }
   }
@@ -418,7 +419,7 @@ class ClubModel {
       });
       return locations.sort();
     } catch (error) {
-      console.error('Error getting locations:', error);
+      logger.error('Error getting locations', { error: error.message });
       throw error;
     }
   }
@@ -453,7 +454,7 @@ class ClubModel {
         averageSize: 0
       };
     } catch (error) {
-      console.error('Error getting club stats:', error);
+      logger.error('Error getting club stats', { error: error.message });
       throw error;
     }
   }

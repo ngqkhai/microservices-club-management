@@ -21,14 +21,34 @@ pids
 *.seed
 *.pid.lock
 
+# Generated files
+**/public/qr/
+services/event/public/qr/
+
 # Coverage
 coverage/
 **/coverage/
 
-# dotenv environment variables
-# .env
-# **/.env
-# .env.*
+# =============================================================================
+# Environment Variables - IMPORTANT!
+# =============================================================================
+# All .env files are ignored EXCEPT example files
+# This prevents accidental commit of credentials
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Keep example files (they should NOT contain real credentials)
+!.env.example
+!.env.*.example
+!env.local.example
+!**/env.example
+!**/env.*.example
 
 # System files
 .DS_Store

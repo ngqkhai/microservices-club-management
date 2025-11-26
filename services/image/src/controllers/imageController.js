@@ -1,4 +1,5 @@
 const imageService = require('../services/imageService');
+const logger = require('../config/logger');
 
 class ImageController {
     async uploadSingleImage(req, res) {
@@ -31,7 +32,7 @@ class ImageController {
         data: result
       });
     } catch (error) {
-      console.error('❌ Upload error:', error.message);
+      logger.error('Upload error', { error: error.message });
       res.status(500).json({
         success: false,
         error: error.message
@@ -69,7 +70,7 @@ class ImageController {
         data: results
       });
     } catch (error) {
-      console.error('❌ Multiple upload error:', error.message);
+      logger.error('Multiple upload error', { error: error.message });
       res.status(500).json({
         success: false,
         error: error.message
@@ -97,7 +98,7 @@ class ImageController {
         data: result
       });
     } catch (error) {
-      console.error('❌ Delete error:', error.message);
+      logger.error('Delete error', { publicId: req.params.publicId, error: error.message });
       res.status(500).json({
         success: false,
         error: error.message
@@ -120,7 +121,7 @@ class ImageController {
         data: result
       });
     } catch (error) {
-      console.error('❌ Get info error:', error.message);
+      logger.error('Get info error', { publicId: req.params.publicId, error: error.message });
       res.status(500).json({
         success: false,
         error: error.message

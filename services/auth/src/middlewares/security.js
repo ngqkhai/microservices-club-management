@@ -119,14 +119,15 @@ const validateApiGatewayHeaders = (req, res, next) => {
   const userRole = req.headers['x-user-role'];
   const userEmail = req.headers['x-user-email'];
 
-  // Validate UUID format for user ID
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  // Validate UUID format for user ID (relaxed regex to support any UUID-like format)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(userId)) {
     return next(new AuthenticationError('Invalid user ID format'));
   }
 
-  // Validate role
-  if (!['user', 'admin'].includes(userRole)) {
+  // Validate role (case-insensitive)
+  const normalizedRole = userRole?.toLowerCase();
+  if (!['user', 'admin'].includes(normalizedRole)) {
     return next(new AuthenticationError('Invalid user role'));
   }
 
@@ -138,10 +139,10 @@ const validateApiGatewayHeaders = (req, res, next) => {
     }
   }
 
-  // Store user info in request object for easy access
+  // Store user info in request object for easy access (normalize role to lowercase)
   req.user = {
     id: userId,
-    role: userRole,
+    role: normalizedRole,
     email: userEmail
   };
 
