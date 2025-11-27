@@ -1,53 +1,57 @@
-# Use Node.js 18 Alpine as base image
-FROM node:18-alpine AS base
+# ===========================================
+# EVENT SERVICE - PRODUCTION DOCKERFILE
+# ===========================================
+# Optimized for minimal size using Alpine's nodejs
+# ===========================================
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# -------------------------------------------
+# STAGE 1: Install dependencies
+# -------------------------------------------
+FROM node:18-alpine AS deps
 
-# Set working directory
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --only=production && npm cache clean --force
+# Install production deps and clean up unnecessary files
+RUN npm ci --only=production --ignore-scripts && \
+    npm cache clean --force && \
+    rm -rf node_modules/@types && \
+    find node_modules \( -name "*.md" -o -name "LICENSE*" -o -name "*.map" \) -type f -delete 2>/dev/null || true && \
+    find node_modules -type d \( -name "test" -o -name "tests" \) -exec rm -rf {} + 2>/dev/null || true
 
-# Development stage
-FROM base AS development
+# -------------------------------------------
+# STAGE 2: Minimal Alpine runtime
+# -------------------------------------------
+FROM alpine:3.20 AS production
 
-# Install all dependencies including dev dependencies
-RUN npm install
+LABEL maintainer="Club Management Team" \
+      version="1.0.0" \
+      description="Event microservice"
 
-# Copy source code
-COPY . .
+# Install Node.js from Alpine repos - guaranteed ABI compatibility
+RUN apk add --no-cache nodejs
 
-# Expose port
-EXPOSE 3003
+ENV NODE_ENV=production \
+    PORT=3003
 
-# Start development server
-CMD ["npm", "run", "dev"]
+WORKDIR /app
 
-# Production stage
-FROM base AS production
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs && \
+    mkdir -p /app/logs && \
+    chown -R nodejs:nodejs /app
 
-# Copy source code
-COPY . .
+# Copy app with proper ownership
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --chown=nodejs:nodejs package.json ./
+COPY --chown=nodejs:nodejs src ./src
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
 USER nodejs
-
-# Expose port
 EXPOSE 3003
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3003/health || exit 1
+# Health check using Node.js (no curl needed)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Start production server
-CMD ["npm", "start"]
+CMD ["node", "src/index.js"]

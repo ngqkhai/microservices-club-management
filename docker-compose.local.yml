@@ -77,11 +77,12 @@ services:
     networks:
       - club_network
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      # Use check_port_connectivity to ensure AMQP port 5672 is actually ready
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
     restart: unless-stopped
 
   # MinIO - S3-Compatible Object Storage (Cloudinary Alternative)

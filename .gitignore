@@ -54,6 +54,14 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# =============================================================================
+# Secrets - NEVER COMMIT!
+# =============================================================================
+secrets/
+*.pem
+*.key
+**/secrets/
+
 # IDEs
 .vscode/
 .idea/
@@ -71,5 +79,3 @@ Thumbs.db
 .cursor
 
 test.json
-
-/Hệ thống Quản lý Câu lạc bộ Đại học UniVibe

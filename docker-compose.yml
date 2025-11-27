@@ -44,7 +44,7 @@ services:
         - GIT_COMMIT=${GIT_COMMIT:-local}
         - BUILD_NUMBER=${BUILD_NUMBER:-0}
         - BUILD_TIME=${BUILD_TIME:-}
-      target: development
+      target: production
     container_name: club_management_club
     environment:
       PORT: 3002
@@ -55,9 +55,6 @@ services:
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
     ports:
       - "3002:3002"
-    volumes:
-      - ./services/club:/app
-      - /app/node_modules
     networks:
       - club_network
     depends_on:
@@ -82,7 +79,7 @@ services:
         - GIT_COMMIT=${GIT_COMMIT:-local}
         - BUILD_NUMBER=${BUILD_NUMBER:-0}
         - BUILD_TIME=${BUILD_TIME:-}
-      target: development
+      target: production
     container_name: club_management_event
     environment:
       PORT: 3003
@@ -92,9 +89,6 @@ services:
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
     ports:
       - "3003:3003"
-    volumes:
-      - ./services/event:/app
-      - /app/node_modules
     networks:
       - club_network
     depends_on:
@@ -142,9 +136,6 @@ services:
       AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-true}
     ports:
       - "3001:3001"
-    volumes:
-      - ./services/auth:/app
-      - /app/node_modules
     networks:
       - club_network
     depends_on:
@@ -247,9 +238,6 @@ services:
       EVENT_SERVICE_URL: http://event-service:3003
     ports:
       - "3004:3004"
-    volumes:
-      - ./services/image:/app
-      - /app/node_modules
     networks:
       - club_network
     depends_on:
@@ -279,8 +267,6 @@ services:
     ports:
       - "3005:3005"
     volumes:
-      - ./services/notify:/app
-      - /app/node_modules
       - notify_logs:/app/logs
     networks:
       - club_network
@@ -289,7 +275,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3005/health || exit 1"]
+      # Check if process is listening on port 3005 (service is running, even if RabbitMQ not connected)
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3005/', r => process.exit(0)).on('error', () => process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 5

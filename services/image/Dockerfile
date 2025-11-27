@@ -1,26 +1,58 @@
-FROM node:18-alpine
+# ===========================================
+# IMAGE SERVICE - PRODUCTION DOCKERFILE
+# ===========================================
+# Optimized for minimal size using Alpine's nodejs
+# ===========================================
 
-# Set working directory
+# -------------------------------------------
+# STAGE 1: Install dependencies
+# -------------------------------------------
+FROM node:18-alpine AS deps
+
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --only=production && npm cache clean --force
+# Install production deps and clean up unnecessary files
+# Using npm install since package-lock.json may not exist
+RUN npm install --only=production --ignore-scripts && \
+    npm cache clean --force && \
+    rm -rf node_modules/@types && \
+    find node_modules \( -name "*.md" -o -name "LICENSE*" -o -name "*.map" \) -type f -delete 2>/dev/null || true && \
+    find node_modules -type d \( -name "test" -o -name "tests" \) -exec rm -rf {} + 2>/dev/null || true
 
-# Copy source code
-COPY . .
+# -------------------------------------------
+# STAGE 2: Minimal Alpine runtime
+# -------------------------------------------
+FROM alpine:3.20 AS production
 
-# Create uploads directory
-RUN mkdir -p uploads
+LABEL maintainer="Club Management Team" \
+      version="1.0.0" \
+      description="Image microservice"
 
-# Expose port
+# Install Node.js from Alpine repos - guaranteed ABI compatibility
+RUN apk add --no-cache nodejs
+
+ENV NODE_ENV=production \
+    PORT=3004
+
+WORKDIR /app
+
+# Create non-root user and uploads directory
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs && \
+    mkdir -p /app/uploads /app/logs && \
+    chown -R nodejs:nodejs /app
+
+# Copy app with proper ownership
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --chown=nodejs:nodejs package.json ./
+COPY --chown=nodejs:nodejs src ./src
+
+USER nodejs
 EXPOSE 3004
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3004/health || exit 1
+# Health check using Node.js (no wget needed)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:3004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Start the service
-CMD ["npm", "start"]
+CMD ["node", "src/server.js"]

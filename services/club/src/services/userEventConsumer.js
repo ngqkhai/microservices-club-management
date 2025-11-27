@@ -40,6 +40,7 @@ class UserEventConsumer {
         durable: true,
         arguments: {
           'x-message-ttl': 86400000, // 24 hours
+          'x-dead-letter-exchange': 'club_events.dlx'
         }
       });
 
