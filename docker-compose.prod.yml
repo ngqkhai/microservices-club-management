@@ -1,0 +1,273 @@
+# =============================================================================
+# PRODUCTION DOCKER COMPOSE
+# =============================================================================
+# Security-hardened configuration for production deployment
+#
+# Features:
+# Environment variables for secrets (use .env.production)
+#  No exposed service ports (only Kong and Frontend)
+#   Kong Admin API restricted to localhost
+#  HTTPS enabled with SSL certificates
+#  No default passwords
+#
+# Usage:
+#   # Create .env.production with your secrets
+#   cp env.prod.example .env.production
+#   
+#   # Deploy
+#   docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # KONG API GATEWAY - Only exposed service
+  # ===========================================================================
+  kong:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: club_management_kong_prod
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PLUGINS: bundled,jwt-claims-headers,api-gateway-secret
+      
+      # ========== SECURITY: Admin API restricted ==========
+      KONG_ADMIN_LISTEN: "127.0.0.1:8001"  # Only localhost, not exposed
+      
+      # ========== SECURITY: HTTPS enabled ==========
+      KONG_PROXY_LISTEN: "0.0.0.0:8000, 0.0.0.0:8443 ssl"
+      KONG_SSL_CERT: /etc/kong/ssl/fullchain.pem
+      KONG_SSL_CERT_KEY: /etc/kong/ssl/privkey.pem
+      KONG_SSL_PROTOCOLS: "TLSv1.2 TLSv1.3"
+      
+      # Logging (reduced in production)
+      KONG_LOG_LEVEL: warn
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      
+      # Service URLs (internal Docker network)
+      AUTH_SERVICE_URL: http://auth-service:3001
+      CLUB_SERVICE_URL: http://club-service:3002
+      EVENT_SERVICE_URL: http://event-service:3003
+      NOTIFY_SERVICE_URL: http://notify-service:3005
+      IMAGE_SERVICE_URL: http://image-service:3004
+      
+      # Secrets from environment
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET}
+      JWT_RSA_PUBLIC_KEY: ${JWT_RSA_PUBLIC_KEY}
+    ports:
+      # ========== SECURITY: Only Kong exposed ==========
+      - "80:8000"     # HTTP (redirect to HTTPS)
+      - "443:8443"    # HTTPS
+      # NO 8001 (Admin API) exposed!
+    volumes:
+      - ./ssl/certs:/etc/kong/ssl:ro
+    networks:
+      - club_network
+    depends_on:
+      auth-service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================================================
+  # FRONTEND
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${FRONTEND_API_URL:-https://api.yourdomain.com}
+    container_name: club_management_frontend_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    networks:
+      - club_network
+    depends_on:
+      - kong
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================================================
+  # AUTH SERVICE - No port exposed
+  # ===========================================================================
+  auth-service:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
+    container_name: club_management_auth_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      DB_SSL: "true"
+      
+      # JWT
+      JWT_ALGORITHM: RS256
+      JWT_PRIVATE_KEY_PATH: /app/keys/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /app/keys/jwt_public.pem
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      
+      # API Gateway
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET}
+      
+      # RabbitMQ
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      
+      # Security
+      BCRYPT_ROUNDS: 12
+      MAX_LOGIN_ATTEMPTS: 5
+      ACCOUNT_LOCK_TIME_MS: 1800000
+      
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-https://yourdomain.com}
+    volumes:
+      - ./secrets/production:/app/keys:ro
+    # ========== SECURITY: No ports exposed ==========
+    networks:
+      - club_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3001/', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ===========================================================================
+  # CLUB SERVICE - No port exposed
+  # ===========================================================================
+  club-service:
+    build:
+      context: ./services/club
+      dockerfile: Dockerfile
+      target: production
+    container_name: club_management_club_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MONGODB_URI: ${MONGODB_URI}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET}
+    # ========== SECURITY: No ports exposed ==========
+    networks:
+      - club_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ===========================================================================
+  # EVENT SERVICE - No port exposed
+  # ===========================================================================
+  event-service:
+    build:
+      context: ./services/event
+      dockerfile: Dockerfile
+      target: production
+    container_name: club_management_event_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      MONGODB_URI: ${MONGODB_URI}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET}
+    # ========== SECURITY: No ports exposed ==========
+    networks:
+      - club_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ===========================================================================
+  # IMAGE SERVICE - No port exposed
+  # ===========================================================================
+  image-service:
+    build:
+      context: ./services/image
+      dockerfile: Dockerfile
+    container_name: club_management_image_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-s3}
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_REGION: ${AWS_REGION:-ap-southeast-1}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET}
+      CLUB_SERVICE_URL: http://club-service:3002
+      EVENT_SERVICE_URL: http://event-service:3003
+    # ========== SECURITY: No ports exposed ==========
+    networks:
+      - club_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ===========================================================================
+  # NOTIFY SERVICE - No port exposed
+  # ===========================================================================
+  notify-service:
+    build:
+      context: ./services/notify
+      dockerfile: Dockerfile
+    container_name: club_management_notify_prod
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      API_GATEWAY_SECRET: ${API_GATEWAY_SECRET}
+    # ========== SECURITY: No ports exposed ==========
+    networks:
+      - club_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3005/', (r) => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  club_network:
+    driver: bridge
+
+# =============================================================================
+# SECURITY CHECKLIST
+# =============================================================================
+# ✅ Unique JWT Keys - Different keys in secrets/production/
+# ✅ No Default Passwords - Uses .env.production file
+# ✅ Kong Admin API - Only accessible from localhost (127.0.0.1:8001)
+# ✅ HTTPS Enabled - Kong handles SSL termination
+# ✅ Ports Removed - Only Kong (80/443) and Frontend (3000) exposed
+# =============================================================================

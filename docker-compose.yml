@@ -53,8 +53,9 @@ services:
       MONGODB_URI: ${CLUB_MONGODB_URI}
       RABBITMQ_URL: ${AUTH_RABBITMQ_URL}
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
-    ports:
-      - "3002:3002"
+    # ========== SECURITY: Port removed - only accessible via Kong ==========
+    # ports:
+    #   - "3002:3002"
     networks:
       - club_network
     depends_on:
@@ -87,8 +88,9 @@ services:
       MONGODB_URI: ${EVENT_MONGODB_URI}
       RABBITMQ_URL: ${AUTH_RABBITMQ_URL}
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
-    ports:
-      - "3003:3003"
+    # ========== SECURITY: Port removed - only accessible via Kong ==========
+    # ports:
+    #   - "3003:3003"
     networks:
       - club_network
     depends_on:
@@ -134,8 +136,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
       AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-true}
-    ports:
-      - "3001:3001"
+    # ========== SECURITY: Port removed - only accessible via Kong ==========
+    # ports:
+    #   - "3001:3001"
     networks:
       - club_network
     depends_on:
@@ -162,9 +165,11 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
       KONG_PLUGINS: bundled,jwt-claims-headers,api-gateway-secret
-      KONG_LOG_LEVEL: debug
+      KONG_LOG_LEVEL: ${KONG_LOG_LEVEL:-warn}
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
+      # ========== SECURITY: Admin API restricted to localhost ==========
+      KONG_ADMIN_LISTEN: "127.0.0.1:8001"
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       # Service URLs - Use environment variables with fallback to local services
@@ -188,10 +193,11 @@ services:
         ZwIDAQAB
         -----END PUBLIC KEY-----
     ports:
-      - "8000:8000"
-      - "8443:8443"
-      - "8001:8001"
-      - "8444:8444"
+      - "8000:8000"   # HTTP Proxy
+      - "8443:8443"   # HTTPS Proxy
+      # ========== SECURITY: Admin API not exposed ==========
+      # - "8001:8001" # Admin API - REMOVED for security
+      # - "8444:8444" # Admin API HTTPS - REMOVED for security
     networks:
       - club_network
     restart: unless-stopped
@@ -236,8 +242,9 @@ services:
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
       CLUB_SERVICE_URL: http://club-service:3002
       EVENT_SERVICE_URL: http://event-service:3003
-    ports:
-      - "3004:3004"
+    # ========== SECURITY: Port removed - only accessible via Kong ==========
+    # ports:
+    #   - "3004:3004"
     networks:
       - club_network
     depends_on:
@@ -264,8 +271,9 @@ services:
       PORT: 3005
       NODE_ENV: ${NODE_ENV:-development}
       API_GATEWAY_SECRET: ${API_GATEWAY_SECRET:-local-dev-api-gateway-secret-min-16}
-    ports:
-      - "3005:3005"
+    # ========== SECURITY: Port removed - only accessible via Kong ==========
+    # ports:
+    #   - "3005:3005"
     volumes:
       - notify_logs:/app/logs
     networks:

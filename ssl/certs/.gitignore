@@ -1,0 +1,5 @@
+# SSL certificates - never commit to git!
+*
+!.gitignore
+!README.md
+!generate-self-signed.ps1

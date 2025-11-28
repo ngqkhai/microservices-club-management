@@ -1,36 +1,31 @@
 # Club Management System
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green)
-![Docker](https://img.shields.io/badge/docker-ready-blue)
-![Kubernetes](https://img.shields.io/badge/kubernetes-ready-blue)
-
 > A **Cloud-Native Ready** microservices platform for managing university clubs, events, memberships, and recruitment campaigns. Built with DevOps best practices including containerization, event-driven architecture, and structured logging.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Services](#-services)
-- [Environment Variables](#-environment-variables)
-- [Database & Seeding](#-database--seeding)
-- [Event-Driven Architecture](#-event-driven-architecture)
-- [DevOps & Deployment](#-devops--deployment)
-- [Scripts & Commands](#-scripts--commands)
-- [API Documentation](#-api-documentation)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Setup](#setup)
+  - [Prerequisites](#prerequisites)
+  - [Development Setup](#development-setup)
+  - [Production Setup](#production-setup)
+- [Services](#services)
+- [Environment Variables](#environment-variables)
+- [Database & Seeding](#database--seeding)
+- [Event-Driven Architecture](#event-driven-architecture)
+- [Scripts Reference](#scripts-reference)
+- [API Documentation](#api-documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 🔥 Overview
+## Overview
 
 The Club Management System is a comprehensive microservices-based platform designed for:
 
@@ -41,16 +36,16 @@ The Club Management System is a comprehensive microservices-based platform desig
 
 ### Key Highlights
 
-✅ **Cloud-Native Ready** - Dockerized services with Kubernetes health probes  
-✅ **Event-Driven** - Async communication via RabbitMQ  
-✅ **Structured Logging** - Winston-based JSON logging for observability  
-✅ **Validated Configuration** - Joi schema validation for all env vars  
-✅ **Local Development** - Full local stack with Docker (no cloud needed)  
-✅ **Storage Abstraction** - Pluggable storage (MinIO local / Cloudinary production)
+- **Cloud-Native Ready** - Dockerized services with Kubernetes health probes  
+- **Event-Driven** - Async communication via RabbitMQ  
+- **Structured Logging** - Winston-based JSON logging for observability  
+- **Validated Configuration** - Joi schema validation for all env vars  
+- **Local Development** - Full local stack with Docker (no cloud needed)  
+- **Storage Abstraction** - Pluggable storage (MinIO local / S3 production)
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```mermaid
 graph TB
@@ -111,7 +106,7 @@ graph TB
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -130,62 +125,112 @@ graph TB
 
 ---
 
-## ✨ Features
+## Features
 
 ### User Management
-- 📝 Registration with email verification
-- 🔐 Login with JWT tokens (access + refresh)
-- 🔑 Password reset via email
-- 👤 Profile management with profile pictures
+- Registration with email verification
+- Login with JWT tokens (access + refresh)
+- Password reset via email
+- Profile management with profile pictures
 
 ### Club Management
-- 🏢 Create and manage clubs
-- 👥 Member roles: `member`, `organizer`, `club_manager`
-- 📊 Club statistics and member counts
-- 🖼️ Club logos and cover images
+- Create and manage clubs
+- Member roles: `member`, `organizer`, `club_manager`
+- Club statistics and member counts
+- Club logos and cover images
 
 ### Recruitment Campaigns
-- 📢 Create recruitment campaigns
-- 📋 Custom application forms
-- ✅ Application review workflow
-- 📧 Applicant notifications
+- Create recruitment campaigns
+- Custom application forms
+- Application review workflow
+- Applicant notifications
 
 ### Event Management
-- 📅 Create events (in-person, online, hybrid)
-- 🎟️ Event registration with QR tickets
-- ✅ QR code check-in system
-- ⭐ Event favorites
-- ⏰ Automatic status updates (cron jobs)
+- Create events (in-person, online, hybrid)
+- Event registration with QR tickets
+- QR code check-in system
+- Event favorites
+- Automatic status updates (cron jobs)
 
 ### Notifications
-- ✉️ Email verification
-- 🔐 Password reset emails
-- 📧 Event reminders
-- 📢 Club announcements
+- Email verification
+- Password reset emails
+- Event reminders
+- Club announcements
 
 ---
 
-## 🚀 Quick Start
+## Setup
 
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (required)
-- [Node.js 18+](https://nodejs.org/) (for local development)
+- [Node.js 18+](https://nodejs.org/) (for local development without Docker)
 - [Git](https://git-scm.com/)
+- [OpenSSL](https://www.openssl.org/) (for generating JWT keys - included with Git for Windows)
 
-### 1. Clone the Repository
+### Development Setup
+
+Follow these steps to set up the project for local development.
+
+#### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/your-org/club-management-system.git
 cd club-management-system
 ```
 
-### 2. Start Local Infrastructure
+#### Step 2: Generate JWT Keys
 
-**Option A: Using Helper Script (Recommended)**
+Generate RSA key pairs for JWT authentication:
 
 ```powershell
 # Windows PowerShell
+.\scripts\generate-jwt-keys.ps1
+```
+
+```bash
+# Linux/macOS
+chmod +x ./scripts/generate-jwt-keys.sh
+./scripts/generate-jwt-keys.sh
+```
+
+This creates:
+- `secrets/development/jwt_private.pem` - Private key for signing tokens
+- `secrets/development/jwt_public.pem` - Public key for verifying tokens
+- `secrets/development/api_gateway_secret.txt` - Kong API gateway secret
+- `secrets/development/refresh_token_secret.txt` - Refresh token secret
+
+#### Step 3: Create Environment File
+
+```bash
+cp env.local.example .env
+```
+
+The default values in `.env` are pre-configured for local Docker development.
+
+#### Step 4: Start Infrastructure (Databases)
+
+```bash
+docker-compose -f docker-compose.local.yml up -d
+```
+
+This starts:
+- PostgreSQL (port 5432) - Auth service database
+- MongoDB (port 27017) - Club & Event databases
+- RabbitMQ (ports 5672, 15672) - Message queue
+- MinIO (ports 9000, 9001) - Local S3-compatible storage
+
+#### Step 5: Start All Services
+
+```bash
+docker-compose -f docker-compose.local.yml -f docker-compose.yml up -d
+```
+
+Or use the helper script:
+
+```powershell
+# Windows
 .\scripts\start-local.ps1 -Start
 ```
 
@@ -194,24 +239,7 @@ cd club-management-system
 ./scripts/start-local.sh start
 ```
 
-**Option B: Using Docker Compose Directly**
-
-```bash
-# Start databases and infrastructure
-docker-compose -f docker-compose.local.yml up -d
-
-# Start all services
-docker-compose -f docker-compose.local.yml -f docker-compose.yml up -d
-```
-
-### 3. Create Environment File
-
-```bash
-# Copy the example env file
-cp env.local.example .env
-```
-
-### 4. Run Database Migrations & Seeds
+#### Step 6: Run Database Migrations & Seeds
 
 ```powershell
 # Windows
@@ -223,17 +251,17 @@ cp env.local.example .env
 ./scripts/seed-all.sh
 ```
 
-### 5. Access the Application
+#### Step 7: Access the Application
 
 | Service | URL |
 |---------|-----|
-| **Frontend** | http://localhost:3000 |
-| **API Gateway** | http://localhost:8000 |
-| **Auth API Docs** | http://localhost:3001/api-docs |
-| **RabbitMQ Console** | http://localhost:15672 |
-| **MinIO Console** | http://localhost:9001 |
+| Frontend | http://localhost:3000 |
+| API Gateway | http://localhost:8000 |
+| Auth API Docs | http://localhost:3001/api-docs |
+| RabbitMQ Console | http://localhost:15672 |
+| MinIO Console | http://localhost:9001 |
 
-### Demo Credentials (After Seeding)
+#### Demo Credentials (After Seeding)
 
 | Email | Password | Role |
 |-------|----------|------|
@@ -243,7 +271,105 @@ cp env.local.example .env
 
 ---
 
-## 📦 Services
+### Production Setup
+
+Follow these steps to deploy the system to production.
+
+#### Step 1: Generate Production JWT Keys
+
+```powershell
+# Windows PowerShell
+.\scripts\generate-jwt-keys.ps1
+```
+
+This generates keys in `secrets/production/`. **Keep these secure!**
+
+#### Step 2: Create Production Environment File
+
+```bash
+cp env.prod.example .env.production
+```
+
+Edit `.env.production` with your production values:
+
+```bash
+# Database connections (use managed services)
+DATABASE_URL=postgresql://user:password@your-postgres-host:5432/auth_db?sslmode=require
+MONGODB_URI=mongodb+srv://user:password@your-mongodb-cluster/club_db
+RABBITMQ_URL=amqps://user:password@your-rabbitmq-host/vhost
+
+# Secrets (generate unique values!)
+API_GATEWAY_SECRET=<run: openssl rand -base64 32>
+REFRESH_TOKEN_SECRET=<run: openssl rand -base64 48>
+
+# JWT Public Key for Kong (copy from secrets/production/jwt_public.pem)
+JWT_RSA_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+
+# Frontend URL
+FRONTEND_URL=https://yourdomain.com
+
+# S3 Storage
+AWS_REGION=ap-southeast-1
+S3_BUCKET=your-bucket-name
+STORAGE_PROVIDER=s3
+```
+
+#### Step 3: Generate SSL Certificates
+
+For HTTPS, you need SSL certificates. For development/testing:
+
+```powershell
+# Windows - Generate self-signed certificate
+.\ssl\generate-self-signed.ps1
+```
+
+For production, use Let's Encrypt or your certificate provider and place:
+- `ssl/certs/fullchain.pem` - Certificate chain
+- `ssl/certs/privkey.pem` - Private key
+
+#### Step 4: Deploy to Production
+
+```bash
+docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+#### Production Security Checklist
+
+- [ ] Use managed database services (AWS RDS, MongoDB Atlas, CloudAMQP)
+- [ ] Generate unique JWT keys for production
+- [ ] Generate unique secrets (API_GATEWAY_SECRET, REFRESH_TOKEN_SECRET)
+- [ ] Enable HTTPS with valid SSL certificates
+- [ ] Set `NODE_ENV=production` in all services
+- [ ] Configure proper CORS origins
+- [ ] Set up monitoring and logging
+- [ ] Configure backup strategies for databases
+
+---
+
+## Docker Compose Files
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.local.yml` | Infrastructure only (databases, RabbitMQ, MinIO) for local development |
+| `docker-compose.yml` | Application services (auth, club, event, image, notify, frontend, kong) |
+| `docker-compose.prod.yml` | Production-ready configuration with HTTPS and security hardening |
+
+### Usage Patterns
+
+```bash
+# Development: Infrastructure only (run services with npm)
+docker-compose -f docker-compose.local.yml up -d
+
+# Development: Full stack in Docker
+docker-compose -f docker-compose.local.yml -f docker-compose.yml up -d
+
+# Production: Deploy with production config
+docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+---
+
+## Services
 
 | Service | Port | Database | Description |
 |---------|------|----------|-------------|
@@ -266,40 +392,27 @@ Each service has detailed documentation:
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 ### Root `.env` File
 
-Create from `env.local.example`:
+Create from `env.local.example` for development or `env.prod.example` for production:
 
-```bash
-# Database URLs
-AUTH_DATABASE_URL=postgresql://postgres:postgres_local_dev@postgres:5432/auth_service_db
-CLUB_MONGODB_URI=mongodb://mongo:mongo_local_dev@mongodb:27017/club_service_db?authSource=admin
-EVENT_MONGODB_URI=mongodb://mongo:mongo_local_dev@mongodb:27017/event_service_db?authSource=admin
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string for auth service |
+| `MONGODB_URI` | MongoDB connection string for club/event services |
+| `RABBITMQ_URL` | RabbitMQ connection string |
+| `API_GATEWAY_SECRET` | Secret for Kong JWT validation (min 16 chars) |
+| `REFRESH_TOKEN_SECRET` | Secret for refresh tokens (min 32 chars) |
+| `FRONTEND_URL` | Frontend URL for CORS and email links |
+| `STORAGE_PROVIDER` | `auto`, `minio`, or `s3` |
 
-# RabbitMQ
-AUTH_RABBITMQ_URL=amqp://rabbitmq:rabbitmq_local_dev@rabbitmq:5672
-NOTIFY_RABBITMQ_URL=amqp://rabbitmq:rabbitmq_local_dev@rabbitmq:5672
-IMAGE_RABBITMQ_URL=amqp://rabbitmq:rabbitmq_local_dev@rabbitmq:5672
-
-# Security (change in production!)
-API_GATEWAY_SECRET=local-dev-api-gateway-secret-min-16
-REFRESH_TOKEN_SECRET=local-dev-refresh-secret-minimum-32-characters-long
-
-# Storage (auto-detects MinIO for local)
-STORAGE_PROVIDER=auto
-MINIO_ENDPOINT=minio
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin_local_dev
-
-# Frontend
-FRONTEND_BASE_URL=http://localhost:3000
-```
+See `env.local.example` and `env.prod.example` for complete variable lists.
 
 ---
 
-## 🗄 Database & Seeding
+## Database & Seeding
 
 ### Database Migrations
 
@@ -341,7 +454,7 @@ cd services/event && npm run seed
 
 ---
 
-## 📨 Event-Driven Architecture
+## Event-Driven Architecture
 
 Services communicate asynchronously via RabbitMQ using a topic exchange.
 
@@ -373,43 +486,43 @@ See [`shared/events/eventTypes.js`](shared/events/eventTypes.js) for all event c
 
 ---
 
-## 🐳 DevOps & Deployment
+## Scripts Reference
 
-### Docker Health Checks
+### Helper Scripts
 
-All services include Kubernetes-ready health endpoints:
+| Script | Description |
+|--------|-------------|
+| `scripts/generate-jwt-keys.ps1` | Generate RSA key pairs for JWT (Windows) |
+| `scripts/generate-jwt-keys.sh` | Generate RSA key pairs for JWT (Linux/macOS) |
+| `scripts/start-local.ps1` | Manage local Docker stack (Windows) |
+| `scripts/start-local.sh` | Manage local Docker stack (Linux/macOS) |
+| `scripts/seed-all.ps1` | Seed all databases (Windows) |
+| `scripts/seed-all.sh` | Seed all databases (Linux/macOS) |
+| `ssl/generate-self-signed.ps1` | Generate self-signed SSL certificate for local HTTPS |
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /health` | Full health check (DB, RabbitMQ) |
-| `GET /ready` | Readiness probe |
-| `GET /live` | Liveness probe |
-
-### Dockerfile Best Practices
-
-- ✅ Multi-stage builds
-- ✅ Non-root user (`nodejs`)
-- ✅ Health check instructions
-- ✅ Production-optimized (`npm ci --only=production`)
-- ✅ `.dockerignore` files
-
-### Local Development with Docker
+### Common Commands
 
 ```bash
-# Start only infrastructure (databases, RabbitMQ, MinIO)
-docker-compose -f docker-compose.local.yml up -d
+# Start local development
+.\scripts\start-local.ps1 -Start    # Windows
+./scripts/start-local.sh start      # Linux/macOS
 
-# Start infrastructure + all services
-docker-compose -f docker-compose.local.yml -f docker-compose.yml up -d
-
-# View logs
+# View service logs
 docker-compose logs -f auth-service
+
+# Stop all containers
+docker-compose -f docker-compose.local.yml -f docker-compose.yml down
 
 # Rebuild a specific service
 docker-compose up -d --build club-service
 
-# Stop everything
-docker-compose -f docker-compose.local.yml -f docker-compose.yml down
+# Seed databases
+.\scripts\seed-all.ps1              # Windows
+./scripts/seed-all.sh               # Linux/macOS
+
+# Clear seeded data
+.\scripts\seed-all.ps1 -Undo        # Windows
+./scripts/seed-all.sh --undo        # Linux/macOS
 ```
 
 ### Admin Tools (Optional)
@@ -428,39 +541,7 @@ docker-compose -f docker-compose.local.yml --profile tools up -d
 
 ---
 
-## 📜 Scripts & Commands
-
-### Helper Scripts
-
-| Script | Description |
-|--------|-------------|
-| `scripts/start-local.ps1` | Windows script to manage local Docker stack |
-| `scripts/start-local.sh` | Linux/macOS script to manage local Docker stack |
-| `scripts/seed-all.ps1` | Windows script to seed all databases |
-| `scripts/seed-all.sh` | Linux/macOS script to seed all databases |
-
-### Common Commands
-
-```bash
-# Start local development
-.\scripts\start-local.ps1 -Start
-
-# View service logs
-.\scripts\start-local.ps1 -Logs auth-service
-
-# Stop all containers
-.\scripts\start-local.ps1 -Stop
-
-# Seed databases
-.\scripts\seed-all.ps1
-
-# Clear seeded data
-.\scripts\seed-all.ps1 -Undo
-```
-
----
-
-## 📚 API Documentation
+## API Documentation
 
 ### Postman Collection
 
@@ -496,22 +577,27 @@ Features:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 club-management-system/
 ├── api-gateway/              # Kong configuration
 │   ├── kong.yml              # Declarative config
-│   └── plugins/              # Custom plugins
+│   └── lua-plugins/          # Custom plugins
 ├── database_script/          # Database initialization
 │   ├── init-postgres.sql     # PostgreSQL init
 │   └── init-mongo.js         # MongoDB init
 ├── frontend/                 # Next.js frontend
 ├── scripts/                  # Helper scripts
-│   ├── start-local.ps1       # Windows local dev
-│   ├── start-local.sh        # Linux local dev
-│   ├── seed-all.ps1          # Seed databases
-│   └── seed-all.sh
+│   ├── generate-jwt-keys.ps1 # Generate JWT keys (Windows)
+│   ├── generate-jwt-keys.sh  # Generate JWT keys (Linux/macOS)
+│   ├── start-local.ps1       # Start local dev (Windows)
+│   ├── start-local.sh        # Start local dev (Linux/macOS)
+│   ├── seed-all.ps1          # Seed databases (Windows)
+│   └── seed-all.sh           # Seed databases (Linux/macOS)
+├── secrets/                  # JWT keys and secrets (gitignored)
+│   ├── development/          # Dev environment keys
+│   └── production/           # Prod environment keys
 ├── services/
 │   ├── auth/                 # Auth microservice
 │   ├── club/                 # Club microservice
@@ -521,15 +607,20 @@ club-management-system/
 ├── shared/
 │   └── events/
 │       └── eventTypes.js     # RabbitMQ event constants
-├── docker-compose.yml        # Main compose file
+├── ssl/                      # SSL certificates
+│   ├── certs/                # Certificate files (gitignored)
+│   └── generate-self-signed.ps1
+├── docker-compose.yml        # Application services
 ├── docker-compose.local.yml  # Local infrastructure
-├── env.local.example         # Environment template
-└── REFACTORING_ROADMAP.md    # Technical roadmap
+├── docker-compose.prod.yml   # Production deployment
+├── env.local.example         # Development env template
+├── env.prod.example          # Production env template
+└── README.md
 ```
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -548,13 +639,13 @@ club-management-system/
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📚 Resources
+## Resources
 
 - [12 Factor App Methodology](https://12factor.net/)
 - [Microservices Patterns](https://microservices.io/patterns/)
@@ -562,7 +653,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
 
 ---
-
-**Built with ❤️ for DevOps Learning**
 
 *Last Updated: November 2024*
