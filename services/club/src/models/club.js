@@ -7,7 +7,7 @@ class ClubModel {
     try {
       // Build the query
       const query = {};
-      
+
       // US007: Advanced search and filtering
       if (search) {
         // Full-text search across multiple fields
@@ -23,12 +23,12 @@ class ClubModel {
         if (name) {
           query.name = { $regex: name, $options: 'i' };
         }
-        
+
         if (location) {
           query.location = { $regex: location, $options: 'i' };
         }
       }
-      
+
       if (category) {
         query.category = category;
       } else if (type) {
@@ -38,19 +38,19 @@ class ClubModel {
           { type: type }
         ];
       }
-      
+
       if (status) {
         query.status = status;
       }
       // Note: No default status filter since clubs don't have a status field by default
-      
+
       // Only show non-deleted clubs (deleted_at is null or doesn't exist)
       // Handle this carefully to avoid conflicts with existing $or conditions
       const deletedFilter = [
         { deleted_at: { $exists: false } },
         { deleted_at: null }
       ];
-      
+
       if (query.$or) {
         // If there's already an $or condition, wrap everything in $and
         query.$and = [
@@ -61,15 +61,15 @@ class ClubModel {
       } else {
         query.$or = deletedFilter;
       }
-      
+
       // Pagination
       const pageNumber = parseInt(page, 10) || 1;
       const pageSize = parseInt(limit, 10) || 10;
       const skip = (pageNumber - 1) * pageSize;
-      
+
       // Get total count for pagination
       const total = await Club.countDocuments(query);
-      
+
       // US007: Sorting options
       let sortOption = {};
       switch (sort) {
@@ -97,16 +97,16 @@ class ClubModel {
           sortOption = { name: 1 };
           break;
       }
-      
+
       // Execute the query with pagination and sorting
       const results = await Club.find(query)
         .sort(sortOption)
         .skip(skip)
         .limit(pageSize);
-      
+
       // Calculate pagination metadata
       const totalPages = Math.ceil(total / pageSize);
-      
+
       return {
         total,
         page: pageNumber,
@@ -119,7 +119,7 @@ class ClubModel {
           category: club.category,
           location: club.location,
           logo_url: club.logo_url,
-          cover_url: club.cover_url || "",
+          cover_url: club.cover_url || '',
           status: club.status,
           settings: club.settings,
           member_count: club.member_count || 0,
@@ -135,13 +135,13 @@ class ClubModel {
       throw error;
     }
   }
-  
+
   static async findById(id) {
     try {
       const club = await Club.findById(id);
-      
-      if (!club) return null;
-      
+
+      if (!club) {return null;}
+
       return {
         id: club._id,
         name: club.name,
@@ -151,7 +151,7 @@ class ClubModel {
         contact_email: club.contact_email,
         contact_phone: club.contact_phone,
         logo_url: club.logo_url,
-        cover_url: club.cover_url || "",
+        cover_url: club.cover_url || '',
         website_url: club.website_url,
         social_links: club.social_links,
         settings: club.settings,
@@ -168,17 +168,17 @@ class ClubModel {
       throw error;
     }
   }
-  
+
   static async create(clubData) {
     try {
-      const { 
-        name, 
-        description, 
+      const {
+        name,
+        description,
         category,
         location,
         contact_email,
         contact_phone,
-        logo_url, 
+        logo_url,
         website_url,
         social_links,
         settings,
@@ -188,7 +188,7 @@ class ClubModel {
         type,
         status
       } = clubData;
-      
+
       const newClub = new Club({
         name,
         description,
@@ -211,9 +211,9 @@ class ClubModel {
         status: status || 'ACTIVE',
         created_by
       });
-      
+
       await newClub.save();
-      
+
       return {
         id: newClub._id,
         name: newClub.name,
@@ -255,27 +255,27 @@ class ClubModel {
   static async findRecruitments(clubId, options = {}) {
     try {
       const { RecruitmentCampaign } = require('../config/database');
-      
+
       // Build query
       const query = { club_id: clubId };
       if (options.status) {
         query.status = options.status;
       }
-      
+
       // Get total count
       const total = await RecruitmentCampaign.countDocuments(query);
-      
+
       // Pagination
       const page = options.page || 1;
       const limit = options.limit || 10;
       const skip = (page - 1) * limit;
-      
+
       // Find recruitment campaigns for this club
       const recruitments = await RecruitmentCampaign.find(query)
         .sort({ start_date: -1 }) // Sort by start date, newest first
         .skip(skip)
         .limit(limit);
-      
+
       const formattedRecruitments = recruitments.map(recruitment => ({
         id: recruitment._id,
         title: recruitment.title,
@@ -291,7 +291,7 @@ class ClubModel {
         start_at: recruitment.start_at || recruitment.start_date,
         end_at: recruitment.end_at || recruitment.end_date
       }));
-      
+
       return {
         total,
         recruitments: formattedRecruitments
@@ -312,7 +312,7 @@ class ClubModel {
     try {
       // Find and update the club, only if member count is valid
       if (memberCount >= 0) {
-        await Club.findByIdAndUpdate(clubId, { 
+        await Club.findByIdAndUpdate(clubId, {
           member_count: memberCount,
           size: memberCount // Update size for backward compatibility
         });
@@ -333,23 +333,23 @@ class ClubModel {
     try {
       const updatedClub = await Club.findByIdAndUpdate(
         clubId,
-        { 
+        {
           status: status,
           updated_at: new Date()
         },
-        { 
+        {
           new: true,
           runValidators: true
         }
       );
-      
+
       return updatedClub;
     } catch (error) {
       logger.error('Error updating club status', { clubId, error: error.message });
       throw error;
     }
   }
-  
+
   /**
    * Update club size (deprecated, use updateMemberCount instead)
    * @param {string} clubId - The club ID
@@ -360,7 +360,7 @@ class ClubModel {
     try {
       // Find and update the club, only if size is valid
       if (size >= 0) {
-        await Club.findByIdAndUpdate(clubId, { 
+        await Club.findByIdAndUpdate(clubId, {
           size: size,
           member_count: size // Update member_count for consistency
         });
@@ -370,16 +370,16 @@ class ClubModel {
       logger.warn('Error updating club size (gracefully handled)', { clubId, error: error.message });
     }
   }
-  
+
   static async findMembership(clubId, userId) {
     try {
       const { Membership } = require('../config/database');
-      const membership = await Membership.findOne({ 
-        club_id: clubId, 
-        user_id: userId 
+      const membership = await Membership.findOne({
+        club_id: clubId,
+        user_id: userId
       }, 'role joined_at');
 
-      if (!membership) return null;
+      if (!membership) {return null;}
 
       return {
         role: membership.role,
@@ -394,7 +394,7 @@ class ClubModel {
   // US007: Get available categories for filtering
   static async getCategories() {
     try {
-      const categories = await Club.distinct('category', { 
+      const categories = await Club.distinct('category', {
         $or: [
           { deleted_at: { $exists: false } },
           { deleted_at: null }
@@ -406,11 +406,11 @@ class ClubModel {
       throw error;
     }
   }
-  
+
   // US007: Get available locations for filtering
   static async getLocations() {
     try {
-      const locations = await Club.distinct('location', { 
+      const locations = await Club.distinct('location', {
         $or: [
           { deleted_at: { $exists: false } },
           { deleted_at: null }
@@ -423,13 +423,13 @@ class ClubModel {
       throw error;
     }
   }
-  
+
   // US007: Get club statistics for search context
   static async getStats() {
     try {
       const stats = await Club.aggregate([
-        { 
-          $match: { 
+        {
+          $match: {
             $or: [
               { deleted_at: { $exists: false } },
               { deleted_at: null }
@@ -446,7 +446,7 @@ class ClubModel {
           }
         }
       ]);
-      
+
       return stats[0] || {
         totalClubs: 0,
         categories: [],

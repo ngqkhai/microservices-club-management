@@ -229,7 +229,7 @@ module.exports = (sequelize, DataTypes) => {
 
   User.createUser = async function(userData) {
     const { email, full_name, password, role = 'USER' } = userData;
-    
+
     return this.create({
       email: email.toLowerCase(),
       full_name,
@@ -254,4 +254,4 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   return User;
-}; 
+};

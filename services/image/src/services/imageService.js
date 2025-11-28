@@ -1,6 +1,6 @@
 /**
  * Image Service
- * 
+ *
  * Handles image uploads, deletions, and metadata management.
  * Uses a pluggable storage provider (Cloudinary or MinIO/S3).
  */
@@ -21,7 +21,7 @@ class ImageService {
    * Call this on server startup
    */
   async initialize() {
-    if (this.initialized) return true;
+    if (this.initialized) {return true;}
 
     try {
       await initializeStorage();
@@ -46,7 +46,7 @@ class ImageService {
 
   /**
    * Upload a single image
-   * 
+   *
    * @param {Object} file - Multer file object
    * @param {Object} options - Upload options
    * @returns {Promise<Object>} Upload result
@@ -121,7 +121,7 @@ class ImageService {
 
   /**
    * Upload multiple images
-   * 
+   *
    * @param {Array} files - Array of Multer file objects
    * @param {Object} options - Upload options
    * @returns {Promise<Array>} Array of upload results
@@ -141,7 +141,7 @@ class ImageService {
 
   /**
    * Delete an image
-   * 
+   *
    * @param {string} publicId - Public ID of the image
    * @param {string} userId - User requesting deletion
    * @param {string} userRole - User's role
@@ -153,16 +153,16 @@ class ImageService {
     try {
       // Verify ownership before deletion
       const hasAccess = await ownershipService.verifyImageAccess(publicId, userId, userRole);
-      
+
       if (!hasAccess) {
         throw new Error('Access denied: You do not have permission to delete this image');
       }
 
       const result = await this.storage.delete(publicId);
-      
+
       // Log the deletion for audit purposes
       logger.info('Image deleted', { userId, publicId });
-      
+
       return result;
     } catch (error) {
       logger.error('Image deletion failed', { publicId, error: error.message });
@@ -172,7 +172,7 @@ class ImageService {
 
   /**
    * Get image information
-   * 
+   *
    * @param {string} publicId - Public ID of the image
    * @returns {Promise<Object>} Image information
    */
@@ -190,7 +190,7 @@ class ImageService {
 
   /**
    * Get image URL
-   * 
+   *
    * @param {string} publicId - Public ID of the image
    * @param {Object} options - URL options
    * @returns {string} Image URL

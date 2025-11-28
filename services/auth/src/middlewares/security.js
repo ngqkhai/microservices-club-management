@@ -9,7 +9,7 @@ const securityHeaders = helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -33,11 +33,11 @@ const validateApiGatewaySecret = (req, res, next) => {
     method: req.method,
     allHeaders: req.headers
   });
-  
+
   // Check if request is from API Gateway - MANDATORY for all requests
   const gatewaySecret = req.headers['x-api-gateway-secret'];
   const expectedSecret = process.env.API_GATEWAY_SECRET;
-  
+
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
     logger.warn('Request rejected: Invalid or missing gateway secret', {
       ip: req.ip,
@@ -47,14 +47,14 @@ const validateApiGatewaySecret = (req, res, next) => {
       hasSecret: !!gatewaySecret,
       secretMatch: gatewaySecret === expectedSecret
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'Unauthorized: Request must come through API Gateway',
       code: 'INVALID_GATEWAY'
     });
   }
-  
+
   logger.debug('Gateway secret validation passed', {
     path: req.path,
     method: req.method
@@ -67,18 +67,18 @@ const validateApiGatewaySecret = (req, res, next) => {
 const validateApiGatewayHeaders = (req, res, next) => {
   const requiredHeaders = ['x-user-id', 'x-user-role'];
   const optionalHeaders = ['x-user-email', 'x-request-id'];
-  
+
   //DEBUG: Log all headers for debugging Kong JWT claims injection
   logger.info('🔍 DEBUG: Incoming headers from Kong (Protected Route)', {
     path: req.path,
     method: req.method,
     allHeaders: req.headers
   });
-  
+
   // Check if request is from API Gateway - MANDATORY for all requests
   const gatewaySecret = req.headers['x-api-gateway-secret'];
   const expectedSecret = process.env.API_GATEWAY_SECRET;
-  
+
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
     logger.warn('Request rejected: Invalid or missing gateway secret', {
       ip: req.ip,
@@ -88,14 +88,14 @@ const validateApiGatewayHeaders = (req, res, next) => {
       hasSecret: !!gatewaySecret,
       secretMatch: gatewaySecret === expectedSecret
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'Unauthorized: Request must come through API Gateway',
       code: 'INVALID_GATEWAY'
     });
   }
-  
+
   logger.debug('Gateway secret validation passed', {
     path: req.path,
     method: req.method
@@ -103,14 +103,14 @@ const validateApiGatewayHeaders = (req, res, next) => {
 
   // Validate required headers for protected endpoints
   const missingHeaders = requiredHeaders.filter(header => !req.headers[header]);
-  
+
   if (missingHeaders.length > 0) {
     logger.warn('Missing required headers', {
       missing: missingHeaders,
       ip: req.ip,
       path: req.path
     });
-    
+
     return next(new AuthenticationError('Missing required authentication headers'));
   }
 
@@ -170,7 +170,7 @@ const requireRole = (allowedRoles) => {
         requiredRoles: allowedRoles,
         path: req.path
       });
-      
+
       return next(new AuthorizationError('Insufficient permissions'));
     }
 
@@ -192,7 +192,7 @@ const requireSelfOrAdmin = (userIdParam = 'id') => {
     }
 
     const requestedUserId = req.params[userIdParam] || req.body.userId || req.query.userId;
-    
+
     // Admin can access any user's data
     if (req.user.role === 'admin') {
       return next();
@@ -205,7 +205,7 @@ const requireSelfOrAdmin = (userIdParam = 'id') => {
         requestedUserId,
         path: req.path
       });
-      
+
       return next(new AuthorizationError('Can only access your own data'));
     }
 
@@ -217,8 +217,8 @@ const requireSelfOrAdmin = (userIdParam = 'id') => {
 const sanitizeRequest = (req, res, next) => {
   // Remove potentially dangerous characters from strings
   const sanitizeString = (str) => {
-    if (typeof str !== 'string') return str;
-    
+    if (typeof str !== 'string') {return str;}
+
     return str
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
       .replace(/javascript:/gi, '') // Remove javascript: protocols
@@ -264,7 +264,7 @@ const sanitizeRequest = (req, res, next) => {
 // Request logging middleware
 const requestLogger = (req, res, next) => {
   const start = Date.now();
-  
+
   logger.info('Incoming request', {
     method: req.method,
     url: req.url,
@@ -276,7 +276,7 @@ const requestLogger = (req, res, next) => {
 
   res.on('finish', () => {
     const duration = Date.now() - start;
-    
+
     logger.info('Request completed', {
       method: req.method,
       url: req.url,
@@ -295,50 +295,50 @@ const corsOptions = {
   origin: (origin, callback) => {
     const nodeEnv = process.env.NODE_ENV || 'development';
     const corsOrigin = process.env.CORS_ORIGIN;
-    
+
     let allowedOrigins = ['http://localhost:3000']; // default
-    
+
     if (corsOrigin) {
       if (corsOrigin === '*') {
         allowedOrigins = ['*'];
       } else if (typeof corsOrigin === 'string') {
-        allowedOrigins = corsOrigin.includes(',') ? 
-          corsOrigin.split(',').map(url => url.trim()) : 
+        allowedOrigins = corsOrigin.includes(',') ?
+          corsOrigin.split(',').map(url => url.trim()) :
           [corsOrigin];
       } else if (Array.isArray(corsOrigin)) {
         allowedOrigins = corsOrigin;
       }
     }
-    
+
     // In development, be more permissive for API testing
     if (nodeEnv === 'development') {
       // Allow requests with no origin (curl, Postman, mobile apps, etc.)
-      if (!origin) return callback(null, true);
-      
+      if (!origin) {return callback(null, true);}
+
       // Allow localhost with any port for development
       if (origin.startsWith('http://localhost') || origin.startsWith('https://localhost')) {
         return callback(null, true);
       }
-      
+
       // Allow configured origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      
+
       // In development, log but allow other origins
       logger.warn('Unknown origin in development mode, allowing anyway', { origin });
       return callback(null, true);
     }
-    
+
     // Production mode - strict origin checking
     // Allow requests with no origin (mobile apps, server-to-server, etc.)
-    if (!origin) return callback(null, true);
-    
+    if (!origin) {return callback(null, true);}
+
     // Handle wildcard origin
     if (allowedOrigins.includes('*')) {
       return callback(null, true);
     }
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -381,4 +381,4 @@ module.exports = {
   sanitizeRequest,
   requestLogger,
   corsOptions
-}; 
+};

@@ -16,7 +16,7 @@ class SimpleHttpClient {
       const url = new URL(path, this.baseURL);
       const isHttps = url.protocol === 'https:';
       const client = isHttps ? https : http;
-      
+
       const requestOptions = {
         hostname: url.hostname,
         path: url.pathname + url.search,
@@ -26,7 +26,7 @@ class SimpleHttpClient {
           ...options.headers
         }
       };
-      
+
       // Only add port if explicitly provided
       if (url.port) {
         requestOptions.port = url.port;
@@ -43,7 +43,7 @@ class SimpleHttpClient {
               status: res.statusCode,
               data: JSON.parse(data)
             };
-            
+
             if (res.statusCode >= 400) {
               const error = new Error(`HTTP ${res.statusCode}: ${data}`);
               error.response = response;
@@ -79,10 +79,10 @@ class AuthServiceClient {
   constructor() {
     const servicesConfig = config.getServicesConfig();
     const securityConfig = config.getSecurityConfig();
-    
+
     this.baseURL = servicesConfig.authService.baseURL;
     this.apiGatewaySecret = securityConfig.apiGatewaySecret;
-    
+
     // Create HTTP client instance
     this.client = new SimpleHttpClient(this.baseURL);
   }
@@ -100,20 +100,20 @@ class AuthServiceClient {
         'X-User-ID': requestContext.userId || 'system-service',
         'X-User-Role': requestContext.userRole || 'admin'
       };
-      
+
       const response = await this.client.get(`/api/auth/users/${userId}`, { headers });
       return response.data;
     } catch (error) {
       if (error.response && error.response.status === 404) {
         return null; // User not found
       }
-      
+
       logger.error('Auth Service Error', {
         message: error.message,
         status: error.response?.status,
         userId
       });
-      
+
       throw new Error(`Failed to verify user existence: ${error.message}`);
     }
   }
@@ -131,7 +131,7 @@ class AuthServiceClient {
         'x-user-id': requestContext.userId || 'system-service',
         'x-user-role': requestContext.userRole || 'admin'
       };
-      
+
       const response = await this.client.get(`/api/auth/users/${userId}`, { headers });
       return response.data;
     } catch (error) {
@@ -141,13 +141,13 @@ class AuthServiceClient {
         notFoundError.name = 'USER_NOT_FOUND';
         throw notFoundError;
       }
-      
+
       logger.error('Auth Service Error', {
         message: error.message,
         status: error.response?.status,
         userId
       });
-      
+
       throw new Error(`Failed to get user details: ${error.message}`);
     }
   }
@@ -164,18 +164,18 @@ class AuthServiceClient {
   async getAllUsers(options = {}, requestContext = {}) {
     try {
       const { page = 1, limit = 10, search = '' } = options;
-      
+
       const params = new URLSearchParams();
-      if (page) params.append('page', page.toString());
-      if (limit) params.append('limit', limit.toString());
-      if (search) params.append('search', search);
-      
+      if (page) {params.append('page', page.toString());}
+      if (limit) {params.append('limit', limit.toString());}
+      if (search) {params.append('search', search);}
+
       const headers = {
         'x-api-gateway-secret': this.apiGatewaySecret,
         'x-user-id': requestContext.userId || 'system-service',
         'x-user-role': requestContext.userRole || 'admin'
       };
-      
+
       const response = await this.client.get(`/api/auth/users?${params.toString()}`, { headers });
       return response.data;
     } catch (error) {
@@ -184,7 +184,7 @@ class AuthServiceClient {
         status: error.response?.status,
         options
       });
-      
+
       throw new Error(`Failed to get users list: ${error.message}`);
     }
   }
@@ -198,7 +198,7 @@ class AuthServiceClient {
       const headers = {
         'x-api-gateway-secret': this.apiGatewaySecret
       };
-      
+
       const response = await this.client.get('/api/auth/health', { headers });
       return response.status === 200;
     } catch (error) {

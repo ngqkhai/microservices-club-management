@@ -49,7 +49,7 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     // Remove constraint first
     await queryInterface.removeConstraint('users', 'users_phone_unique');
-    
+
     // Remove columns
     await queryInterface.removeColumn('users', 'social_links');
     await queryInterface.removeColumn('users', 'address');
@@ -58,4 +58,4 @@ module.exports = {
     await queryInterface.removeColumn('users', 'profile_picture_url');
     await queryInterface.removeColumn('users', 'phone');
   }
-}; 
+};

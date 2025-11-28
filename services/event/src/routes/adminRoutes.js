@@ -84,7 +84,7 @@ router.post('/api/admin/cron/:jobName/restart', async (req, res) => {
   try {
     const { jobName } = req.params;
     const restarted = cronJobManager.restartJob(jobName);
-    
+
     if (restarted) {
       res.status(200).json({
         success: true,

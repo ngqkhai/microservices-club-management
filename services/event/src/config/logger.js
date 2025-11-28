@@ -26,8 +26,8 @@ const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
     let log = `${timestamp} [${level}]: ${message}`;
-    if (stack) log += `\n${stack}`;
-    if (Object.keys(meta).length > 0 && 
+    if (stack) {log += `\n${stack}`;}
+    if (Object.keys(meta).length > 0 &&
         !meta.service && !meta.environment) {
       log += `\n${JSON.stringify(meta, null, 2)}`;
     }
@@ -78,19 +78,19 @@ if (nodeEnv !== 'production') {
 const logger = winston.createLogger({
   level: logLevel,
   format: logFormat,
-  defaultMeta: { 
+  defaultMeta: {
     service: 'event-service',
     environment: nodeEnv
   },
   transports,
   exceptionHandlers: [
-    new winston.transports.File({ 
+    new winston.transports.File({
       filename: path.join(logsDir, 'exceptions.log'),
       format: logFormat
     })
   ],
   rejectionHandlers: [
-    new winston.transports.File({ 
+    new winston.transports.File({
       filename: path.join(logsDir, 'rejections.log'),
       format: logFormat
     })

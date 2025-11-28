@@ -8,13 +8,13 @@ const logger = require('../utils/logger');
  * @param {Function} next - Express next middleware function
  */
 const errorHandler = (err, req, res, next) => {
-  logger.error('Request error', { 
-    error: err.message, 
+  logger.error('Request error', {
+    error: err.message,
     stack: err.stack,
     path: req.path,
-    method: req.method 
+    method: req.method
   });
-  
+
   // Handle MongoDB duplicate key error
   if (err.name === 'MongoServerError' && err.code === 11000) {
     res.status(409).json({
@@ -31,7 +31,7 @@ const errorHandler = (err, req, res, next) => {
       message: error.message,
       value: error.value
     }));
-    
+
     res.status(400).json({
       status: 400,
       error: 'VALIDATION_ERROR',

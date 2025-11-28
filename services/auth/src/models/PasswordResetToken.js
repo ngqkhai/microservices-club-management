@@ -75,8 +75,8 @@ module.exports = (sequelize, DataTypes) => {
       {
         where: {
           user_id: userId,
-          used: false 
-        } 
+          used: false
+        }
       }
     );
 
@@ -131,4 +131,4 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   return PasswordResetToken;
-}; 
+};

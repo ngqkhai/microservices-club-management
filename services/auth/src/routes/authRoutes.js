@@ -35,7 +35,7 @@
  *           type: string
  *           format: date-time
  *           description: Last update timestamp
- *     
+ *
  *     RegisterRequest:
  *       type: object
  *       required:
@@ -55,7 +55,7 @@
  *           type: string
  *           minLength: 2
  *           description: User full name
- *     
+ *
  *     LoginRequest:
  *       type: object
  *       required:
@@ -69,7 +69,7 @@
  *         password:
  *           type: string
  *           description: User password
- *     
+ *
  *     AuthResponse:
  *       type: object
  *       properties:
@@ -90,7 +90,7 @@
  *             expires_in:
  *               type: number
  *               description: Token expiration time in seconds
- *     
+ *
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -106,7 +106,7 @@
  *         details:
  *           type: object
  *           description: Additional error details
- *     
+ *
  *     HealthResponse:
  *       type: object
  *       properties:
@@ -146,7 +146,7 @@
  *               type: boolean
  *             service:
  *               type: string
- *   
+ *
  *   parameters:
  *     GatewayUserId:
  *       in: header
@@ -156,7 +156,7 @@
  *         type: string
  *         format: uuid
  *       description: User ID injected by API Gateway
- *     
+ *
  *     GatewayUserRole:
  *       in: header
  *       name: x-user-role
@@ -165,7 +165,7 @@
  *         type: string
  *         enum: [USER, ADMIN]
  *       description: User role injected by API Gateway
- *   
+ *
  *   responses:
  *     Unauthorized:
  *       description: Unauthorized - Invalid or missing authentication
@@ -173,28 +173,28 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/ErrorResponse'
- *     
+ *
  *     Forbidden:
  *       description: Forbidden - Insufficient permissions
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/ErrorResponse'
- *     
+ *
  *     ValidationError:
  *       description: Validation Error - Invalid request data
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/ErrorResponse'
- *     
+ *
  *     RateLimitExceeded:
  *       description: Rate Limit Exceeded
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/ErrorResponse'
- * 
+ *
  * tags:
  *   - name: Authentication
  *     description: User authentication operations
@@ -868,11 +868,11 @@ router.get('/users/:id', validateApiGatewayHeaders, requireAdmin, authLimiter, a
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.post('/change-password', 
-  validateApiGatewayHeaders, 
-  requireUser, 
-  authLimiter, 
-  validateChangePassword, 
+router.post('/change-password',
+  validateApiGatewayHeaders,
+  requireUser,
+  authLimiter,
+  validateChangePassword,
   authController.changePassword
 );
 
@@ -1123,11 +1123,11 @@ router.post('/cleanup', validateApiGatewayHeaders, requireAdmin, authController.
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.delete('/me', 
-  validateApiGatewayHeaders, 
-  requireUser, 
+router.delete('/me',
+  validateApiGatewayHeaders,
+  requireUser,
   authLimiter,
-  validateAccountDeletion, 
+  validateAccountDeletion,
   authController.deleteAccount
 );
 
@@ -1178,14 +1178,13 @@ router.delete('/me',
  *       429:
  *         $ref: '#/components/responses/RateLimitExceeded'
  */
-router.delete('/users/:id', 
-  validateApiGatewayHeaders, 
-  requireAdmin, 
+router.delete('/users/:id',
+  validateApiGatewayHeaders,
+  requireAdmin,
   authLimiter,
   validateUserIdParam,
   authController.deleteUser
 );
-
 
 
 // Public key endpoint for Kong API Gateway

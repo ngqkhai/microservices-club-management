@@ -52,4 +52,4 @@ module.exports = {
   Sequelize,
   testConnection,
   ...models
-}; 
+};

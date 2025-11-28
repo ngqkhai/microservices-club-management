@@ -6,25 +6,25 @@ export const connectToDatabase = async () => {
   try {
     const mongoConfig = config.getMongoDBConfig();
     const MONGODB_URI = mongoConfig.uri;
-    
+
     await mongoose.connect(MONGODB_URI, {
       ...mongoConfig.options,
       bufferCommands: false
     });
-    
+
     // Mask password in log
     const maskedUri = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
     logger.info('Connected to MongoDB - Event Service Database', { database: maskedUri });
-    
+
     return true;
   } catch (error) {
     logger.error('MongoDB connection error', { error: error.message });
-    
+
     if (config.isDevelopment()) {
       logger.warn('Running in development mode without database connection');
       return false;
     }
-    
+
     return false;
   }
 };

@@ -22,8 +22,8 @@ const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
     let log = `${timestamp} [${level}]: ${message}`;
-    if (stack) log += `\n${stack}`;
-    if (Object.keys(meta).length > 0) log += `\n${JSON.stringify(meta, null, 2)}`;
+    if (stack) {log += `\n${stack}`;}
+    if (Object.keys(meta).length > 0) {log += `\n${JSON.stringify(meta, null, 2)}`;}
     return log;
   })
 );
@@ -77,19 +77,19 @@ if (process.env.NODE_ENV !== 'production') {
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   format: logFormat,
-  defaultMeta: { 
+  defaultMeta: {
     service: 'notification-service',
     environment: process.env.NODE_ENV || 'development'
   },
   transports,
   exceptionHandlers: [
-    new winston.transports.File({ 
+    new winston.transports.File({
       filename: path.join(logsDir, 'exceptions.log'),
       format: logFormat
     })
   ],
   rejectionHandlers: [
-    new winston.transports.File({ 
+    new winston.transports.File({
       filename: path.join(logsDir, 'rejections.log'),
       format: logFormat
     })
@@ -119,4 +119,4 @@ logger.health = (message, meta = {}) => {
   }
 };
 
-module.exports = logger; 
+module.exports = logger;

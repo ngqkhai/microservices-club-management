@@ -1,9 +1,9 @@
 /**
  * Storage Configuration
- * 
+ *
  * This module provides a unified interface for object storage,
  * supporting both Cloudinary (production) and MinIO/S3 (local development).
- * 
+ *
  * The storage provider is selected based on environment variables:
  * - STORAGE_PROVIDER=cloudinary (default for production)
  * - STORAGE_PROVIDER=minio (for local development)
@@ -21,13 +21,13 @@ const logger = require('./logger');
  */
 function getStorageProvider() {
   const provider = process.env.STORAGE_PROVIDER || 'auto';
-  
+
   // Auto-detect: Use Cloudinary if configured, otherwise MinIO
   if (provider === 'auto') {
-    const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
-                          process.env.CLOUDINARY_API_KEY && 
+    const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME &&
+                          process.env.CLOUDINARY_API_KEY &&
                           process.env.CLOUDINARY_API_SECRET;
-    
+
     if (hasCloudinary) {
       logger.info('Storage provider selected', { provider: 'Cloudinary', mode: 'auto-detected' });
       return new CloudinaryProvider();
@@ -36,17 +36,17 @@ function getStorageProvider() {
       return new MinioProvider();
     }
   }
-  
+
   switch (provider.toLowerCase()) {
     case 'cloudinary':
       logger.info('Storage provider selected', { provider: 'Cloudinary' });
       return new CloudinaryProvider();
-    
+
     case 'minio':
     case 's3':
       logger.info('Storage provider selected', { provider: provider.toUpperCase() });
       return new MinioProvider();
-    
+
     default:
       logger.warn('Unknown storage provider, falling back to MinIO', { provider });
       return new MinioProvider();

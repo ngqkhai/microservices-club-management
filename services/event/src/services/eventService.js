@@ -91,10 +91,10 @@ export async function joinEventService(eventId, userContext) {
   const userId = userContext?.userId || (typeof userContext === 'string' ? userContext : undefined);
   const userEmail = userContext?.userEmail;
   const userFullName = userContext?.userFullName;
-  
+
   try {
     logger.debug('joinEventService called', { eventId, userId });
-    
+
     // Validate eventId format (MongoDB ObjectId)
     if (!eventId || !eventId.match(/^[0-9a-fA-F]{24}$/)) {
       logger.debug('Invalid eventId format', { eventId });
@@ -108,11 +108,11 @@ export async function joinEventService(eventId, userContext) {
     }
 
     logger.debug('Searching for event', { eventId });
-    
+
     // Check if event exists
     const event = await Event.findById(eventId);
     logger.debug('Event lookup result', { eventId, found: !!event });
-    
+
     if (!event) {
       throw new Error('Event not found');
     }
@@ -154,8 +154,8 @@ export async function joinEventService(eventId, userContext) {
     const registeredAt = new Date();
     const registration = await Registration.findOneAndUpdate(
       { event_id: eventId, user_id: userId },
-      { 
-        $set: { 
+      {
+        $set: {
       status: 'registered',
           registered_at: registeredAt,
           user_email: userEmail,
@@ -182,15 +182,15 @@ export async function joinEventService(eventId, userContext) {
       userId,
       dbState: mongoose.connection.readyState
     });
-    
+
     // Handle duplicate key by treating as already existing registration
     if (error && (error.code === 11000 || (typeof error.message === 'string' && error.message.includes('E11000')))) {
       const registeredAt = new Date();
       const registration = await Registration.findOneAndUpdate(
         { event_id: eventId, user_id: userId },
-        { 
-          $set: { 
-            status: 'registered', 
+        {
+          $set: {
+            status: 'registered',
             registered_at: registeredAt,
             user_email: userEmail,
             user_name: userFullName,
@@ -207,12 +207,12 @@ export async function joinEventService(eventId, userContext) {
         eventStartAt: (await Event.findById(eventId))?.start_date,
       };
     }
-    
+
     // Handle database connection errors
     if (error.message === 'Database connection unavailable') {
       throw new Error('Service temporarily unavailable');
     }
-    
+
     // Re-throw the error to be handled by the controller
     throw error;
   }
@@ -221,7 +221,7 @@ export async function joinEventService(eventId, userContext) {
 export async function leaveEventService(eventId, userId) {
   try {
     logger.debug('leaveEventService called', { eventId, userId });
-    
+
     // Validate eventId format (MongoDB ObjectId)
     if (!eventId || !eventId.match(/^[0-9a-fA-F]{24}$/)) {
       logger.debug('Invalid eventId format', { eventId });
@@ -235,11 +235,11 @@ export async function leaveEventService(eventId, userId) {
     }
 
     logger.debug('Searching for event', { eventId });
-    
+
     // Check if event exists
     const event = await Event.findById(eventId);
     logger.debug('Event lookup result', { eventId, found: !!event });
-    
+
     if (!event) {
       throw new Error('Event not found');
     }
@@ -258,8 +258,8 @@ export async function leaveEventService(eventId, userId) {
     // Update registration status to cancelled (or delete the record)
     await Registration.updateOne(
       { event_id: eventId, user_id: userId },
-      { 
-        status: 'cancelled', 
+      {
+        status: 'cancelled',
         cancelled_at: new Date(),
         cancellation_reason: 'User left event'
       }
@@ -281,12 +281,12 @@ export async function leaveEventService(eventId, userId) {
       userId,
       dbState: mongoose.connection.readyState
     });
-    
+
     // Handle database connection errors
     if (error.message === 'Database connection unavailable') {
       throw new Error('Service temporarily unavailable');
     }
-    
+
     // Re-throw the error to be handled by the controller
     throw error;
   }
@@ -384,12 +384,12 @@ export const checkInWithTicketService = async (eventId, qrToken, checkerUserId) 
 };
 
 export const createEventService = async (eventData) => {
-  let { 
-    title, 
-    description, 
+  let {
+    title,
+    description,
     short_description,
     category,
-    location, 
+    location,
     start_date,
     end_date,
     start_time,
@@ -407,10 +407,10 @@ export const createEventService = async (eventData) => {
     attachments,
     contact_info,
     social_links,
-    status, 
+    status,
     visibility,
     organizers,
-    created_by, 
+    created_by,
     club_id,
     club,
     club_name,
@@ -425,7 +425,7 @@ export const createEventService = async (eventData) => {
   // Handle field mapping for backward compatibility and combine date/time if provided
   const startDate = start_date || start_at;
   const endDate = end_date || end_at;
-  
+
   // Combine date and time if both are provided
   const startDateTime = start_time ? `${startDate}T${start_time}:00` : startDate;
   const endDateTime = end_time ? `${endDate}T${end_time}:00` : endDate;
@@ -463,7 +463,7 @@ export const createEventService = async (eventData) => {
   if (!club_id) {
     const clubServiceUrl = process.env.CLUB_SERVICE_URL || 'http://club-service:3002';
     // This endpoint is an assumption for the user service to get user's clubs
-    const userClubsUrl = `${clubServiceUrl}/api/users/${created_by}/clubs?role=MANAGER`; 
+    const userClubsUrl = `${clubServiceUrl}/api/users/${created_by}/clubs?role=MANAGER`;
     try {
       const response = await axios.get(userClubsUrl);
       const managedClubs = response.data.results;
@@ -482,7 +482,7 @@ export const createEventService = async (eventData) => {
        // ... error handling for the axios call
     }
   }
-  
+
   const newEventData = {
     title,
     description,
@@ -525,7 +525,7 @@ export const createEventService = async (eventData) => {
     max_attendees: maxCapacity,
     fee: eventFee || 0
   };
-  
+
   const newEvent = await createEventInDB(newEventData);
   return newEvent;
 };
@@ -545,7 +545,7 @@ export const updateEventService = async (eventId, eventData) => {
     error.status = 400;
     throw error;
   }
-  
+
   // 4.2: Apply validation to updated fields
   if (eventData.start_at && new Date(eventData.start_at) <= new Date()) {
     const error = new Error('Event start_at must be a future date.');
@@ -560,7 +560,7 @@ export const updateEventService = async (eventId, eventData) => {
     error.status = 400;
     throw error;
   }
-  
+
   // 4.4: Update the event in the repository
   const updatedEvent = await updateEventInDB(eventId, eventData);
   return updatedEvent;
@@ -576,7 +576,7 @@ export const deleteEventService = async (eventId) => {
   }
 
   // 5.2: Check if event has registrations - optionally prevent deletion if there are active registrations
-  const registrationCount = await Registration.countDocuments({ 
+  const registrationCount = await Registration.countDocuments({
     event_id: eventId,
     status: { $in: ['registered', 'attended'] }
   });
@@ -584,14 +584,14 @@ export const deleteEventService = async (eventId) => {
     // Optional: You can either prevent deletion or allow it with cascade deletion
     // For now, let's allow deletion but clean up related data
     logger.info('Deleting event with active registrations', { eventId, registrationCount });
-    
+
     // Clean up related registration records
     await Registration.deleteMany({ event_id: eventId });
   }
 
   // 5.3: Delete the event from the repository
   await deleteEventFromDB(eventId);
-  
+
   return { message: 'Event and related data deleted successfully' };
 };
 
@@ -667,17 +667,17 @@ export const getEventsOfClubService = async ({ clubId, status, start_from, start
     // 4. Định dạng kết quả
     const getEventStatus = (event) => {
         // Ưu tiên trạng thái đã được lưu trong DB
-        if (event.status) return event.status;
+        if (event.status) {return event.status;}
 
         const now = new Date();
         // Đảm bảo các ngày là đối tượng Date hợp lệ
         const startDate = event.start_date ? new Date(event.start_date) : null;
         const endDate = event.end_date ? new Date(event.end_date) : null;
 
-        if (endDate && endDate < now) return 'past';
-        if (startDate && startDate > now) return 'upcoming';
-        if (startDate && endDate && startDate <= now && endDate >= now) return 'ongoing';
-        
+        if (endDate && endDate < now) {return 'past';}
+        if (startDate && startDate > now) {return 'upcoming';}
+        if (startDate && endDate && startDate <= now && endDate >= now) {return 'ongoing';}
+
         // Giá trị mặc định nếu không thể xác định
         return 'unknown';
     };
@@ -777,7 +777,7 @@ export const getEventByIdService = async (eventId, userId = null) => {
     const event = await Event.findById(eventId)
       .populate('club_id', 'name logo_url description')
       .lean();
-      
+
     if (!event) {
       return null;
     }
@@ -830,13 +830,13 @@ export const getEventByIdService = async (eventId, userId = null) => {
  */
 export const getUserEventStatusService = async (eventId, userId) => {
   try {
-    const registration = await Registration.findOne({ 
-      event_id: eventId, 
-      user_id: userId 
+    const registration = await Registration.findOne({
+      event_id: eventId,
+      user_id: userId
     });
-    
-    const favorite = await mongoose.connection.db.collection('event_interests').findOne({ 
-      event_id: eventId, 
+
+    const favorite = await mongoose.connection.db.collection('event_interests').findOne({
+      event_id: eventId,
       user_id: userId,
       interest_type: 'favorite'
     });
@@ -861,7 +861,7 @@ export const getUserEventStatusService = async (eventId, userId) => {
 export const toggleEventFavoriteService = async (eventId, userId) => {
   try {
     const collection = mongoose.connection.db.collection('event_interests');
-    
+
     const existing = await collection.findOne({
       event_id: eventId,
       user_id: userId,
@@ -892,14 +892,14 @@ export const toggleEventFavoriteService = async (eventId, userId) => {
 export const getUserFavoriteEventsService = async (userId, { page = 1, limit = 10 } = {}) => {
   try {
     const skip = (page - 1) * limit;
-    
+
     const favoriteEventIds = await mongoose.connection.db.collection('event_interests')
       .find({ user_id: userId, interest_type: 'favorite' })
       .project({ event_id: 1 })
       .toArray();
-    
+
     const eventIds = favoriteEventIds.map(f => f.event_id);
-    
+
     const total = eventIds.length;
     const events = await Event.find({ _id: { $in: eventIds } })
       .populate('club_id', 'name logo_url')
@@ -929,14 +929,14 @@ export const getUserFavoriteEventsService = async (userId, { page = 1, limit = 1
 export const getEventRegistrationsService = async (eventId, { page = 1, limit = 20, status } = {}) => {
   try {
     const skip = (page - 1) * limit;
-    
-    let query = { event_id: eventId };
+
+    const query = { event_id: eventId };
     if (status) {
       query.status = status;
     }
-    
+
     const total = await Registration.countDocuments(query);
-    
+
     const registrations = await Registration.find(query)
       .sort({ created_at: -1 })
       .skip(skip)
@@ -1004,7 +1004,7 @@ export const getMyEventsService = async (userId) => {
   try {
     const regs = await Registration.find({ user_id: userId }).select('event_id').lean();
     const eventIds = [...new Set(regs.map((r) => r.event_id).filter(Boolean))];
-    if (eventIds.length === 0) return [];
+    if (eventIds.length === 0) {return [];}
     const events = await Event.find({ _id: { $in: eventIds } }).lean();
     return events;
   } catch (error) {

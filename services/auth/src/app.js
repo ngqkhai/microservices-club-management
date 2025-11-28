@@ -162,7 +162,7 @@ class Application {
         const rabbitmqConfig = require('./config/rabbitmq');
         await rabbitmqConfig.connect();
         logger.info('RabbitMQ connected successfully');
-        
+
         // Initialize image event consumer
         const imageEventConsumer = require('./services/imageEventConsumer');
         await imageEventConsumer.connect();
@@ -213,4 +213,4 @@ class Application {
   }
 }
 
-module.exports = Application; 
+module.exports = Application;

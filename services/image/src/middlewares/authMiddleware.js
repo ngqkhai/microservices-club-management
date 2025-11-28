@@ -7,8 +7,8 @@ const validateApiGatewaySecret = (req, res, next) => {
   const expectedSecret = config.get('API_GATEWAY_SECRET');
 
   if (!expectedSecret) {
-    return res.status(500).json({ 
-      error: 'API Gateway secret not configured' 
+    return res.status(500).json({
+      error: 'API Gateway secret not configured'
     });
   }
 
@@ -19,9 +19,9 @@ const validateApiGatewaySecret = (req, res, next) => {
       method: req.method,
       hasSecret: !!gatewaySecret
     });
-    
-    return res.status(403).json({ 
-      error: 'Access denied: Invalid or missing API Gateway secret' 
+
+    return res.status(403).json({
+      error: 'Access denied: Invalid or missing API Gateway secret'
     });
   }
 
@@ -35,7 +35,7 @@ const extractUserInfo = (req, res, next) => {
   const userEmail = req.headers['x-user-email'];
   const userRole = req.headers['x-user-role'];
   const userFullNameRaw = req.headers['x-user-full-name'];
-  
+
   // Decode base64 encoded full_name (to handle UTF-8 characters like Vietnamese names)
   let userFullName = userFullNameRaw;
   if (userFullNameRaw) {
@@ -49,8 +49,8 @@ const extractUserInfo = (req, res, next) => {
   }
 
   if (!userId) {
-    return res.status(401).json({ 
-      error: 'Authentication required: User ID not found' 
+    return res.status(401).json({
+      error: 'Authentication required: User ID not found'
     });
   }
 
@@ -71,8 +71,8 @@ const extractUserInfo = (req, res, next) => {
 // Authorization middleware for different operations
 const requireAuth = (req, res, next) => {
   if (!req.user || !req.user.id) {
-    return res.status(401).json({ 
-      error: 'Authentication required' 
+    return res.status(401).json({
+      error: 'Authentication required'
     });
   }
   next();
@@ -81,8 +81,8 @@ const requireAuth = (req, res, next) => {
 // Admin role requirement
 const requireAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ 
-      error: 'Admin access required' 
+    return res.status(403).json({
+      error: 'Admin access required'
     });
   }
   next();
@@ -106,15 +106,15 @@ const requireClubManagerOrAdmin = async (req, res, next) => {
     // For club-related images, verify club manager access
     if (entity_type === 'club') {
       if (!entity_id) {
-        return res.status(400).json({ 
-          error: 'Club ID required for club image uploads' 
+        return res.status(400).json({
+          error: 'Club ID required for club image uploads'
         });
       }
 
       const hasClubAccess = await ownershipService.verifyClubManagerAccess(entity_id, userId);
       if (!hasClubAccess) {
-        return res.status(403).json({ 
-          error: 'Access denied: You must be a club manager or organizer to upload club images' 
+        return res.status(403).json({
+          error: 'Access denied: You must be a club manager or organizer to upload club images'
         });
       }
     }
@@ -122,31 +122,31 @@ const requireClubManagerOrAdmin = async (req, res, next) => {
     // For event-related images, verify event access
     if (entity_type === 'event') {
       if (!entity_id) {
-        return res.status(400).json({ 
-          error: 'Event ID required for event image uploads' 
+        return res.status(400).json({
+          error: 'Event ID required for event image uploads'
         });
       }
 
       const hasEventAccess = await ownershipService.verifyEventAccess(entity_id, userId);
       if (!hasEventAccess) {
-        return res.status(403).json({ 
-          error: 'Access denied: You must be the event creator, event organizer, or club manager/organizer to upload event images' 
+        return res.status(403).json({
+          error: 'Access denied: You must be the event creator, event organizer, or club manager/organizer to upload event images'
         });
       }
     }
 
     // For user profile images, only allow own profile
     if (entity_type === 'user' && entity_id !== userId) {
-      return res.status(403).json({ 
-        error: 'Can only upload images for your own profile' 
+      return res.status(403).json({
+        error: 'Can only upload images for your own profile'
       });
     }
 
     next();
   } catch (error) {
     logger.error('Authorization error', { error: error.message });
-    res.status(500).json({ 
-      error: 'Authorization check failed' 
+    res.status(500).json({
+      error: 'Authorization check failed'
     });
   }
 };

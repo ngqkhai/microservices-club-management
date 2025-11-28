@@ -22,7 +22,7 @@ class EmailService {
       failed: 0,
       retries: 0
     };
-    
+
     this.setupTransporter();
   }
 
@@ -92,7 +92,7 @@ class EmailService {
    */
   async loadTemplate(templateName, type = 'html') {
     const cacheKey = `${templateName}_${type}`;
-    
+
     // Check cache first
     if (process.env.ENABLE_TEMPLATE_CACHING !== 'false') {
       const cached = this.templateCache.get(cacheKey);
@@ -103,7 +103,7 @@ class EmailService {
 
     try {
       const templatePath = path.join(__dirname, '..', this.templateDir, templateName, `index.${type}`);
-      
+
       if (!await fs.pathExists(templatePath)) {
         throw new Error(`Template not found: ${templatePath}`);
       }
@@ -135,7 +135,7 @@ class EmailService {
   async loadTemplateMeta(templateName) {
     try {
       const metaPath = path.join(__dirname, '..', this.templateDir, templateName, 'meta.json');
-      
+
       if (await fs.pathExists(metaPath)) {
         const meta = await fs.readJson(metaPath);
         return meta;
@@ -176,7 +176,7 @@ class EmailService {
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      
+
       this.stats.sent++;
       logger.email('Email sent successfully', {
         to: mailOptions.to,
@@ -196,7 +196,7 @@ class EmailService {
       if (attempt < maxRetries) {
         const delay = retryDelay * Math.pow(exponentialBase, attempt - 1);
         this.stats.retries++;
-        
+
         logger.email(`Retrying email send in ${delay}ms`, {
           attempt: attempt + 1,
           maxRetries,
@@ -240,7 +240,7 @@ class EmailService {
       };
 
       const result = await this.sendEmail(emailOptions);
-      
+
       logger.email('Email verification sent', {
         userId,
         email,
@@ -250,9 +250,9 @@ class EmailService {
       return result;
 
     } catch (error) {
-      logger.error('Failed to send email verification:', error, { 
-        userId: data.userId, 
-        email: data.email 
+      logger.error('Failed to send email verification:', error, {
+        userId: data.userId,
+        email: data.email
       });
       throw error;
     }
@@ -286,7 +286,7 @@ class EmailService {
       };
 
       const result = await this.sendEmail(emailOptions);
-      
+
       logger.email('Password reset email sent', {
         userId,
         email,
@@ -296,9 +296,9 @@ class EmailService {
       return result;
 
     } catch (error) {
-      logger.error('Failed to send password reset email:', error, { 
-        userId: data.userId, 
-        email: data.email 
+      logger.error('Failed to send password reset email:', error, {
+        userId: data.userId,
+        email: data.email
       });
       throw error;
     }
@@ -336,7 +336,7 @@ class EmailService {
       };
 
       const result = await this.sendEmail(emailOptions);
-      
+
       logger.email('RSVP invitation sent', {
         userId,
         email,
@@ -347,8 +347,8 @@ class EmailService {
       return result;
 
     } catch (error) {
-      logger.error('Failed to send RSVP invitation:', error, { 
-        userId: data.userId, 
+      logger.error('Failed to send RSVP invitation:', error, {
+        userId: data.userId,
         email: data.email,
         eventName: data.eventName
       });
@@ -391,10 +391,10 @@ class EmailService {
           };
 
           const result = await this.sendEmail(emailOptions);
-          results.push({ 
-            email: recipient.email, 
-            success: true, 
-            messageId: result.messageId 
+          results.push({
+            email: recipient.email,
+            success: true,
+            messageId: result.messageId
           });
 
         } catch (error) {
@@ -402,10 +402,10 @@ class EmailService {
             email: recipient.email,
             title
           });
-          results.push({ 
-            email: recipient.email, 
-            success: false, 
-            error: error.message 
+          results.push({
+            email: recipient.email,
+            success: false,
+            error: error.message
           });
         }
       }
@@ -484,4 +484,4 @@ class EmailService {
   }
 }
 
-module.exports = new EmailService(); 
+module.exports = new EmailService();

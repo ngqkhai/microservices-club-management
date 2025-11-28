@@ -25,7 +25,7 @@ const createClub = async (req, res, next) => {
       userRole: req.user?.role || req.headers['x-user-role'],
       userEmail: req.user?.email || req.headers['x-user-email']
     };
-    
+
     const result = await clubService.createClub(req.body, userContext);
     res.status(201).json(result);
   } catch (error) {
@@ -48,7 +48,7 @@ const getClubMember = async (req, res, next) => {
       userId: req.headers['x-user-id'],
       userRole: req.headers['x-user-role']
     };
-    
+
     const result = await clubService.getClubMember(req.params.clubId, req.params.userId, userContext);
     res.status(200).json(result);
   } catch (error) {
@@ -90,7 +90,7 @@ const updateClubStatus = async (req, res, next) => {
       userRole: req.user?.role || req.headers['x-user-role'],
       userEmail: req.user?.email || req.headers['x-user-email']
     };
-    
+
     const { status } = req.body;
     const result = await clubService.updateClubStatus(req.params.id, status, userContext);
     res.status(200).json(result);
@@ -114,7 +114,7 @@ const getClubMembers = async (req, res, next) => {
       userId: req.user?.id || req.headers['x-user-id'],
       userRole: req.user?.role || req.headers['x-user-role']
     };
-    
+
     const result = await clubService.getClubMembers(req.params.clubId, userContext);
     res.status(200).json(result);
   } catch (error) {
@@ -128,7 +128,7 @@ const addClubMember = async (req, res, next) => {
       userId: req.user?.id || req.headers['x-user-id'],
       userRole: req.user?.role || req.headers['x-user-role']
     };
-    
+
     const result = await clubService.addClubMember(req.params.clubId, req.body, userContext);
     res.status(201).json(result);
   } catch (error) {
@@ -142,11 +142,11 @@ const updateMemberRole = async (req, res, next) => {
       userId: req.user?.id || req.headers['x-user-id'],
       userRole: req.user?.role || req.headers['x-user-role']
     };
-    
+
     const result = await clubService.updateMemberRole(
-      req.params.clubId, 
-      req.params.userId, 
-      req.body.role, 
+      req.params.clubId,
+      req.params.userId,
+      req.body.role,
       userContext
     );
     res.status(200).json(result);
@@ -161,10 +161,10 @@ const removeMember = async (req, res, next) => {
       userId: req.user?.id || req.headers['x-user-id'],
       userRole: req.user?.role || req.headers['x-user-role']
     };
-    
+
     const result = await clubService.removeMember(
-      req.params.clubId, 
-      req.params.userId, 
+      req.params.clubId,
+      req.params.userId,
       userContext
     );
     res.status(200).json(result);

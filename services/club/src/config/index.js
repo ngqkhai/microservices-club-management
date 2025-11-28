@@ -20,15 +20,15 @@ class ConfigManager {
       NODE_ENV: Joi.string()
         .valid('development', 'test', 'production')
         .default('development'),
-      
+
       // Server Configuration
       PORT: Joi.number()
         .port()
         .default(3002),
-      
+
       SERVICE_NAME: Joi.string()
         .default('club-service'),
-      
+
       SERVICE_VERSION: Joi.string()
         .default('1.0.0'),
 
@@ -43,10 +43,10 @@ class ConfigManager {
       RABBITMQ_URL: Joi.string()
         .uri({ scheme: ['amqp', 'amqps'] })
         .default('amqp://localhost:5672'),
-      
+
       RABBITMQ_EXCHANGE: Joi.string()
         .default('club_events'),
-      
+
       RABBITMQ_QUEUE: Joi.string()
         .default('club_events'),
 
@@ -54,15 +54,15 @@ class ConfigManager {
       AUTH_SERVICE_URL: Joi.string()
         .uri()
         .default('http://auth-service:3001'),
-      
+
       AUTH_SERVICE_TIMEOUT: Joi.number()
         .integer()
         .default(5000),
-      
+
       EVENT_SERVICE_URL: Joi.string()
         .uri()
         .default('http://event-service:3003'),
-      
+
       EVENT_SERVICE_TIMEOUT: Joi.number()
         .integer()
         .default(5000),
@@ -106,44 +106,44 @@ class ConfigManager {
    */
   loadAndValidateConfig() {
     const schema = this.getConfigSchema();
-    
+
     // Extract environment variables
     const envVars = {
       NODE_ENV: process.env.NODE_ENV,
       PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : undefined,
       SERVICE_NAME: process.env.SERVICE_NAME,
       SERVICE_VERSION: process.env.SERVICE_VERSION,
-      
+
       // MongoDB
       MONGODB_URI: process.env.MONGODB_URI,
-      
+
       // RabbitMQ
       RABBITMQ_URL: process.env.RABBITMQ_URL,
       RABBITMQ_EXCHANGE: process.env.RABBITMQ_EXCHANGE,
       RABBITMQ_QUEUE: process.env.RABBITMQ_QUEUE,
-      
+
       // Service URLs
       AUTH_SERVICE_URL: process.env.AUTH_SERVICE_URL,
       AUTH_SERVICE_TIMEOUT: process.env.AUTH_SERVICE_TIMEOUT ? parseInt(process.env.AUTH_SERVICE_TIMEOUT, 10) : undefined,
       EVENT_SERVICE_URL: process.env.EVENT_SERVICE_URL,
       EVENT_SERVICE_TIMEOUT: process.env.EVENT_SERVICE_TIMEOUT ? parseInt(process.env.EVENT_SERVICE_TIMEOUT, 10) : undefined,
-      
+
       // Security
       API_GATEWAY_SECRET: process.env.API_GATEWAY_SECRET,
-      
+
       // Logging
       LOG_LEVEL: process.env.LOG_LEVEL,
-      
+
       // CORS
-      CORS_ORIGIN: process.env.CORS_ORIGIN ? 
-        (process.env.CORS_ORIGIN.includes(',') ? 
-          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : 
-          process.env.CORS_ORIGIN) : 
+      CORS_ORIGIN: process.env.CORS_ORIGIN ?
+        (process.env.CORS_ORIGIN.includes(',') ?
+          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) :
+          process.env.CORS_ORIGIN) :
         undefined,
-      
+
       // Health Check
       HEALTH_CHECK_TIMEOUT_MS: process.env.HEALTH_CHECK_TIMEOUT_MS ? parseInt(process.env.HEALTH_CHECK_TIMEOUT_MS, 10) : undefined,
-      
+
       // Features
       ENABLE_REQUEST_LOGGING: process.env.ENABLE_REQUEST_LOGGING !== 'false'
     };
@@ -158,7 +158,7 @@ class ConfigManager {
       const errorMessage = error.details
         .map(detail => `  - ${detail.path.join('.')}: ${detail.message}`)
         .join('\n');
-      
+
       console.error('❌ Configuration validation failed:');
       console.error(errorMessage);
       console.error('\n📋 Please check your .env file or environment variables.');
@@ -166,7 +166,7 @@ class ConfigManager {
     }
 
     this.config = value;
-    
+
     // Log configuration summary (without sensitive data)
     if (process.env.NODE_ENV !== 'test') {
       console.log('✅ Club Service configuration loaded:', JSON.stringify({

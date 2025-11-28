@@ -15,7 +15,7 @@ class StatusUpdateService {
       // Debug: Check total events in database
       const totalEvents = await Event.countDocuments();
       const publishedEvents = await Event.countDocuments({ status: 'published' });
-      
+
       logger.debug('Event counts', { totalEvents, publishedEvents });
 
       // Update published events that have ended to completed
@@ -25,7 +25,7 @@ class StatusUpdateService {
           end_date: { $lt: currentDate }
         },
         {
-          $set: { 
+          $set: {
             status: 'completed',
             updated_at: new Date()
           }
@@ -42,7 +42,7 @@ class StatusUpdateService {
           end_date: { $gt: currentDate }
         },
         {
-          $set: { 
+          $set: {
             status: 'published',
             updated_at: new Date()
           }

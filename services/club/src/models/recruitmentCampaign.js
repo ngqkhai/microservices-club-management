@@ -2,7 +2,7 @@ const { RecruitmentCampaign } = require('../config/database');
 const mongoose = require('mongoose');
 
 class RecruitmentCampaignModel {
-  
+
   /**
    * Create a new recruitment campaign
    * @param {Object} campaignData - Campaign data including club_id, title, description, etc.
@@ -39,9 +39,9 @@ class RecruitmentCampaignModel {
   static async findByClubId(clubId, options = {}) {
     try {
       const { status, page = 1, limit = 10, sort = 'created_at' } = options;
-      
+
       const query = { club_id: new mongoose.Types.ObjectId(clubId) };
-      
+
       if (status) {
         query.status = status;
       }
@@ -186,7 +186,7 @@ class RecruitmentCampaignModel {
   static async getPublishedCampaigns(options = {}) {
     try {
       const { club_id, page = 1, limit = 10 } = options;
-      
+
       const query = {
         status: { $in: ['published'] },
         // The date filter was preventing upcoming published campaigns from being returned.
@@ -237,8 +237,8 @@ class RecruitmentCampaignModel {
       }
 
       const now = new Date();
-      return campaign.status === 'published' && 
-             campaign.start_date <= now && 
+      return campaign.status === 'published' &&
+             campaign.start_date <= now &&
              campaign.end_date >= now &&
              (!campaign.max_applications || campaign.statistics.total_applications < campaign.max_applications);
     } catch (error) {

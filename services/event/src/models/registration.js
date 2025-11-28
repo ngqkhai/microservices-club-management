@@ -34,23 +34,23 @@ const registrationSchema = new mongoose.Schema({
   registration_data: {
     type: {
       answers: [{
-        question_id: { 
-          type: String, 
+        question_id: {
+          type: String,
           required: true,
           maxLength: 100
         },
-        question_text: { 
-          type: String, 
+        question_text: {
+          type: String,
           required: true,
           maxLength: 500
         },
-        answer_value: { 
-          type: String, 
+        answer_value: {
+          type: String,
           required: true,
           maxLength: 2000
         },
-        answer_type: { 
-          type: String, 
+        answer_type: {
+          type: String,
           enum: ['text', 'textarea', 'select', 'checkbox', 'number', 'date'],
           default: 'text'
         }
@@ -155,9 +155,9 @@ const registrationSchema = new mongoose.Schema({
     maxLength: 500
   }
 }, {
-  timestamps: { 
-    createdAt: 'created_at', 
-    updatedAt: 'updated_at' 
+  timestamps: {
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
   },
   collection: 'event_registrations'
 });

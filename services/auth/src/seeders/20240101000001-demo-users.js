@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 /**
  * Enhanced Auth Service Seeder
  * Generates realistic Vietnamese user data with proper role distribution
- * 
+ *
  * Pre-hashed password: Password123! (bcrypt, 12 rounds)
  */
 
@@ -232,7 +232,7 @@ module.exports = {
       const userInterests = [];
       for (let j = 0; j < Math.floor(Math.random() * 3) + 1; j++) {
         const interest = randomChoice(interests);
-        if (!userInterests.includes(interest)) userInterests.push(interest);
+        if (!userInterests.includes(interest)) {userInterests.push(interest);}
       }
 
       additionalUsers.push({

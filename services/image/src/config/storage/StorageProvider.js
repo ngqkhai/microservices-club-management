@@ -1,6 +1,6 @@
 /**
  * Abstract Storage Provider Interface
- * 
+ *
  * All storage providers (Cloudinary, MinIO, S3) must implement this interface.
  * This allows the image service to work with different storage backends
  * without changing the business logic.
@@ -26,7 +26,7 @@ class StorageProvider {
 
   /**
    * Upload an image to storage
-   * 
+   *
    * @param {Buffer} buffer - The image file buffer
    * @param {Object} options - Upload options
    * @param {string} options.folder - Folder/prefix for the image
@@ -45,7 +45,7 @@ class StorageProvider {
 
   /**
    * Delete an image from storage
-   * 
+   *
    * @param {string} publicId - The public ID of the image to delete
    * @returns {Promise<DeleteResult>}
    */
@@ -55,7 +55,7 @@ class StorageProvider {
 
   /**
    * Get information about an image
-   * 
+   *
    * @param {string} publicId - The public ID of the image
    * @returns {Promise<ImageInfo>}
    */
@@ -65,7 +65,7 @@ class StorageProvider {
 
   /**
    * Generate a public URL for an image
-   * 
+   *
    * @param {string} publicId - The public ID of the image
    * @param {Object} [options] - URL options (transformations, etc.)
    * @returns {string}

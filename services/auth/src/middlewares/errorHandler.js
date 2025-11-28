@@ -1,15 +1,15 @@
 const logger = require('../config/logger');
-const { 
-  AppError, 
-  formatErrorResponse, 
-  isOperationalError, 
-  handleSequelizeError 
+const {
+  AppError,
+  formatErrorResponse,
+  isOperationalError,
+  handleSequelizeError
 } = require('../utils/errors');
 
 // Development error response
 const sendErrorDev = (err, res) => {
   const errorResponse = formatErrorResponse(err, true);
-  
+
   logger.error('Error details:', {
     message: err.message,
     stack: err.stack,
@@ -86,12 +86,12 @@ const globalErrorHandler = (err, req, res, next) => {
     error.message = err.message;
 
     // Handle specific error types
-    if (err.name === 'CastError') error = handleCastErrorDB(error);
-    if (err.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (err.name === 'ValidationError') error = handleValidationErrorDB(error);
-    if (err.name === 'JsonWebTokenError') error = handleJWTError();
-    if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
-    
+    if (err.name === 'CastError') {error = handleCastErrorDB(error);}
+    if (err.code === 11000) {error = handleDuplicateFieldsDB(error);}
+    if (err.name === 'ValidationError') {error = handleValidationErrorDB(error);}
+    if (err.name === 'JsonWebTokenError') {error = handleJWTError();}
+    if (err.name === 'TokenExpiredError') {error = handleJWTExpiredError();}
+
     // Handle Sequelize errors
     if (err.name && err.name.startsWith('Sequelize')) {
       error = handleSequelizeError(error);
@@ -129,13 +129,13 @@ const timeoutHandler = (timeout = 30000) => {
 const gracefulShutdown = (server) => {
   return (signal) => {
     logger.info(`Received ${signal}. Starting graceful shutdown...`);
-    
+
     server.close((err) => {
       if (err) {
         logger.error('Error during graceful shutdown:', err);
         process.exit(1);
       }
-      
+
       logger.info('Server closed gracefully');
       process.exit(0);
     });
@@ -155,7 +155,7 @@ const uncaughtExceptionHandler = (err) => {
     message: err.message,
     stack: err.stack
   });
-  
+
   process.exit(1);
 };
 
@@ -166,7 +166,7 @@ const unhandledRejectionHandler = (err) => {
     message: err.message,
     stack: err.stack
   });
-  
+
   process.exit(1);
 };
 
@@ -174,7 +174,7 @@ const unhandledRejectionHandler = (err) => {
 const setupGlobalErrorHandlers = (server) => {
   process.on('uncaughtException', uncaughtExceptionHandler);
   process.on('unhandledRejection', unhandledRejectionHandler);
-  
+
   process.on('SIGTERM', gracefulShutdown(server));
   process.on('SIGINT', gracefulShutdown(server));
 };
@@ -187,4 +187,4 @@ module.exports = {
   setupGlobalErrorHandlers,
   sendErrorDev,
   sendErrorProd
-}; 
+};

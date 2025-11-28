@@ -18,7 +18,7 @@ class CampaignEventPublisher {
 
   async connect() {
     try {
-      if (this.isConnected && this.channel) return;
+      if (this.isConnected && this.channel) {return;}
 
       const rabbitUrl = config.get('RABBITMQ_URL');
       logger.info('CampaignEventPublisher: Connecting to RabbitMQ...');
@@ -81,19 +81,19 @@ class CampaignEventPublisher {
       }
 
       const messageBuffer = Buffer.from(JSON.stringify(payload));
-      
+
       const published = this.channel.publish(
         this.exchange,
         routingKey,
         messageBuffer,
-        { 
+        {
           persistent: true,
           contentType: 'application/json'
         }
       );
 
       if (published) {
-        logger.info('CampaignEventPublisher: Event published', { 
+        logger.info('CampaignEventPublisher: Event published', {
           eventType: routingKey,
           eventId: payload.id
         });
@@ -101,9 +101,9 @@ class CampaignEventPublisher {
 
       return published;
     } catch (error) {
-      logger.error('CampaignEventPublisher: Failed to publish', { 
+      logger.error('CampaignEventPublisher: Failed to publish', {
         error: error.message,
-        routingKey 
+        routingKey
       });
       return false;
     }
@@ -299,8 +299,8 @@ class CampaignEventPublisher {
 
   async close() {
     try {
-      if (this.channel) await this.channel.close();
-      if (this.connection) await this.connection.close();
+      if (this.channel) {await this.channel.close();}
+      if (this.connection) {await this.connection.close();}
       this.isConnected = false;
       logger.info('CampaignEventPublisher: Connection closed');
     } catch (error) {

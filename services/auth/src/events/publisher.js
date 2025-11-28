@@ -62,10 +62,10 @@ class EventPublisher {
 
       await this.rabbitmq.publishEvent(EventTypes.USER_CREATED, payload);
 
-      logger.info('User created event published', { 
+      logger.info('User created event published', {
         eventId: payload.id,
         userId: user.id,
-        email: user.email 
+        email: user.email
       });
     } catch (error) {
       logger.error('Failed to publish user created event:', error, { userId: user.id });
@@ -91,10 +91,10 @@ class EventPublisher {
 
       await this.rabbitmq.publishEvent(EventTypes.USER_UPDATED, payload);
 
-      logger.info('User updated event published', { 
+      logger.info('User updated event published', {
         eventId: payload.id,
         userId: user.id,
-        changedFields 
+        changedFields
       });
     } catch (error) {
       logger.error('Failed to publish user updated event:', error, { userId: user.id });
@@ -114,9 +114,9 @@ class EventPublisher {
 
       await this.rabbitmq.publishEvent(EventTypes.USER_DELETED, payload);
 
-      logger.info('User deleted event published', { 
+      logger.info('User deleted event published', {
         eventId: payload.id,
-        userId 
+        userId
       });
     } catch (error) {
       logger.error('Failed to publish user deleted event:', error, { userId });
@@ -137,9 +137,9 @@ class EventPublisher {
 
       await this.rabbitmq.publishEvent(eventType, payload);
 
-      logger.debug('User event published successfully', { 
-        eventType, 
-        userId: eventData.userId 
+      logger.debug('User event published successfully', {
+        eventType,
+        userId: eventData.userId
       });
     } catch (error) {
       // Log error but don't fail the operation
@@ -177,9 +177,9 @@ class EventPublisher {
       });
     } catch (error) {
       // Log error but don't fail the registration
-      logger.error('Failed to publish email verification event:', error, { 
+      logger.error('Failed to publish email verification event:', error, {
         userId: eventData.userId,
-        email: eventData.email 
+        email: eventData.email
       });
     }
   }
@@ -214,9 +214,9 @@ class EventPublisher {
       });
     } catch (error) {
       // Log error but don't fail the password reset request
-      logger.error('Failed to publish password reset email event:', error, { 
+      logger.error('Failed to publish password reset email event:', error, {
         userId: eventData.userId,
-        email: eventData.email 
+        email: eventData.email
       });
     }
   }
@@ -271,4 +271,4 @@ class EventPublisher {
 }
 
 // Export singleton instance
-module.exports = new EventPublisher(); 
+module.exports = new EventPublisher();

@@ -96,8 +96,8 @@ router.get(
  * @desc Get a specific club member's details
  * @access Private - Club Members, Organizers, and Managers
  */
-router.get('/clubs/:clubId/members/:userId', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.get('/clubs/:clubId/members/:userId',
+  authMiddleware.validateApiGatewayHeaders,
   clubController.getClubMember
 );
 
@@ -106,9 +106,9 @@ router.get('/clubs/:clubId/members/:userId',
  * @desc Create a new club
  * @access Private - Requires SYSTEM_ADMIN role
  */
-router.post('/clubs', 
-  authMiddleware.validateApiGatewayHeaders, 
-  authMiddleware.requireRoles([ 'admin']), 
+router.post('/clubs',
+  authMiddleware.validateApiGatewayHeaders,
+  authMiddleware.requireRoles([ 'admin']),
   clubController.createClub
 );
 
@@ -117,9 +117,9 @@ router.post('/clubs',
  * @desc Update club status (ACTIVE/INACTIVE)
  * @access Private - Requires SYSTEM_ADMIN role
  */
-router.put('/clubs/:id/status', 
-  authMiddleware.validateApiGatewayHeaders, 
-  authMiddleware.requireRoles(['admin']), 
+router.put('/clubs/:id/status',
+  authMiddleware.validateApiGatewayHeaders,
+  authMiddleware.requireRoles(['admin']),
   clubController.updateClubStatus
 );
 
@@ -128,8 +128,8 @@ router.put('/clubs/:id/status',
  * @desc Get all club roles for a user
  * @access Private
  */
-router.get('/users/:userId/club-roles', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.get('/users/:userId/club-roles',
+  authMiddleware.validateApiGatewayHeaders,
   clubController.getUserClubRoles
 );
 
@@ -138,8 +138,8 @@ router.get('/users/:userId/club-roles',
  * @desc Get all recruitment applications for a user
  * @access Private - User can only view their own applications
  */
-router.get('/users/:userId/applications', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.get('/users/:userId/applications',
+  authMiddleware.validateApiGatewayHeaders,
   require('../controllers/recruitmentCampaignController').getUserApplications
 );
 
@@ -148,8 +148,8 @@ router.get('/users/:userId/applications',
  * @desc Get all members of a club
  * @access Private - Club Members, Organizers, and Managers
  */
-router.get('/clubs/:clubId/members', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.get('/clubs/:clubId/members',
+  authMiddleware.validateApiGatewayHeaders,
   clubController.getClubMembers
 );
 
@@ -158,8 +158,8 @@ router.get('/clubs/:clubId/members',
  * @desc Add a member to a club
  * @access Private - Club Manager only
  */
-router.post('/clubs/:clubId/members', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.post('/clubs/:clubId/members',
+  authMiddleware.validateApiGatewayHeaders,
   clubController.addClubMember
 );
 
@@ -168,8 +168,8 @@ router.post('/clubs/:clubId/members',
  * @desc Update a member's role in a club
  * @access Private - Club Manager only
  */
-router.put('/clubs/:clubId/members/:userId/role', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.put('/clubs/:clubId/members/:userId/role',
+  authMiddleware.validateApiGatewayHeaders,
   clubController.updateMemberRole
 );
 
@@ -178,8 +178,8 @@ router.put('/clubs/:clubId/members/:userId/role',
  * @desc Remove a member from a club
  * @access Private - Club Manager only
  */
-router.delete('/clubs/:clubId/members/:userId', 
-  authMiddleware.validateApiGatewayHeaders, 
+router.delete('/clubs/:clubId/members/:userId',
+  authMiddleware.validateApiGatewayHeaders,
   clubController.removeMember
 );
 

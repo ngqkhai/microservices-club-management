@@ -27,14 +27,14 @@ async function startServer() {
 
     // Start server
     const server = app.listen(PORT, HOST, () => {
-      logger.info(`🚀 Auth Service started successfully`, {
+      logger.info('🚀 Auth Service started successfully', {
         port: PORT,
         host: HOST,
         environment: process.env.NODE_ENV || 'development',
         version: process.env.SERVICE_VERSION || '1.0.0',
         pid: process.pid,
         documentation: `http://${HOST}:${PORT}/api/auth/docs`,
-        userServiceUrl: process.env.USER_SERVICE_URL 
+        userServiceUrl: process.env.USER_SERVICE_URL
       });
     });
 
@@ -44,7 +44,7 @@ async function startServer() {
     // Handle graceful shutdown
     const gracefulShutdown = async (signal) => {
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
-      
+
       try {
         // Stop accepting new connections
         server.close(async (err) => {
@@ -123,4 +123,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = startServer; 
+module.exports = startServer;

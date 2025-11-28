@@ -20,12 +20,12 @@ class ConfigManager {
       NODE_ENV: Joi.string()
         .valid('development', 'test', 'production')
         .default('development'),
-      
+
       // Server Configuration
       PORT: Joi.number()
         .port()
         .default(3000),
-      
+
       SERVICE_VERSION: Joi.string()
         .default('1.0.0'),
 
@@ -41,7 +41,7 @@ class ConfigManager {
           then: Joi.optional(),
           otherwise: Joi.string().hostname().default('localhost')
         }),
-      
+
       DB_PORT: Joi.number()
         .port()
         .when('DATABASE_URL', {
@@ -49,7 +49,7 @@ class ConfigManager {
           then: Joi.optional(),
           otherwise: Joi.number().port().default(5432)
         }),
-      
+
       DB_NAME: Joi.string()
         .when('DATABASE_URL', {
           is: Joi.exist(),
@@ -58,7 +58,7 @@ class ConfigManager {
             'any.required': 'Database name (DB_NAME) is required when DATABASE_URL is not provided'
           })
         }),
-      
+
       DB_USERNAME: Joi.string()
         .when('DATABASE_URL', {
           is: Joi.exist(),
@@ -67,7 +67,7 @@ class ConfigManager {
             'any.required': 'Database username (DB_USERNAME) is required when DATABASE_URL is not provided'
           })
         }),
-      
+
       DB_PASSWORD: Joi.string()
         .when('DATABASE_URL', {
           is: Joi.exist(),
@@ -76,14 +76,14 @@ class ConfigManager {
             'any.required': 'Database password (DB_PASSWORD) is required when DATABASE_URL is not provided'
           })
         }),
-      
+
       DB_DIALECT: Joi.string()
         .valid('postgres', 'mysql', 'sqlite', 'mariadb')
         .default('postgres'),
-      
+
       DB_LOGGING: Joi.boolean()
         .default(false),
-      
+
       DB_SSL: Joi.boolean()
         .default(false),
 
@@ -91,17 +91,17 @@ class ConfigManager {
       TEST_DB_HOST: Joi.string()
         .hostname()
         .default('localhost'),
-      
+
       TEST_DB_PORT: Joi.number()
         .port()
         .default(5432),
-      
+
       TEST_DB_NAME: Joi.string()
         .default('club_management_auth_test'),
-      
+
       TEST_DB_USERNAME: Joi.string()
         .default('postgres'),
-      
+
       TEST_DB_PASSWORD: Joi.string()
         .default('password'),
 
@@ -109,16 +109,16 @@ class ConfigManager {
       JWT_ALGORITHM: Joi.string()
         .valid('RS256', 'RS384', 'RS512')
         .default('RS256'),
-      
+
       JWT_PRIVATE_KEY_PATH: Joi.string()
         .default('./src/config/keys/private.pem'),
-      
+
       JWT_PUBLIC_KEY_PATH: Joi.string()
         .default('./src/config/keys/public.pem'),
-      
+
       JWT_EXPIRES_IN: Joi.string()
         .default('15m'),
-      
+
       // Refresh Token - Keep symmetric for security
       REFRESH_TOKEN_SECRET: Joi.string()
         .min(32)
@@ -127,7 +127,7 @@ class ConfigManager {
           'any.required': 'Refresh token secret (REFRESH_TOKEN_SECRET) is required',
           'string.min': 'Refresh token secret must be at least 32 characters long'
         }),
-      
+
       REFRESH_TOKEN_EXPIRES_IN: Joi.string()
         .default('7d'),
 
@@ -135,10 +135,10 @@ class ConfigManager {
       RABBITMQ_URL: Joi.string()
         .uri({ scheme: ['amqp', 'amqps'] })
         .default('amqp://localhost:5672'),
-      
+
       RABBITMQ_EXCHANGE: Joi.string()
         .default('club_events'),
-      
+
       RABBITMQ_QUEUE: Joi.string()
         .default('auth_events'),
 
@@ -146,7 +146,7 @@ class ConfigManager {
       FRONTEND_BASE_URL: Joi.string()
         .uri()
         .default('http://localhost:3000'),
-      
+
       FRONTEND_URL: Joi.string()
         .uri()
         .default('http://localhost:3000'),
@@ -162,13 +162,13 @@ class ConfigManager {
         .min(10)
         .max(15)
         .default(12),
-      
+
       MAX_LOGIN_ATTEMPTS: Joi.number()
         .integer()
         .min(3)
         .max(10)
         .default(5),
-      
+
       ACCOUNT_LOCK_TIME_MS: Joi.number()
         .integer()
         .min(300000) // 5 minutes minimum
@@ -178,7 +178,7 @@ class ConfigManager {
       RATE_LIMIT_WINDOW_MS: Joi.number()
         .integer()
         .default(900000), // 15 minutes
-      
+
       RATE_LIMIT_MAX_REQUESTS: Joi.number()
         .integer()
         .default(100),
@@ -205,7 +205,7 @@ class ConfigManager {
       // Development/Debug flags
       DEBUG_SQL: Joi.boolean()
         .default(false),
-      
+
       ENABLE_REQUEST_LOGGING: Joi.boolean()
         .default(true),
 
@@ -220,13 +220,13 @@ class ConfigManager {
    */
   loadAndValidateConfig() {
     const schema = this.getConfigSchema();
-    
+
     // Extract environment variables
     const envVars = {
       NODE_ENV: process.env.NODE_ENV,
       PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : undefined,
       SERVICE_VERSION: process.env.SERVICE_VERSION,
-      
+
       // Database
       DATABASE_URL: process.env.DATABASE_URL,
       DB_HOST: process.env.DB_HOST,
@@ -237,14 +237,14 @@ class ConfigManager {
       DB_DIALECT: process.env.DB_DIALECT,
       DB_LOGGING: process.env.DB_LOGGING === 'true',
       DB_SSL: process.env.DB_SSL === 'true',
-      
+
       // Test Database
       TEST_DB_HOST: process.env.TEST_DB_HOST,
       TEST_DB_PORT: process.env.TEST_DB_PORT ? parseInt(process.env.TEST_DB_PORT, 10) : undefined,
       TEST_DB_NAME: process.env.TEST_DB_NAME,
       TEST_DB_USERNAME: process.env.TEST_DB_USERNAME,
       TEST_DB_PASSWORD: process.env.TEST_DB_PASSWORD,
-      
+
       // JWT
       JWT_ALGORITHM: process.env.JWT_ALGORITHM,
       JWT_PRIVATE_KEY_PATH: process.env.JWT_PRIVATE_KEY_PATH,
@@ -252,41 +252,41 @@ class ConfigManager {
       JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
       REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
       REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN,
-      
+
       // RabbitMQ
       RABBITMQ_URL: process.env.RABBITMQ_URL,
       RABBITMQ_EXCHANGE: process.env.RABBITMQ_EXCHANGE,
       RABBITMQ_QUEUE: process.env.RABBITMQ_QUEUE,
-      
+
       // Frontend
       FRONTEND_BASE_URL: process.env.FRONTEND_BASE_URL,
       FRONTEND_URL: process.env.FRONTEND_URL,
-      
+
       // Logging
       LOG_LEVEL: process.env.LOG_LEVEL,
-      
+
       // Security
       BCRYPT_ROUNDS: process.env.BCRYPT_ROUNDS ? parseInt(process.env.BCRYPT_ROUNDS, 10) : undefined,
       MAX_LOGIN_ATTEMPTS: process.env.MAX_LOGIN_ATTEMPTS ? parseInt(process.env.MAX_LOGIN_ATTEMPTS, 10) : undefined,
       ACCOUNT_LOCK_TIME_MS: process.env.ACCOUNT_LOCK_TIME_MS ? parseInt(process.env.ACCOUNT_LOCK_TIME_MS, 10) : undefined,
-      
+
       // Rate Limiting
       RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) : undefined,
       RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) : undefined,
-      
+
       // CORS
-      CORS_ORIGIN: process.env.CORS_ORIGIN ? 
-        (process.env.CORS_ORIGIN.includes(',') ? 
-          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : 
-          process.env.CORS_ORIGIN) : 
+      CORS_ORIGIN: process.env.CORS_ORIGIN ?
+        (process.env.CORS_ORIGIN.includes(',') ?
+          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) :
+          process.env.CORS_ORIGIN) :
         undefined,
-      
+
       // Health Check
       HEALTH_CHECK_TIMEOUT_MS: process.env.HEALTH_CHECK_TIMEOUT_MS ? parseInt(process.env.HEALTH_CHECK_TIMEOUT_MS, 10) : undefined,
-      
+
       // Session
       SESSION_SECRET: process.env.SESSION_SECRET,
-      
+
       // Debug
       DEBUG_SQL: process.env.DEBUG_SQL === 'true',
       ENABLE_REQUEST_LOGGING: process.env.ENABLE_REQUEST_LOGGING !== 'false',
@@ -303,14 +303,14 @@ class ConfigManager {
       const errorMessage = error.details
         .map(detail => `${detail.path.join('.')}: ${detail.message}`)
         .join('\n');
-      
+
       console.error('Configuration validation failed:');
       console.error(errorMessage);
       process.exit(1);
     }
 
     this.config = value;
-    
+
     // Log configuration summary (without sensitive data)
     const configSummary = {
       environment: this.config.NODE_ENV,
@@ -370,13 +370,13 @@ class ConfigManager {
    */
   getDatabaseConfig() {
     // Support both individual DB config variables and DATABASE_URL
-    const databaseUrl = process.env.DATABASE_URL || 
+    const databaseUrl = process.env.DATABASE_URL ||
       `postgresql://${this.config.DB_USERNAME}:${this.config.DB_PASSWORD}@${this.config.DB_HOST}:${this.config.DB_PORT}/${this.config.DB_NAME}`;
-    
+
     if (process.env.DATABASE_URL) {
       // Parse DATABASE_URL for Supabase/cloud providers
       const url = new URL(databaseUrl);
-      
+
       const baseConfig = {
         host: url.hostname,
         port: parseInt(url.port) || 5432,
@@ -553,4 +553,4 @@ class ConfigManager {
 }
 
 // Export singleton instance
-module.exports = new ConfigManager(); 
+module.exports = new ConfigManager();

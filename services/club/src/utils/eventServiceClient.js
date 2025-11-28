@@ -6,18 +6,18 @@ const logger = require('./logger');
 class EventServiceClient {
   constructor() {
     // Priority: ENV variable > Docker service name > localhost fallback
-    const eventServiceUrl = process.env.EVENT_SERVICE_URL || 
+    const eventServiceUrl = process.env.EVENT_SERVICE_URL ||
                            (process.env.NODE_ENV === 'development' ? 'http://event-service:3003' : 'http://localhost:3003');
-    
+
     const url = new URL(eventServiceUrl);
     this.hostname = url.hostname;
     this.protocol = url.protocol === 'https:' ? 'https' : 'http';
     // Only set port if explicitly provided in URL
     this.port = url.port || undefined;
     this.timeout = 5000;
-    
-    logger.info('Event service configured', { 
-      url: `${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}` 
+
+    logger.info('Event service configured', {
+      url: `${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}`
     });
   }
 
@@ -34,13 +34,13 @@ class EventServiceClient {
         .filter(key => params[key] !== undefined && params[key] !== null)
         .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
         .join('&');
-      
+
       const fullPath = queryString ? `${path}?${queryString}` : path;
-      
-      logger.debug('Making request to event service', { 
-        url: `${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}${fullPath}` 
+
+      logger.debug('Making request to event service', {
+        url: `${this.protocol}://${this.hostname}${this.port ? ':' + this.port : ''}${fullPath}`
       });
-      
+
       const options = {
         hostname: this.hostname,
         path: fullPath,
@@ -51,7 +51,7 @@ class EventServiceClient {
           'x-api-gateway-secret': process.env.API_GATEWAY_SECRET || 'club-mgmt-internal-secret-2024'
         }
       };
-      
+
       // Only add port if explicitly provided
       if (this.port) {
         options.port = this.port;
@@ -60,11 +60,11 @@ class EventServiceClient {
       const protocol = this.protocol === 'https' ? https : http;
       const req = protocol.request(options, (res) => {
         let data = '';
-        
+
         res.on('data', (chunk) => {
           data += chunk;
         });
-        
+
         res.on('end', () => {
           try {
             if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -136,11 +136,11 @@ class EventServiceClient {
         status: 'published',
         limit: 10
       });
-      
+
       // Filter events with future start_date on client side
       const currentDate = new Date();
       const allEvents = response?.data || [];
-      
+
       return allEvents.filter(event => {
         const eventDate = new Date(event.start_date || event.date);
         return eventDate > currentDate;
@@ -157,7 +157,7 @@ class EventServiceClient {
   async getEventStatistics(clubId, requestContext = {}) {
     try {
       logger.debug('Fetching event statistics for club', { clubId });
-      
+
       // Get published and completed events separately since cron job maintains correct statuses
       const [publishedResponse, completedResponse] = await Promise.all([
         this._makeRequest(`/api/clubs/${clubId}/events`, {
@@ -165,7 +165,7 @@ class EventServiceClient {
           page: 1,
           limit: 100
         }).catch(() => ({ data: [], meta: { total: 0 } })),
-        
+
         this._makeRequest(`/api/clubs/${clubId}/events`, {
           status: 'completed',
           page: 1,
@@ -175,12 +175,12 @@ class EventServiceClient {
 
       const publishedEvents = publishedResponse?.data || [];
       const completedEvents = completedResponse?.data || [];
-      
+
       // Since cron job maintains accurate statuses, no need for client-side date filtering
       const published_events = publishedEvents.length;
       const completed_events = completedEvents.length;
       const total_events = published_events + completed_events;
-      
+
       // For upcoming events, filter published events by future start_date (client-side)
       const currentDate = new Date();
       const upcoming_events = publishedEvents.filter(event => {
@@ -216,14 +216,14 @@ class EventServiceClient {
   async getCompletedClubEvents(clubId, options = {}) {
     try {
       logger.debug('Fetching completed events for club', { clubId });
-      
+
       // Get completed events by status - cron job maintains accurate statuses
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
         status: 'completed',
         limit: 20,
         ...options
       });
-      
+
       return response?.data || [];
     } catch (error) {
       logger.error('Error fetching completed club events', { clubId, error: error.message });

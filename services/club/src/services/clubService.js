@@ -4,43 +4,43 @@ const eventServiceClient = require('../utils/eventServiceClient');
 const logger = require('../utils/logger');
 
 class ClubService {
-  
+
   /**
    * Get all clubs with filtering, search, and pagination
    * @param {Object} params - Query parameters
    * @returns {Promise<Object>} - Clubs with pagination info
    */
   async getClubs(params) {
-    const { 
-      name, 
-      type, 
-      category, 
-      status, 
-      location, 
-      search, 
-      page, 
-      limit, 
-      sort 
+    const {
+      name,
+      type,
+      category,
+      status,
+      location,
+      search,
+      page,
+      limit,
+      sort
     } = params;
-    
+
     // Validate pagination parameters
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
-    
+
     if (page && (isNaN(pageNumber) || pageNumber < 1)) {
       const error = new Error('Page must be a positive integer');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     if (limit && (isNaN(limitNumber) || limitNumber < 1 || limitNumber > 100)) {
       const error = new Error('Limit must be a positive integer between 1 and 100');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     // Validate sort parameter
     const validSortOptions = ['name', 'name_desc', 'category', 'location', 'newest', 'oldest', 'relevance'];
     if (sort && !validSortOptions.includes(sort)) {
@@ -49,7 +49,7 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     // Input sanitization
     const sanitizedParams = {
       name: this._sanitizeInput(name),
@@ -62,10 +62,10 @@ class ClubService {
       limit: limitNumber,
       sort: sort
     };
-    
+
     try {
       const result = await Club.findAll(sanitizedParams);
-      
+
       // Fetch event statistics for each club
       const clubsWithEventStats = await Promise.all(
         result.results.map(async (club) => {
@@ -91,7 +91,7 @@ class ClubService {
           }
         })
       );
-      
+
       return {
         success: true,
         message: 'Clubs retrieved successfully',
@@ -113,7 +113,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Get a club by ID with additional data (recruitments, statistics)
    * @param {string} clubId - The club ID
@@ -126,10 +126,10 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     try {
       const club = await Club.findById(clubId);
-      
+
       if (!club) {
         const error = new Error('Club not found');
         error.status = 404;
@@ -171,7 +171,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Create a new club
    * @param {Object} clubData - Club creation data
@@ -179,14 +179,14 @@ class ClubService {
    * @returns {Promise<Object>} - Created club
    */
   async createClub(clubData, userContext) {
-    const { 
-      name, 
-      description, 
+    const {
+      name,
+      description,
       category,
       location,
       contact_email,
       contact_phone,
-      logo_url, 
+      logo_url,
       website_url,
       social_links,
       settings,
@@ -196,7 +196,7 @@ class ClubService {
       manager_email,
       type // Backward compatibility
     } = clubData;
-    
+
     // Validate required fields based on MongoDB schema
     // Required: name, category, status, manager, created_by
     if (!name || (!category && !type)) {
@@ -205,7 +205,7 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     // Validate manager fields (manager object is required)
     if (!manager_user_id || !manager_full_name) {
       const error = new Error('Manager user ID and full name are required');
@@ -213,17 +213,17 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     // Validate data types for required fields
     this._validateStringField(name, 'Name');
     this._validateStringField(category || type, 'Category');
     this._validateStringField(manager_user_id, 'Manager user ID');
     this._validateStringField(manager_full_name, 'Manager full name');
-    
+
     // Validate optional fields if provided
-    if (description) this._validateStringField(description, 'Description');
-    if (location) this._validateStringField(location, 'Location');
-    
+    if (description) {this._validateStringField(description, 'Description');}
+    if (location) {this._validateStringField(location, 'Location');}
+
     // Validate manager email if provided
     if (manager_email && (typeof manager_email !== 'string' || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(manager_email))) {
       const error = new Error('Manager email must be a valid email address');
@@ -231,7 +231,7 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     // Validate status field
     if (status && !['ACTIVE', 'INACTIVE'].includes(status)) {
       const error = new Error('Status must be either ACTIVE or INACTIVE');
@@ -239,17 +239,17 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     // Verify manager user exists
     let finalManagerEmail = manager_email;
     let finalManagerFullName = manager_full_name;
-    
+
     try {
       const requestContext = {
         userId: userContext.userId,
         userRole: userContext.userRole
       };
-      
+
       const managerUser = await authServiceClient.verifyUserExists(manager_user_id, requestContext);
       if (!managerUser) {
         const error = new Error('Manager user not found in auth database');
@@ -257,7 +257,7 @@ class ClubService {
         error.name = 'USER_NOT_FOUND';
         throw error;
       }
-      
+
       // Log manager validation success
       logger.info('Manager user validated', {
         user_id: manager_user_id,
@@ -265,15 +265,15 @@ class ClubService {
         full_name: managerUser.data?.user?.full_name || managerUser.full_name,
         validated_by: requestContext.userId
       });
-      
+
       // Use verified user information
       const verifiedUser = managerUser.data?.user || managerUser;
       const verifiedManagerEmail = verifiedUser.email;
       const verifiedManagerFullName = verifiedUser.full_name;
-      
+
       finalManagerEmail = manager_email || verifiedManagerEmail;
       finalManagerFullName = manager_full_name || verifiedManagerFullName;
-      
+
       // Ensure manager email is provided (required by MongoDB validation)
       if (!finalManagerEmail) {
         const error = new Error('Manager email is required but not found in auth service');
@@ -281,20 +281,20 @@ class ClubService {
         error.name = 'VALIDATION_ERROR';
         throw error;
       }
-      
+
     } catch (authError) {
       logger.error('Manager validation failed', { error: authError.message });
-      
+
       if (authError.name === 'USER_NOT_FOUND') {
         throw authError;
       }
-      
+
       const error = new Error('Failed to validate manager user');
       error.status = 500;
       error.name = 'AUTH_SERVICE_ERROR';
       throw error;
     }
-    
+
     // Build sanitized club data according to MongoDB schema
     const sanitizedClubData = {
       name: this._sanitizeInput(name),
@@ -311,7 +311,7 @@ class ClubService {
       created_at: new Date(),
       updated_at: new Date()
     };
-    
+
     // Add optional fields only if they have values
     if (description) {
       sanitizedClubData.description = this._sanitizeInput(description);
@@ -350,13 +350,13 @@ class ClubService {
         sanitizedClubData.settings = sanitizedSettings;
       }
     }
-    
+
     // Add backward compatibility field
     sanitizedClubData.type = type || category;
-    
+
     try {
       logger.debug('Creating club with data', { clubData: sanitizedClubData });
-      
+
       // Log the required fields to ensure they're all present
       logger.debug('MongoDB Schema Required Fields Check', {
         name: !!sanitizedClubData.name,
@@ -365,9 +365,9 @@ class ClubService {
         manager: !!sanitizedClubData.manager,
         created_by: !!sanitizedClubData.created_by
       });
-      
+
       const newClub = await Club.create(sanitizedClubData);
-      
+
       logger.info('Club created successfully', {
         club_id: newClub.id,
         name: newClub.name,
@@ -376,18 +376,18 @@ class ClubService {
         member_count: newClub.member_count,
         created_by: userContext.userId
       });
-      
+
       // Create membership record for the club creator/manager
       const { Membership } = require('../config/database');
-      
+
       try {
         // Ensure we have the club ID (try different possible fields)
         const clubId = newClub._id || newClub.id;
-        
+
         if (!clubId) {
           throw new Error('Club ID not found in created club document');
         }
-        
+
         const membershipData = {
           club_id: clubId,
           user_id: userContext.userId,
@@ -400,22 +400,22 @@ class ClubService {
           approved_at: new Date(),
           joined_at: new Date()
         };
-        
+
         logger.debug('Creating membership for club creator', {
           club_id: clubId,
           user_id: userContext.userId,
           role: 'club_manager'
         });
-        
+
         const membership = await Membership.create(membershipData);
-        
+
         logger.info('Membership created for club creator', {
           membership_id: membership._id || membership.id,
           club_id: clubId,
           user_id: userContext.userId,
           role: 'club_manager'
         });
-        
+
       } catch (membershipError) {
         logger.error('Error creating membership for club creator', {
           error: membershipError.message,
@@ -425,13 +425,13 @@ class ClubService {
         // Don't throw error here as club was created successfully
         // This is a secondary operation that shouldn't fail the main flow
       }
-      
+
       return {
         success: true,
         message: 'Club created successfully',
         data: newClub
       };
-      
+
     } catch (error) {
       if (error.name === 'MongoServerError' && error.code === 11000) {
         const duplicateError = new Error('Club name already exists');
@@ -439,26 +439,26 @@ class ClubService {
         duplicateError.name = 'DUPLICATE_ERROR';
         throw duplicateError;
       }
-      
+
       if (error.name === 'MongoServerError' && error.message.includes('Document failed validation')) {
         logger.error('MongoDB validation failed', {
           error: error.message,
           errInfo: error.errInfo,
           schemaRulesNotSatisfied: error.errInfo?.details?.schemaRulesNotSatisfied
         });
-        
+
         const validationError = new Error('Club data validation failed. Please check required fields.');
         validationError.status = 400;
         validationError.name = 'VALIDATION_ERROR';
         validationError.details = error.errInfo;
         throw validationError;
       }
-      
+
       logger.error('Error creating club', { error: error.message, stack: error.stack });
       throw error;
     }
   }
-  
+
   /**
    * Get recruitment campaigns for a club
    * @param {string} clubId - The club ID
@@ -472,10 +472,10 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     try {
       const result = await Club.findRecruitments(clubId, options);
-      
+
       return {
         success: true,
         message: 'Club recruitments retrieved successfully',
@@ -491,7 +491,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Get club member details
    * @param {string} clubId - The club ID
@@ -521,17 +521,17 @@ class ClubService {
       error.name = 'PERMISSION_ERROR';
       throw error;
     }
-    
+
     try {
       const membership = await Club.findMembership(clubId, userId);
-      
+
       if (!membership) {
         const error = new Error('Member not found in this club');
         error.status = 404;
         error.name = 'NOT_FOUND';
         throw error;
       }
-      
+
       return {
         success: true,
         message: 'Club member retrieved successfully',
@@ -547,7 +547,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Get available club categories
    * @returns {Promise<Object>} - Available categories
@@ -555,7 +555,7 @@ class ClubService {
   async getCategories() {
     try {
       const categories = await Club.getCategories();
-      
+
       return {
         success: true,
         message: 'Categories retrieved successfully',
@@ -566,7 +566,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Get available club locations
    * @returns {Promise<Object>} - Available locations
@@ -574,7 +574,7 @@ class ClubService {
   async getLocations() {
     try {
       const locations = await Club.getLocations();
-      
+
       return {
         success: true,
         message: 'Locations retrieved successfully',
@@ -585,7 +585,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Get club statistics
    * @returns {Promise<Object>} - Club statistics
@@ -593,7 +593,7 @@ class ClubService {
   async getStats() {
     try {
       const stats = await Club.getStats();
-      
+
       return {
         success: true,
         message: 'Club statistics retrieved successfully',
@@ -604,7 +604,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Update club member count
    * @param {string} clubId - The club ID
@@ -618,28 +618,28 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     if (typeof memberCount !== 'number' || memberCount < 0) {
       const error = new Error('Member count must be a non-negative number');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     try {
       await Club.updateMemberCount(clubId, memberCount);
-      
+
       logger.info('Club member count updated', {
         club_id: clubId,
         member_count: memberCount
       });
-      
+
     } catch (error) {
       logger.error('Error updating member count', { clubId, error: error.message });
       throw error;
     }
   }
-  
+
   /**
    * Update club status
    * @param {string} clubId - The club ID
@@ -654,36 +654,36 @@ class ClubService {
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
       const error = new Error('Status must be either ACTIVE or INACTIVE');
       error.status = 400;
       error.name = 'VALIDATION_ERROR';
       throw error;
     }
-    
+
     try {
       const updatedClub = await Club.updateStatus(clubId, status);
-      
+
       if (!updatedClub) {
         const error = new Error('Club not found');
         error.status = 404;
         error.name = 'NOT_FOUND';
         throw error;
       }
-      
+
       logger.info('Club status updated', {
         club_id: clubId,
         new_status: status,
         updated_by: userContext.userId
       });
-      
+
       return {
         success: true,
         message: 'Club status updated successfully',
         data: updatedClub
       };
-      
+
     } catch (error) {
       if (error.name === 'CastError') {
         const castError = new Error('Invalid club ID format');
@@ -691,12 +691,12 @@ class ClubService {
         castError.name = 'VALIDATION_ERROR';
         throw castError;
       }
-      
+
       logger.error('Error updating club status', { clubId, error: error.message });
       throw error;
     }
   }
-  
+
   /**
    * Get all club roles for a user
    * @param {string} userId - The user ID
@@ -718,14 +718,14 @@ class ClubService {
       });
 
       logger.debug('Found memberships for user', { userId, count: memberships.length });
-      
+
       const roles = [];
-      
+
       for (const membership of memberships) {
         try {
           // Get club details manually to avoid populate issues
           const club = await Club.findById(membership.club_id);
-          
+
           if (club) {
             roles.push({
               clubId: membership.club_id.toString(),
@@ -822,7 +822,7 @@ class ClubService {
 
     try {
       const { Membership } = require('../config/database');
-      
+
       const membershipData = {
         club_id: clubId,
         user_id: memberData.userId,
@@ -831,7 +831,7 @@ class ClubService {
         approved_by: userContext.userId,
         approved_at: new Date()
       };
-      
+
       // Include user email and full name if provided
       if (memberData.userEmail) {
         membershipData.user_email = memberData.userEmail;
@@ -839,7 +839,7 @@ class ClubService {
       if (memberData.userFullName) {
         membershipData.user_full_name = memberData.userFullName;
       }
-      
+
       const membership = await Membership.create(membershipData);
 
       return {
@@ -938,7 +938,7 @@ class ClubService {
       const { Membership } = require('../config/database');
       const membership = await Membership.findOneAndUpdate(
         { club_id: clubId, user_id: userId, status: 'active' },
-        { 
+        {
           status: 'removed',
           removed_at: new Date(),
           updated_at: new Date()
@@ -989,14 +989,14 @@ class ClubService {
   }
 
   // Private helper methods
-  
+
   /**
    * Sanitize input string
    * @param {*} input - Input to sanitize
    * @returns {*} - Sanitized input
    */
   _sanitizeInput(input) {
-    if (typeof input !== 'string') return input;
+    if (typeof input !== 'string') {return input;}
     return input
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -1004,7 +1004,7 @@ class ClubService {
       .replace(/'/g, '&#x27;')
       .replace(/\//g, '&#x2F;');
   }
-  
+
   /**
    * Validate string field
    * @param {*} value - Value to validate
@@ -1018,7 +1018,7 @@ class ClubService {
       throw error;
     }
   }
-  
+
   /**
    * Sanitize social links object
    * @param {Object} socialLinks - Social links object
@@ -1028,26 +1028,26 @@ class ClubService {
     if (!socialLinks || typeof socialLinks !== 'object') {
       return {};
     }
-    
+
     const sanitized = {};
     const allowedFields = ['facebook', 'instagram', 'twitter', 'linkedin'];
-    
+
     for (const field of allowedFields) {
       if (socialLinks[field]) {
         sanitized[field] = this._sanitizeUrl(socialLinks[field]);
       }
     }
-    
+
     return sanitized;
   }
-  
+
   /**
    * Sanitize URL input (without breaking URL format)
    * @param {*} input - Input to sanitize
    * @returns {*} - Sanitized input
    */
   _sanitizeUrl(input) {
-    if (typeof input !== 'string') return input;
+    if (typeof input !== 'string') {return input;}
     // For URLs, we only remove dangerous characters but keep URL structure intact
     return input
       .replace(/</g, '&lt;')
@@ -1066,7 +1066,7 @@ class ClubService {
     try {
       const { RecruitmentCampaign } = require('../config/database');
       const currentDate = new Date();
-      
+
       const recruitments = await RecruitmentCampaign.find({
         club_id: clubId,
         status: 'published'
@@ -1101,7 +1101,7 @@ class ClubService {
     try {
       const { RecruitmentCampaign } = require('../config/database');
       const currentDate = new Date();
-      
+
       const [totalCount, activeCount] = await Promise.all([
         RecruitmentCampaign.countDocuments({ club_id: clubId }),
         RecruitmentCampaign.countDocuments({
@@ -1136,12 +1136,12 @@ class ClubService {
         // Add basic context for API Gateway validation
         service: 'club-service'
       };
-      
+
       const publishedEvents = await eventServiceClient.getPublishedClubEvents(clubId, {
         status: 'published',
         limit: 10 // Limit to 10 most recent published events
       });
-      
+
       return publishedEvents.map(event => ({
         id: event.id || event._id,
         title: event.title,
@@ -1181,9 +1181,9 @@ class ClubService {
         // Add basic context for API Gateway validation
         service: 'club-service'
       };
-      
+
       const completedEvents = await eventServiceClient.getCompletedClubEvents(clubId, requestContext);
-      
+
       return completedEvents.map(event => ({
         id: event.id || event._id,
         title: event.title || event.name,
@@ -1213,9 +1213,9 @@ class ClubService {
         // Add basic context for API Gateway validation
         service: 'club-service'
       };
-      
+
       const eventStats = await eventServiceClient.getEventStatistics(clubId, requestContext);
-      
+
       return {
         total_events: eventStats.total_events || 0, // published + completed only
         published_events: eventStats.published_events || 0,

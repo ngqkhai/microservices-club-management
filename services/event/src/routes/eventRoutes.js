@@ -1,12 +1,12 @@
 import express from 'express';
-import { 
-  getEvents, 
-  handleEventRSVP, 
-  joinEvent, 
-  leaveEvent, 
-  createEvent, 
-  updateEvent, 
-  deleteEvent, 
+import {
+  getEvents,
+  handleEventRSVP,
+  joinEvent,
+  leaveEvent,
+  createEvent,
+  updateEvent,
+  deleteEvent,
   getEventsOfClub,
   getEventById,
   getUserEventStatus,
@@ -31,12 +31,12 @@ eventRoutes.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, x-api-gateway-secret, x-user-id, x-user-email, x-user-role, x-user-full-name');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '3600');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-  
+
   next();
 });
 

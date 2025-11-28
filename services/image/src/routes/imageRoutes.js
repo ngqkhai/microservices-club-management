@@ -1,11 +1,11 @@
 const express = require('express');
 const imageController = require('../controllers/imageController');
 const upload = require('../middlewares/uploadMiddleware');
-const { 
-  validateApiGatewaySecret, 
-  extractUserInfo, 
-  requireAuth, 
-  requireClubManagerOrAdmin 
+const {
+  validateApiGatewaySecret,
+  extractUserInfo,
+  requireAuth,
+  requireClubManagerOrAdmin
 } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -30,8 +30,8 @@ router.use((req, res, next) => {
 
 // Health check endpoint for Kong routing
 router.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     service: 'image-service',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
@@ -39,15 +39,15 @@ router.get('/health', (req, res) => {
 });
 
 // Upload single image (requires authentication and authorization)
-router.post('/upload', 
+router.post('/upload',
   requireAuth,
   requireClubManagerOrAdmin,
-  upload.single('image'), 
+  upload.single('image'),
   imageController.uploadSingleImage
 );
 
 // Upload multiple images (requires authentication and authorization)
-router.post('/upload/bulk', 
+router.post('/upload/bulk',
   requireAuth,
   requireClubManagerOrAdmin,
   upload.array('images', 10), // Max 10 images
@@ -55,13 +55,13 @@ router.post('/upload/bulk',
 );
 
 // Delete image (requires authentication and ownership verification)
-router.delete('/:publicId', 
+router.delete('/:publicId',
   requireAuth,
   imageController.deleteImage
 );
 
 // Get image info (requires authentication)
-router.get('/:publicId', 
+router.get('/:publicId',
   requireAuth,
   imageController.getImageInfo
 );

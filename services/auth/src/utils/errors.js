@@ -2,13 +2,13 @@
 class AppError extends Error {
   constructor(message, statusCode = 500, code = null, isOperational = true) {
     super(message);
-    
+
     this.statusCode = statusCode;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
     this.isOperational = isOperational;
     this.code = code;
     this.timestamp = new Date().toISOString();
-    
+
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -210,7 +210,7 @@ const handleSequelizeError = (error) => {
 module.exports = {
   // Base classes
   AppError,
-  
+
   // Specific error classes
   AuthenticationError,
   AuthorizationError,
@@ -221,7 +221,7 @@ module.exports = {
   TooManyRequestsError,
   DatabaseError,
   ExternalServiceError,
-  
+
   // Auth-specific errors
   InvalidCredentialsError,
   AccountLockedError,
@@ -231,10 +231,10 @@ module.exports = {
   EmailVerificationTokenError,
   EmailAlreadyExistsError,
   WeakPasswordError,
-  
+
   // Utility functions
   createError,
   formatErrorResponse,
   isOperationalError,
   handleSequelizeError
-}; 
+};

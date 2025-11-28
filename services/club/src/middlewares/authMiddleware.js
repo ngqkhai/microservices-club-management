@@ -10,11 +10,11 @@ const validateApiGatewaySecret = (req, res, next) => {
   if (req.method === 'OPTIONS') {
     return next();
   }
-  
+
   // MANDATORY: Validate API Gateway secret header first
   const gatewaySecret = req.headers['x-api-gateway-secret'];
   const expectedSecret = config.get('API_GATEWAY_SECRET');
-  
+
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
     logger.warn('Request rejected - Invalid or missing gateway secret', {
       ip: req.ip,
@@ -23,7 +23,7 @@ const validateApiGatewaySecret = (req, res, next) => {
       userAgent: req.get('User-Agent'),
       hasSecret: !!gatewaySecret
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'Unauthorized: Request must come through API Gateway',
@@ -46,18 +46,18 @@ const validateApiGatewaySecret = (req, res, next) => {
  */
 const validateApiGatewayHeaders = (req, res, next) => {
   const requiredHeaders = ['x-user-id', 'x-user-role'];
-  
+
   // DEBUG: Log all headers for debugging Kong JWT claims injection
   logger.debug('Incoming headers from Kong (Protected Route)', {
     path: req.path,
     method: req.method,
     headers: Object.keys(req.headers)
   });
-  
+
   // Check if request is from API Gateway - MANDATORY for all requests
   const gatewaySecret = req.headers['x-api-gateway-secret'];
   const expectedSecret = config.get('API_GATEWAY_SECRET');
-  
+
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
     logger.warn('Request rejected: Invalid or missing gateway secret', {
       ip: req.ip,
@@ -66,7 +66,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
       userAgent: req.get('User-Agent'),
       hasSecret: !!gatewaySecret
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'Unauthorized: Request must come through API Gateway',
@@ -81,14 +81,14 @@ const validateApiGatewayHeaders = (req, res, next) => {
 
   // Validate required headers for protected endpoints
   const missingHeaders = requiredHeaders.filter(header => !req.headers[header]);
-  
+
   if (missingHeaders.length > 0) {
     logger.warn('Missing required headers', {
       missing: missingHeaders,
       ip: req.ip,
       path: req.path
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'Missing required authentication headers'
@@ -100,7 +100,7 @@ const validateApiGatewayHeaders = (req, res, next) => {
   const userRole = req.headers['x-user-role'];
   const userEmail = req.headers['x-user-email'];
   const userFullNameRaw = req.headers['x-user-full-name'];
-  
+
   // Decode base64 encoded full_name (to handle UTF-8 characters like Vietnamese names)
   let userFullName = userFullNameRaw;
   if (userFullNameRaw) {
@@ -169,7 +169,7 @@ const requireRoles = (requiredRoles) => {
     if (!requiredRoles || requiredRoles.length === 0) {
       return next();
     }
-    
+
     if (!req.user) {
       return res.status(401).json({
         success: false,

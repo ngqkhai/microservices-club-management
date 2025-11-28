@@ -40,9 +40,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Health check endpoint with storage status
 app.get('/health', (req, res) => {
   const storageHealth = imageService.getHealthStatus();
-  
-  res.json({ 
-    status: 'OK', 
+
+  res.json({
+    status: 'OK',
     service: config.get('SERVICE_NAME'),
     version: config.get('SERVICE_VERSION'),
     environment: config.get('NODE_ENV'),
@@ -55,7 +55,7 @@ app.get('/health', (req, res) => {
 // Ready check - only return OK if storage is initialized
 app.get('/ready', (req, res) => {
   const health = imageService.getHealthStatus();
-  
+
   if (health.initialized) {
     res.json({ ready: true, provider: health.provider });
   } else {
@@ -74,23 +74,23 @@ app.use('/api/images', imageRoutes);
 // Error handling middleware
 app.use((error, req, res, next) => {
   logger.error('Server error', { error: error.message, stack: error.stack });
-  
+
   if (error.code === 'LIMIT_FILE_SIZE') {
     const uploadConfig = config.getUploadConfig();
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'File too large',
       maxSize: `${Math.round(uploadConfig.maxFileSize / 1024 / 1024)}MB`
     });
   }
-  
+
   if (error.code === 'LIMIT_FILE_COUNT') {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'Too many files',
       maxFiles: 10
     });
   }
-  
-  res.status(500).json({ 
+
+  res.status(500).json({
     error: 'Internal server error',
     message: config.isDevelopment() ? error.message : 'Something went wrong'
   });
@@ -126,7 +126,7 @@ async function startServer() {
     // Initialize storage provider (Cloudinary or MinIO)
     logger.info('Initializing storage provider...');
     await imageService.initialize();
-    
+
     // Connect to RabbitMQ
     logger.info('Connecting to RabbitMQ...');
     try {
@@ -134,16 +134,16 @@ async function startServer() {
     } catch (mqError) {
       logger.warn('RabbitMQ connection failed (service will work without events)', { error: mqError.message });
     }
-    
+
     // Start HTTP server
     app.listen(PORT, () => {
-      logger.info(`🚀 Image Service started successfully`, {
+      logger.info('🚀 Image Service started successfully', {
         port: PORT,
         environment: config.get('NODE_ENV'),
         version: config.get('SERVICE_VERSION'),
         storage: imageService.getProviderName()
       });
-      
+
       console.log('');
       console.log('='.repeat(50));
       console.log(`✅ Image Service running on port ${PORT}`);

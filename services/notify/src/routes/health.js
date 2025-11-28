@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   try {
     const health = await getBasicHealthStatus();
     const statusCode = health.healthy ? 200 : 503;
-    
+
     res.status(statusCode).json({
       status: health.healthy ? 'healthy' : 'unhealthy',
       service: 'notification-service',
@@ -97,7 +97,7 @@ router.get('/detailed', async (req, res) => {
 router.get('/readiness', async (req, res) => {
   try {
     const ready = await isServiceReady();
-    
+
     if (ready) {
       res.status(200).json({
         status: 'ready',
@@ -264,7 +264,7 @@ router.post('/admin/email/test', async (req, res) => {
     });
 
     let result;
-    
+
     switch (type) {
       case 'verification':
         result = await emailService.sendEmailVerification({
@@ -274,7 +274,7 @@ router.post('/admin/email/test', async (req, res) => {
           fullName: 'Test User'
         });
         break;
-      
+
       case 'password-reset':
         result = await emailService.sendPasswordReset({
           userId: 'test-user',
@@ -283,7 +283,7 @@ router.post('/admin/email/test', async (req, res) => {
           fullName: 'Test User'
         });
         break;
-      
+
       default:
         return res.status(400).json({
           error: 'Invalid email type. Supported types: verification, password-reset',
@@ -334,7 +334,7 @@ async function isServiceReady() {
     // Check if all critical components are ready
     const consumersRunning = consumerService.isConsumersRunning();
     const rabbitmqConnected = rabbitmqConfig.getStatus().connected;
-    
+
     return consumersRunning && rabbitmqConnected;
   } catch (error) {
     return false;
@@ -355,4 +355,4 @@ router.get('/version', (req, res) => {
   });
 });
 
-module.exports = router; 
+module.exports = router;

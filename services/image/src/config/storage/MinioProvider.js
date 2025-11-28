@@ -1,9 +1,9 @@
 /**
  * MinIO/S3 Storage Provider
- * 
+ *
  * Implements the StorageProvider interface for MinIO (S3-compatible storage).
  * This is the local development storage backend, but also works with AWS S3.
- * 
+ *
  * Environment variables:
  * - MINIO_ENDPOINT: MinIO server URL (default: localhost)
  * - MINIO_PORT: MinIO port (default: 9000)
@@ -24,7 +24,7 @@ class MinioProvider extends StorageProvider {
     super();
     this.client = null;
     this.bucket = process.env.MINIO_BUCKET || 'club-management';
-    this.publicUrl = process.env.MINIO_PUBLIC_URL || 
+    this.publicUrl = process.env.MINIO_PUBLIC_URL ||
                      `http://${process.env.MINIO_ENDPOINT || 'localhost'}:${process.env.MINIO_PORT || 9000}`;
   }
 
@@ -40,7 +40,7 @@ class MinioProvider extends StorageProvider {
   async initialize() {
     // Dynamically require minio to avoid errors when not installed
     const Minio = require('minio');
-    
+
     const endpoint = process.env.MINIO_ENDPOINT || 'minio';
     const port = parseInt(process.env.MINIO_PORT || '9000', 10);
     const useSSL = process.env.MINIO_USE_SSL === 'true';
@@ -59,7 +59,7 @@ class MinioProvider extends StorageProvider {
 
     // Ensure bucket exists
     await this.ensureBucket();
-    
+
     logger.info('MinIO connected', { bucket: this.bucket });
   }
 
@@ -69,7 +69,7 @@ class MinioProvider extends StorageProvider {
       if (!exists) {
         await this.client.makeBucket(this.bucket);
         logger.info('Created bucket', { bucket: this.bucket });
-        
+
         // Set bucket policy for public read access
         const policy = {
           Version: '2012-10-17',
@@ -101,7 +101,7 @@ class MinioProvider extends StorageProvider {
     const ext = path.extname(original_name) || '.jpg';
     const timestamp = Date.now();
     const uuid = uuidv4().split('-')[0]; // Short UUID
-    
+
     return `${folder}/${type}/${timestamp}-${uuid}${ext}`;
   }
 
@@ -179,15 +179,15 @@ class MinioProvider extends StorageProvider {
         height: buffer.readUInt32BE(20)
       };
     }
-    
+
     // Try to detect JPEG dimensions
     if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
       // JPEG - simplified detection
       let offset = 2;
       while (offset < buffer.length) {
-        if (buffer[offset] !== 0xFF) break;
+        if (buffer[offset] !== 0xFF) {break;}
         const marker = buffer[offset + 1];
-        
+
         // SOF0, SOF1, SOF2 markers contain dimensions
         if (marker >= 0xC0 && marker <= 0xC2) {
           return {
@@ -195,13 +195,13 @@ class MinioProvider extends StorageProvider {
             width: buffer.readUInt16BE(offset + 7)
           };
         }
-        
+
         // Skip to next marker
         const length = buffer.readUInt16BE(offset + 2);
         offset += length + 2;
       }
     }
-    
+
     // Default/unknown
     return { width: 0, height: 0 };
   }
@@ -224,7 +224,7 @@ class MinioProvider extends StorageProvider {
   async getInfo(publicId) {
     try {
       const stat = await this.client.statObject(this.bucket, publicId);
-      
+
       return {
         public_id: publicId,
         url: this.getUrl(publicId),
@@ -267,7 +267,7 @@ class MinioProvider extends StorageProvider {
     return new Promise((resolve, reject) => {
       const objects = [];
       const stream = this.client.listObjects(this.bucket, prefix, recursive);
-      
+
       stream.on('data', (obj) => objects.push(obj));
       stream.on('error', reject);
       stream.on('end', () => resolve(objects));

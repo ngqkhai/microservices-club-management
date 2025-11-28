@@ -17,7 +17,7 @@ class ImageController {
 
       // Get user info from JWT (set by Kong middleware)
       const userId = req.user.id;
-      
+
       const result = await imageService.uploadImage(req.file, {
         type,
         folder,
@@ -46,8 +46,8 @@ class ImageController {
         return res.status(400).json({ error: 'No image files provided' });
       }
 
-      const { 
-        type = 'general', 
+      const {
+        type = 'general',
         folder = 'club_management',
         entity_id,
         entity_type
@@ -55,7 +55,7 @@ class ImageController {
 
       // Get user info from JWT (set by Kong middleware)
       const userId = req.user.id;
-      
+
       const results = await imageService.uploadMultipleImages(req.files, {
         type,
         folder,
@@ -81,7 +81,7 @@ class ImageController {
   async deleteImage(req, res) {
     try {
       const { publicId } = req.params;
-      
+
       if (!publicId) {
         return res.status(400).json({ error: 'Public ID is required' });
       }
@@ -109,7 +109,7 @@ class ImageController {
   async getImageInfo(req, res) {
     try {
       const { publicId } = req.params;
-      
+
       if (!publicId) {
         return res.status(400).json({ error: 'Public ID is required' });
       }

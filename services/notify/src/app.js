@@ -25,7 +25,7 @@ function createApp() {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
     hsts: {
@@ -39,10 +39,10 @@ function createApp() {
   app.use(cors({
     origin: (origin, callback) => {
       const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
-      
+
       // Allow requests with no origin (mobile apps, server-to-server, etc.)
-      if (!origin) return callback(null, true);
-      
+      if (!origin) {return callback(null, true);}
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -81,19 +81,19 @@ function createApp() {
   app.use(limiter);
 
   // Body parsing middleware
-  app.use(express.json({ 
+  app.use(express.json({
     limit: '10mb',
     strict: true
   }));
-  app.use(express.urlencoded({ 
-    extended: true, 
-    limit: '10mb' 
+  app.use(express.urlencoded({
+    extended: true,
+    limit: '10mb'
   }));
 
   // Request logging middleware
   app.use((req, res, next) => {
     const startTime = Date.now();
-    
+
     // Log request
     logger.info('Incoming request', {
       method: req.method,
@@ -107,7 +107,7 @@ function createApp() {
     const originalEnd = res.end;
     res.end = function(chunk, encoding) {
       const responseTime = Date.now() - startTime;
-      
+
       logger.info('Request completed', {
         method: req.method,
         url: req.url,
@@ -156,7 +156,7 @@ function createApp() {
       url: req.url,
       ip: req.ip
     });
-    
+
     res.status(404).json({
       error: 'Route not found',
       message: `The requested endpoint ${req.method} ${req.url} does not exist`,
@@ -167,7 +167,7 @@ function createApp() {
   // Global error handler
   app.use((err, req, res, next) => {
     const errorId = require('uuid').v4();
-    
+
     logger.error('Unhandled error in request:', err, {
       errorId,
       method: req.method,
@@ -178,7 +178,7 @@ function createApp() {
 
     // Don't expose internal errors in production
     const isDevelopment = process.env.NODE_ENV === 'development';
-    
+
     res.status(err.status || 500).json({
       error: 'Internal server error',
       message: isDevelopment ? err.message : 'Something went wrong',
@@ -227,4 +227,4 @@ function sanitizeObject(obj) {
   return sanitized;
 }
 
-module.exports = { createApp }; 
+module.exports = { createApp };

@@ -284,7 +284,7 @@ class AuthController {
   readiness = asyncErrorHandler(async (req, res) => {
     try {
       const dbHealth = await authService.checkDatabaseHealth();
-      
+
       if (dbHealth.connected) {
         res.status(200).json({
           success: true,
@@ -369,7 +369,7 @@ class AuthController {
    */
   getProfile = asyncErrorHandler(async (req, res) => {
     const userId = req.user?.id; // From API Gateway headers
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -392,7 +392,7 @@ class AuthController {
   updateProfile = asyncErrorHandler(async (req, res) => {
     const userId = req.user?.id; // From API Gateway headers
     const profileData = req.body;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -416,7 +416,7 @@ class AuthController {
   updateProfilePicture = asyncErrorHandler(async (req, res) => {
     const userId = req.user?.id; // From API Gateway headers
     const { profile_picture_url } = req.body;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,

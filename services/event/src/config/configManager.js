@@ -20,15 +20,15 @@ class ConfigManager {
       NODE_ENV: Joi.string()
         .valid('development', 'test', 'production')
         .default('development'),
-      
+
       // Server Configuration
       PORT: Joi.number()
         .port()
         .default(3003),
-      
+
       SERVICE_NAME: Joi.string()
         .default('event-service'),
-      
+
       SERVICE_VERSION: Joi.string()
         .default('1.0.0'),
 
@@ -43,10 +43,10 @@ class ConfigManager {
       RABBITMQ_URL: Joi.string()
         .uri({ scheme: ['amqp', 'amqps'] })
         .default('amqp://localhost:5672'),
-      
+
       RABBITMQ_EXCHANGE: Joi.string()
         .default('club_events'),
-      
+
       RABBITMQ_QUEUE: Joi.string()
         .default('event_events'),
 
@@ -54,7 +54,7 @@ class ConfigManager {
       AUTH_SERVICE_URL: Joi.string()
         .uri()
         .default('http://auth-service:3001'),
-      
+
       CLUB_SERVICE_URL: Joi.string()
         .uri()
         .default('http://club-service:3002'),
@@ -90,7 +90,7 @@ class ConfigManager {
       // Feature Flags
       ENABLE_REQUEST_LOGGING: Joi.boolean()
         .default(true),
-      
+
       ENABLE_CRON_JOBS: Joi.boolean()
         .default(true)
     }).unknown(true);
@@ -101,42 +101,42 @@ class ConfigManager {
    */
   loadAndValidateConfig() {
     const schema = this.getConfigSchema();
-    
+
     // Extract environment variables
     const envVars = {
       NODE_ENV: process.env.NODE_ENV,
       PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : undefined,
       SERVICE_NAME: process.env.SERVICE_NAME,
       SERVICE_VERSION: process.env.SERVICE_VERSION,
-      
+
       // MongoDB
       MONGODB_URI: process.env.MONGODB_URI,
-      
+
       // RabbitMQ
       RABBITMQ_URL: process.env.RABBITMQ_URL,
       RABBITMQ_EXCHANGE: process.env.RABBITMQ_EXCHANGE,
       RABBITMQ_QUEUE: process.env.RABBITMQ_QUEUE,
-      
+
       // Service URLs
       AUTH_SERVICE_URL: process.env.AUTH_SERVICE_URL,
       CLUB_SERVICE_URL: process.env.CLUB_SERVICE_URL,
-      
+
       // Security
       API_GATEWAY_SECRET: process.env.API_GATEWAY_SECRET,
-      
+
       // Logging
       LOG_LEVEL: process.env.LOG_LEVEL,
-      
+
       // CORS
-      CORS_ORIGIN: process.env.CORS_ORIGIN ? 
-        (process.env.CORS_ORIGIN.includes(',') ? 
-          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : 
-          process.env.CORS_ORIGIN) : 
+      CORS_ORIGIN: process.env.CORS_ORIGIN ?
+        (process.env.CORS_ORIGIN.includes(',') ?
+          process.env.CORS_ORIGIN.split(',').map(url => url.trim()) :
+          process.env.CORS_ORIGIN) :
         undefined,
-      
+
       // Health Check
       HEALTH_CHECK_TIMEOUT_MS: process.env.HEALTH_CHECK_TIMEOUT_MS ? parseInt(process.env.HEALTH_CHECK_TIMEOUT_MS, 10) : undefined,
-      
+
       // Features
       ENABLE_REQUEST_LOGGING: process.env.ENABLE_REQUEST_LOGGING !== 'false',
       ENABLE_CRON_JOBS: process.env.ENABLE_CRON_JOBS !== 'false'
@@ -152,7 +152,7 @@ class ConfigManager {
       const errorMessage = error.details
         .map(detail => `  - ${detail.path.join('.')}: ${detail.message}`)
         .join('\n');
-      
+
       console.error('❌ Configuration validation failed:');
       console.error(errorMessage);
       console.error('\n📋 Please check your .env file or environment variables.');
@@ -160,7 +160,7 @@ class ConfigManager {
     }
 
     this.config = value;
-    
+
     // Log configuration summary (without sensitive data)
     // Note: Using console.log here as logger may not be initialized yet
     if (process.env.NODE_ENV !== 'test') {

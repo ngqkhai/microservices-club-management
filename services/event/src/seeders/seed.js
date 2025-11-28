@@ -392,7 +392,7 @@ async function seed() {
     logger.info('\nSeeded data summary:');
     logger.info(`- ${eventsData.length} events (Hackathon, Workshop, Concert, Tournament, Charity, etc.)`);
     logger.info(`- ${formattedRegistrations.length} registrations across events`);
-    
+
     // Show events by category
     const categories = [...new Set(eventsData.map(e => e.category))];
     logger.info('\nEvents by category:');

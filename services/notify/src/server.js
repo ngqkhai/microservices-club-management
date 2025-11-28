@@ -103,7 +103,7 @@ class NotificationServer {
    */
   setupHealthMonitoring() {
     const healthCheckInterval = parseInt(process.env.HEALTH_CHECK_INTERVAL_MS) || 30000; // 30 seconds
-    
+
     this.healthCheckInterval = setInterval(async () => {
       try {
         const health = await this.getHealthStatus();
@@ -115,8 +115,8 @@ class NotificationServer {
       }
     }, healthCheckInterval);
 
-    logger.info('Health monitoring started', { 
-      intervalMs: healthCheckInterval 
+    logger.info('Health monitoring started', {
+      intervalMs: healthCheckInterval
     });
   }
 
@@ -127,7 +127,7 @@ class NotificationServer {
     try {
       const emailHealth = await emailService.getHealthStatus();
       const rabbitHealth = await rabbitmq.healthCheck();
-      
+
       return {
         status: emailHealth.healthy && rabbitHealth.healthy ? 'healthy' : 'unhealthy',
         email: emailHealth,
@@ -149,7 +149,7 @@ class NotificationServer {
   setupGracefulShutdown() {
     // Handle various shutdown signals
     const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'];
-    
+
     signals.forEach(signal => {
       process.on(signal, () => {
         logger.info(`Received ${signal}, initiating graceful shutdown...`);
@@ -225,7 +225,7 @@ class NotificationServer {
       }
 
       logger.info('Stopping HTTP server...');
-      
+
       this.server.close((err) => {
         if (err) {
           logger.error('Error stopping HTTP server:', err);

@@ -5,15 +5,15 @@ const logger = require('./logger');
 // Define schemas outside the connection function
 // Define Club schema based on the updated schema requirements
 const clubSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: true, 
-    unique: true,
-    maxLength: 200 
-  },
-  description: { 
+  name: {
     type: String,
-    maxLength: 2000 
+    required: true,
+    unique: true,
+    maxLength: 200
+  },
+  description: {
+    type: String,
+    maxLength: 2000
   },
   category: {
     type: String,
@@ -37,7 +37,7 @@ const clubSchema = new mongoose.Schema({
     type: String,
     maxLength: 20
   },
-  logo_url: { 
+  logo_url: {
     type: String,
     maxLength: 500,
     validate: {
@@ -57,7 +57,7 @@ const clubSchema = new mongoose.Schema({
       message: 'Cover URL must be a valid HTTP/HTTPS URL'
     }
   },
-  website_url: { 
+  website_url: {
     type: String,
     maxLength: 500,
     validate: {
@@ -69,8 +69,8 @@ const clubSchema = new mongoose.Schema({
   },
   social_links: {
     type: {
-      facebook: { 
-        type: String, 
+      facebook: {
+        type: String,
         maxLength: 500,
         validate: {
           validator: function(v) {
@@ -79,8 +79,8 @@ const clubSchema = new mongoose.Schema({
           message: 'Facebook URL must be a valid HTTP/HTTPS URL'
         }
       },
-      instagram: { 
-        type: String, 
+      instagram: {
+        type: String,
         maxLength: 500,
         validate: {
           validator: function(v) {
@@ -89,8 +89,8 @@ const clubSchema = new mongoose.Schema({
           message: 'Instagram URL must be a valid HTTP/HTTPS URL'
         }
       },
-      twitter: { 
-        type: String, 
+      twitter: {
+        type: String,
         maxLength: 500,
         validate: {
           validator: function(v) {
@@ -99,8 +99,8 @@ const clubSchema = new mongoose.Schema({
           message: 'Twitter URL must be a valid HTTP/HTTPS URL'
         }
       },
-      linkedin: { 
-        type: String, 
+      linkedin: {
+        type: String,
         maxLength: 500,
         validate: {
           validator: function(v) {
@@ -134,27 +134,27 @@ const clubSchema = new mongoose.Schema({
   type: { type: String },
   size: { type: Number },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     default: 'ACTIVE',
-    enum: ['ACTIVE', 'INACTIVE'] 
+    enum: ['ACTIVE', 'INACTIVE']
   },
-  created_by: { 
-    type: String, 
+  created_by: {
+    type: String,
     required: true
   },
   manager: {
     type: {
-      user_id: { 
-        type: String, 
-        required: true 
+      user_id: {
+        type: String,
+        required: true
       },
-      full_name: { 
-        type: String, 
+      full_name: {
+        type: String,
         required: true,
         maxLength: 255
       },
-      email: { 
+      email: {
         type: String,
         validate: {
           validator: function(v) {
@@ -163,9 +163,9 @@ const clubSchema = new mongoose.Schema({
           message: 'Invalid email format'
         }
       },
-      assigned_at: { 
-        type: Date, 
-        default: Date.now 
+      assigned_at: {
+        type: Date,
+        default: Date.now
       }
     },
     required: true,
@@ -184,14 +184,14 @@ clubSchema.index({ created_at: -1 });
 
 // Define Membership schema
 const membershipSchema = new mongoose.Schema({
-  club_id: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    required: true, 
-    ref: 'Club' 
+  club_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'Club'
   },
-  user_id: { 
-    type: String, 
-    required: true 
+  user_id: {
+    type: String,
+    required: true
   },
   user_email: {
     type: String,
@@ -226,8 +226,8 @@ const membershipSchema = new mongoose.Schema({
     ref: 'RecruitmentCampaign',
     default: null
   },
-  role: { 
-    type: String, 
+  role: {
+    type: String,
     required: true,
     enum: ['member', 'organizer', 'club_manager'],
     default: 'member'
@@ -244,23 +244,23 @@ const membershipSchema = new mongoose.Schema({
   },
   application_answers: {
     type: [{
-      question_id: { 
-        type: String, 
+      question_id: {
+        type: String,
         required: true,
         maxLength: 100
       },
-      question_text: { 
-        type: String, 
+      question_text: {
+        type: String,
         required: true,
         maxLength: 500
       },
-      answer_value: { 
-        type: String, 
+      answer_value: {
+        type: String,
         required: true,
         maxLength: 2000
       },
-      answer_type: { 
-        type: String, 
+      answer_type: {
+        type: String,
         enum: ['text', 'textarea', 'select', 'checkbox'],
         default: 'text'
       }
@@ -273,10 +273,10 @@ const membershipSchema = new mongoose.Schema({
   approved_at: {
     type: Date
   },
-  joined_at: { 
-    type: Date, 
+  joined_at: {
+    type: Date,
     required: true,
-    default: Date.now 
+    default: Date.now
   },
   removed_at: {
     type: Date
@@ -296,21 +296,21 @@ membershipSchema.index({ joined_at: 1 });
 
 // Define RecruitmentCampaign schema
 const recruitmentCampaignSchema = new mongoose.Schema({
-  club_id: { 
-    type: mongoose.Schema.Types.ObjectId, 
+  club_id: {
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'Club' 
+    ref: 'Club'
   },
-  title: { 
-    type: String, 
-    required: true,
-    maxLength: 200 
-  },
-  description: { 
+  title: {
     type: String,
-    maxLength: 2000 
+    required: true,
+    maxLength: 200
   },
-  requirements: { 
+  description: {
+    type: String,
+    maxLength: 2000
+  },
+  requirements: {
     type: [String],
     default: []
   },
@@ -318,10 +318,10 @@ const recruitmentCampaignSchema = new mongoose.Schema({
     type: [{
       id: { type: String, required: true },
       question: { type: String, required: true, maxLength: 500 },
-      type: { 
-        type: String, 
+      type: {
+        type: String,
         required: true,
-        enum: ['text', 'textarea', 'select', 'checkbox'] 
+        enum: ['text', 'textarea', 'select', 'checkbox']
       },
       required: { type: Boolean, default: false },
       max_length: { type: Number },
@@ -331,12 +331,12 @@ const recruitmentCampaignSchema = new mongoose.Schema({
   },
   start_date: { type: Date, required: true },
   end_date: { type: Date, required: true },
-  max_applications: { 
-    type: Number, 
-    min: 1 
+  max_applications: {
+    type: Number,
+    min: 1
   },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     required: true,
     enum: ['draft', 'published', 'paused', 'completed'],
     default: 'draft'
@@ -361,28 +361,28 @@ const recruitmentCampaignSchema = new mongoose.Schema({
   criteria: { type: String },
   review_criteria: {
     type: [{
-      criterion_id: { 
-        type: String, 
+      criterion_id: {
+        type: String,
         required: true,
         maxLength: 100
       },
-      name: { 
-        type: String, 
+      name: {
+        type: String,
         required: true,
         maxLength: 200
       },
-      description: { 
+      description: {
         type: String,
         maxLength: 500
       },
-      weight: { 
-        type: Number, 
-        min: 0, 
+      weight: {
+        type: Number,
+        min: 0,
         max: 100,
         default: 1
       },
-      max_score: { 
-        type: Number, 
+      max_score: {
+        type: Number,
         min: 1,
         default: 10
       }
@@ -392,7 +392,7 @@ const recruitmentCampaignSchema = new mongoose.Schema({
   quota: { type: Number },
   start_at: { type: Date },
   end_at: { type: Date },
-  created_by: { 
+  created_by: {
     type: String,
     required: true
   },
@@ -403,7 +403,7 @@ const recruitmentCampaignSchema = new mongoose.Schema({
 recruitmentCampaignSchema.methods.toPublicJSON = function() {
   const clubName = this.club_id?.name || null;
   const clubId = this.club_id?._id || this.club_id;
-  
+
   return {
     id: this._id,
     club_id: clubId,
@@ -455,25 +455,25 @@ const connectToDatabase = async () => {
   try {
     const mongoConfig = config.getMongoDBConfig();
     const MONGO_URI = mongoConfig.uri;
-    
+
     await mongoose.connect(MONGO_URI, {
       ...mongoConfig.options,
       bufferCommands: false
     });
-    
+
     // Mask password in log
     const maskedUri = MONGO_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
     logger.info('Connected to MongoDB - Club Service Database', { database: maskedUri });
-    
+
     return true;
   } catch (error) {
     logger.error('Database connection error', { error: error.message });
-    
+
     if (config.isDevelopment()) {
       logger.warn('Running in development mode without database connection');
       return false;
     }
-    
+
     throw error;
   }
 };

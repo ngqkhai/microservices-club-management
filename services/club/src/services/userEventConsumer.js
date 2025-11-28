@@ -1,7 +1,7 @@
 /**
  * User Event Consumer
  * Consumes user events from auth-service to keep local user data in sync
- * 
+ *
  * Events handled:
  * - user.created: Cache new user data
  * - user.updated: Update cached user data in memberships
@@ -26,7 +26,7 @@ class UserEventConsumer {
 
   async connect() {
     try {
-      if (this.isConnected) return;
+      if (this.isConnected) {return;}
 
       const rabbitUrl = config.get('RABBITMQ_URL');
       logger.info('UserEventConsumer: Connecting to RabbitMQ...', { queue: this.queue });
@@ -36,7 +36,7 @@ class UserEventConsumer {
 
       // Setup exchange and queue
       await this.channel.assertExchange(this.exchange, 'topic', { durable: true });
-      await this.channel.assertQueue(this.queue, { 
+      await this.channel.assertQueue(this.queue, {
         durable: true,
         arguments: {
           'x-message-ttl': 86400000, // 24 hours
@@ -81,7 +81,7 @@ class UserEventConsumer {
 
     const delay = Math.min(5000 * Math.pow(2, this.reconnectAttempts), 60000);
     this.reconnectAttempts++;
-    
+
     logger.info(`UserEventConsumer: Scheduling reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
     setTimeout(() => {
       this.connect().catch(err => {
@@ -105,16 +105,16 @@ class UserEventConsumer {
       logger.info('UserEventConsumer: Starting to consume messages');
 
       this.channel.consume(this.queue, async (message) => {
-        if (!message) return;
+        if (!message) {return;}
 
         try {
           const content = JSON.parse(message.content.toString());
           const eventType = content.type;
 
-          logger.info('UserEventConsumer: Received event', { 
-            eventType, 
+          logger.info('UserEventConsumer: Received event', {
+            eventType,
             eventId: content.id,
-            userId: content.data?.userId 
+            userId: content.data?.userId
           });
 
           // Process based on event type
@@ -137,7 +137,7 @@ class UserEventConsumer {
           logger.debug('UserEventConsumer: Message acknowledged', { eventId: content.id });
 
         } catch (error) {
-          logger.error('UserEventConsumer: Error processing message', { 
+          logger.error('UserEventConsumer: Error processing message', {
             error: error.message,
             stack: error.stack
           });
@@ -159,7 +159,7 @@ class UserEventConsumer {
   async handleUserCreated(data) {
     try {
       const { userId, email, fullName, profilePictureUrl } = data;
-      
+
       logger.info('UserEventConsumer: Processing user.created', { userId, email });
 
       // We don't create memberships on user creation
@@ -180,25 +180,25 @@ class UserEventConsumer {
   async handleUserUpdated(data) {
     try {
       const { userId, email, fullName, profilePictureUrl, changedFields } = data;
-      
+
       logger.info('UserEventConsumer: Processing user.updated', { userId, changedFields });
 
       // Update denormalized user data in memberships
       const updateData = {};
-      if (email) updateData.user_email = email;
-      if (fullName) updateData.user_full_name = fullName;
-      if (profilePictureUrl !== undefined) updateData.user_profile_picture_url = profilePictureUrl;
+      if (email) {updateData.user_email = email;}
+      if (fullName) {updateData.user_full_name = fullName;}
+      if (profilePictureUrl !== undefined) {updateData.user_profile_picture_url = profilePictureUrl;}
 
       if (Object.keys(updateData).length > 0) {
         updateData.updated_at = new Date();
-        
+
         const result = await Membership.updateMany(
           { user_id: userId },
           { $set: updateData }
         );
 
-        logger.info('UserEventConsumer: Updated memberships', { 
-          userId, 
+        logger.info('UserEventConsumer: Updated memberships', {
+          userId,
           matchedCount: result.matchedCount,
           modifiedCount: result.modifiedCount
         });
@@ -217,25 +217,25 @@ class UserEventConsumer {
   async handleUserDeleted(data) {
     try {
       const { userId } = data;
-      
+
       logger.info('UserEventConsumer: Processing user.deleted', { userId });
 
       // Option 1: Mark memberships as removed
       const result = await Membership.updateMany(
         { user_id: userId, status: { $ne: 'removed' } },
-        { 
-          $set: { 
+        {
+          $set: {
             status: 'removed',
             removal_reason: 'User account deleted',
             removed_at: new Date(),
             updated_at: new Date()
-          } 
+          }
         }
       );
 
-      logger.info('UserEventConsumer: Memberships marked as removed', { 
-        userId, 
-        modifiedCount: result.modifiedCount 
+      logger.info('UserEventConsumer: Memberships marked as removed', {
+        userId,
+        modifiedCount: result.modifiedCount
       });
 
     } catch (error) {
@@ -246,8 +246,8 @@ class UserEventConsumer {
 
   async close() {
     try {
-      if (this.channel) await this.channel.close();
-      if (this.connection) await this.connection.close();
+      if (this.channel) {await this.channel.close();}
+      if (this.connection) {await this.connection.close();}
       this.isConnected = false;
       logger.info('UserEventConsumer: Connection closed');
     } catch (error) {

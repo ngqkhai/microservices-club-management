@@ -19,7 +19,7 @@ class CronJobManager {
     }
 
     logger.info('Starting cron jobs', { schedule: this.cronSchedule });
-    
+
     // Event status update job
     const statusUpdateJob = cron.schedule(this.cronSchedule, async () => {
       try {

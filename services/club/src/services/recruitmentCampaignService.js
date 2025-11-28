@@ -4,7 +4,7 @@ const CampaignEventPublisher = require('../utils/campaignEventPublisher');
 const logger = require('../utils/logger');
 
 class RecruitmentCampaignService {
-  
+
   /**
    * Create a new recruitment campaign
    * @param {String} clubId - Club ID
@@ -91,27 +91,27 @@ class RecruitmentCampaignService {
   static async getCampaign(campaignId, userId = null) {
     try {
       const campaign = await RecruitmentCampaignModel.findById(campaignId);
-      
+
       if (!campaign) {
         throw new Error('Campaign not found');
       }
-      
+
       // If campaign is published, anyone can view it
       if (campaign.status === 'published') {
         return userId ? campaign.toManagerJSON() : campaign.toPublicJSON();
       }
-      
+
       // If campaign is draft, paused, or completed, only club managers can view it
       if (['draft', 'paused', 'completed'].includes(campaign.status)) {
         if (!userId) {
           throw new Error('Authentication required to view this campaign');
         }
-        
+
         const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
         if (!hasPermission) {
           throw new Error('You do not have permission to view this campaign');
         }
-        
+
         return campaign.toManagerJSON();
       }
 
@@ -119,12 +119,12 @@ class RecruitmentCampaignService {
       if (!userId) {
         throw new Error('Authentication required to view this campaign');
       }
-      
+
       const hasPermission = await this.checkCampaignPermission(campaign.club_id, userId);
       if (!hasPermission) {
         throw new Error('You do not have permission to view this campaign');
       }
-      
+
       return campaign.toManagerJSON();
     } catch (error) {
       throw new Error(`Failed to get campaign: ${error.message}`);
@@ -401,10 +401,10 @@ class RecruitmentCampaignService {
   static async getPublishedCampaigns(options = {}) {
     try {
       const result = await RecruitmentCampaignModel.getPublishedCampaigns(options);
-      
+
       // Transform campaigns using toPublicJSON method which includes club name
       const transformedCampaigns = result.campaigns.map(campaign => campaign.toPublicJSON());
-      
+
       return {
         campaigns: transformedCampaigns,
         pagination: result.pagination
@@ -422,7 +422,7 @@ class RecruitmentCampaignService {
   static async getPublishedCampaignById(campaignId) {
     try {
       const campaign = await RecruitmentCampaignModel.findById(campaignId);
-      
+
       if (!campaign) {
         throw new Error('Campaign not found');
       }
@@ -449,7 +449,7 @@ class RecruitmentCampaignService {
       // This would typically check club memberships or call auth service
       // For now, we'll implement a basic check
       const { Membership } = require('../config/database');
-      
+
       const membership = await Membership.findOne({
         club_id: clubId,
         user_id: userId,
@@ -513,7 +513,7 @@ class RecruitmentCampaignService {
       }
 
       const { Membership } = require('../config/database');
-      
+
       // Check if user already has a membership (active or pending) for this club
       const existingMembership = await Membership.findOne({
         club_id: campaign.club_id,
@@ -600,7 +600,7 @@ class RecruitmentCampaignService {
   static async getApplication(applicationId, userId) {
     try {
       const { Membership } = require('../config/database');
-      
+
       const membership = await Membership.findById(applicationId);
       if (!membership) {
         throw new Error('Application not found');
@@ -639,7 +639,7 @@ class RecruitmentCampaignService {
   static async updateApplication(applicationId, userId, updateData) {
     try {
       const { Membership } = require('../config/database');
-      
+
       const membership = await Membership.findById(applicationId);
       if (!membership) {
         throw new Error('Application not found');
@@ -729,7 +729,7 @@ class RecruitmentCampaignService {
   static async withdrawApplication(applicationId, userId) {
     try {
       const { Membership } = require('../config/database');
-      
+
       const membership = await Membership.findById(applicationId);
       if (!membership) {
         throw new Error('Application not found');
@@ -798,7 +798,7 @@ class RecruitmentCampaignService {
       const { Membership } = require('../config/database');
 
       // Build query for memberships
-      let query = {
+      const query = {
         campaign_id: campaignId,
         club_id: clubId
       };
@@ -861,7 +861,7 @@ class RecruitmentCampaignService {
       }
 
       const { Membership } = require('../config/database');
-      
+
       const membership = await Membership.findOne({
         _id: applicationId,
         club_id: clubId
@@ -922,7 +922,7 @@ class RecruitmentCampaignService {
       }
 
       const { Membership } = require('../config/database');
-      
+
       const membership = await Membership.findOne({
         _id: applicationId,
         club_id: clubId
@@ -986,7 +986,7 @@ class RecruitmentCampaignService {
       }
 
       const { Membership } = require('../config/database');
-      
+
       // Find the pending membership
       const membership = await Membership.findOne({
         _id: applicationId,
@@ -1058,7 +1058,7 @@ class RecruitmentCampaignService {
       }
 
       const { Membership } = require('../config/database');
-      
+
       // Find the pending membership
       const membership = await Membership.findOne({
         _id: applicationId,
@@ -1179,7 +1179,7 @@ class RecruitmentCampaignService {
   static async updateCampaignStatistics(campaignId) {
     try {
       const { Membership } = require('../config/database');
-      
+
       const stats = {
         total_applications: await Membership.countDocuments({ campaign_id: campaignId }),
         pending_applications: await Membership.countDocuments({ campaign_id: campaignId, status: 'pending' }),
@@ -1205,7 +1205,7 @@ class RecruitmentCampaignService {
       const { Membership } = require('../config/database');
 
       // Build query for user's memberships (applications)
-      let query = {
+      const query = {
         user_id: userId,
         campaign_id: { $exists: true, $ne: null } // Only memberships created through campaigns
       };

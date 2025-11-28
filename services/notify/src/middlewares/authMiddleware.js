@@ -14,7 +14,7 @@ const authMiddleware = (req, res, next) => {
     // MANDATORY: Validate API Gateway secret header first
     const gatewaySecret = req.headers['x-api-gateway-secret'];
     const expectedSecret = process.env.API_GATEWAY_SECRET || 'club-mgmt-internal-secret-2024';
-    
+
     if (!gatewaySecret || gatewaySecret !== expectedSecret) {
       logger.warn('NOTIFY SERVICE: Request rejected - Invalid or missing gateway secret', {
         ip: req.ip,
@@ -24,7 +24,7 @@ const authMiddleware = (req, res, next) => {
         hasSecret: !!gatewaySecret,
         timestamp: new Date().toISOString()
       });
-      
+
       return res.status(401).json({
         success: false,
         message: 'Unauthorized: Request must come through API Gateway',
@@ -42,7 +42,7 @@ const authMiddleware = (req, res, next) => {
     const userEmail = req.headers['x-user-email'];
     const userRole = req.headers['x-user-role'];
     const userFullNameRaw = req.headers['x-user-full-name'];
-    
+
     // Decode base64 encoded full_name (to handle UTF-8 characters like Vietnamese names)
     let userFullName = userFullNameRaw;
     if (userFullNameRaw) {
@@ -68,7 +68,7 @@ const authMiddleware = (req, res, next) => {
           path: req.path,
           method: req.method
         });
-        
+
         return res.status(401).json({
           success: false,
           message: 'Invalid user role',
@@ -106,7 +106,7 @@ const authMiddleware = (req, res, next) => {
       path: req.path,
       method: req.method
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Internal authentication error',
@@ -125,7 +125,7 @@ const requireUser = (req, res, next) => {
       method: req.method,
       ip: req.ip
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'User authentication required',
@@ -147,7 +147,7 @@ const requireAdmin = (req, res, next) => {
       path: req.path,
       method: req.method
     });
-    
+
     return res.status(403).json({
       success: false,
       message: 'Admin access required',
@@ -162,4 +162,4 @@ module.exports = {
   authMiddleware,
   requireUser,
   requireAdmin
-}; 
+};

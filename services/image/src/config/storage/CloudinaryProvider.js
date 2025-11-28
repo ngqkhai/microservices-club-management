@@ -1,6 +1,6 @@
 /**
  * Cloudinary Storage Provider
- * 
+ *
  * Implements the StorageProvider interface for Cloudinary.
  * This is the production storage backend.
  */
@@ -35,7 +35,7 @@ class CloudinaryProvider extends StorageProvider {
 
     // Dynamically require cloudinary to avoid errors when not installed
     this.cloudinary = require('cloudinary').v2;
-    
+
     this.cloudinary.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY,
@@ -106,7 +106,7 @@ class CloudinaryProvider extends StorageProvider {
           }
         }
       );
-      
+
       uploadStream.end(buffer);
     });
   }

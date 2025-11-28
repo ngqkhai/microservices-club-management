@@ -22,8 +22,8 @@ app.use(bodyParser.json());
 
 // Health check endpoint (before other routes)
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
     service: config.get('SERVICE_NAME'),
     version: config.get('SERVICE_VERSION'),
     environment: config.get('NODE_ENV'),
@@ -53,17 +53,17 @@ import mongoose from 'mongoose';
 const startServer = async () => {
   try {
     logger.info('Attempting to connect to database...');
-    
+
     // Connect to MongoDB
     const dbConnected = await connectToDatabase();
-    
+
     logger.info('Database connection result', { connected: dbConnected });
-    
+
     if (!dbConnected && !config.isDevelopment()) {
       logger.error('Could not connect to MongoDB. Exiting application.');
       process.exit(1);
     }
-    
+
     // Initialize RabbitMQ consumers (non-blocking - service starts even if RabbitMQ fails)
     const rabbitmqConfig = config.getRabbitMQConfig();
     if (rabbitmqConfig.url) {
@@ -71,20 +71,20 @@ const startServer = async () => {
       imageEventConsumer.connect()
         .then(() => logger.info('📥 Event service listening for image events'))
         .catch(err => logger.warn('Image event consumer failed to connect', { error: err.message }));
-      
+
       // User events consumer (for user data sync) - start in background
       userEventConsumer.startConsuming()
         .then(() => logger.info('📥 Event service listening for user events'))
         .catch(err => logger.warn('User event consumer failed to connect', { error: err.message }));
     }
-    
+
     app.listen(PORT, () => {
-      logger.info(`🚀 Event service started successfully`, {
+      logger.info('🚀 Event service started successfully', {
         port: PORT,
         environment: config.get('NODE_ENV'),
         version: config.get('SERVICE_VERSION')
       });
-      
+
       if (!dbConnected) {
         logger.warn('Running with limited functionality due to database connection issues');
       } else if (config.get('ENABLE_CRON_JOBS')) {

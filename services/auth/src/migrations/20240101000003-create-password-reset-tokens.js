@@ -62,4 +62,4 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('password_reset_tokens');
   }
-}; 
+};

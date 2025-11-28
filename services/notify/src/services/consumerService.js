@@ -35,7 +35,7 @@ class ConsumerService {
 
       // Start consumers for each queue
       const queues = rabbitmqConfig.queues;
-      
+
       for (const [queueType, queueName] of Object.entries(queues)) {
         await this.startConsumer(queueName, queueType);
       }
@@ -99,7 +99,7 @@ class ConsumerService {
   createMessageHandler(queueName, queueType) {
     return async (message, rawMessage) => {
       const startTime = Date.now();
-      
+
       try {
         logger.queue('Received message', {
           queue: queueName,
@@ -222,7 +222,7 @@ class ConsumerService {
    */
   getStats() {
     const consumerStats = {};
-    
+
     for (const [queueName, consumer] of this.consumers.entries()) {
       consumerStats[queueName] = {
         queueType: consumer.queueType,
@@ -252,7 +252,7 @@ class ConsumerService {
   async getHealthStatus() {
     try {
       const rabbitmqHealth = await rabbitmqConfig.healthCheck();
-      
+
       return {
         healthy: this.isRunning && rabbitmqHealth.healthy,
         isRunning: this.isRunning,
@@ -290,7 +290,7 @@ class ConsumerService {
   resetStats() {
     this.stats.messagesProcessed = 0;
     this.stats.messagesFailed = 0;
-    
+
     // Reset individual consumer stats
     for (const consumer of this.consumers.values()) {
       consumer.messagesProcessed = 0;
@@ -301,4 +301,4 @@ class ConsumerService {
   }
 }
 
-module.exports = new ConsumerService(); 
+module.exports = new ConsumerService();

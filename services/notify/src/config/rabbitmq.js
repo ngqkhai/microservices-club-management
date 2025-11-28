@@ -15,7 +15,7 @@ class RabbitMQConfig {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
     this.reconnectDelay = 5000; // 5 seconds
-    
+
     // Queue configurations (using underscores for queue names)
     this.queues = {
       emailVerification: process.env.RABBITMQ_EMAIL_VERIFICATION_QUEUE || 'send_email_verification',
@@ -43,7 +43,7 @@ class RabbitMQConfig {
       }
 
       logger.queue('Connecting to RabbitMQ...', { url: this.url });
-      
+
       this.connection = await amqp.connect(this.url);
       this.channel = await this.connection.createChannel();
 
@@ -51,8 +51,8 @@ class RabbitMQConfig {
       await this.channel.prefetch(1);
 
       // Create exchange if it doesn't exist
-      await this.channel.assertExchange(this.exchange, 'topic', { 
-        durable: true 
+      await this.channel.assertExchange(this.exchange, 'topic', {
+        durable: true
       });
 
       // Setup all queues
@@ -73,7 +73,7 @@ class RabbitMQConfig {
       this.isConnected = true;
       this.reconnectAttempts = 0;
       logger.queue('Successfully connected to RabbitMQ');
-      
+
       return this.channel;
     } catch (error) {
       logger.error('Failed to connect to RabbitMQ:', error);
@@ -88,13 +88,13 @@ class RabbitMQConfig {
   async setupQueues() {
     try {
       const queueTypes = Object.keys(this.queues);
-      
+
       for (const queueType of queueTypes) {
         const queueName = this.queues[queueType];
         const routingKey = this.routingKeys[queueType];
-        
+
         // Assert queue
-        await this.channel.assertQueue(queueName, { 
+        await this.channel.assertQueue(queueName, {
           durable: true,
           arguments: {
             'x-message-ttl': 86400000, // 24 hours TTL
@@ -104,7 +104,7 @@ class RabbitMQConfig {
 
         // Bind queue to exchange with routing key (dots for routing keys)
         await this.channel.bindQueue(queueName, this.exchange, routingKey);
-        
+
         logger.queue(`Queue setup completed: ${queueName} -> ${routingKey}`, { queueType });
       }
     } catch (error) {
@@ -159,7 +159,7 @@ class RabbitMQConfig {
             try {
               const content = JSON.parse(message.content.toString());
               const startTime = Date.now();
-              
+
               logger.queue('Processing message', {
                 queue: queueName,
                 messageId: content.id || 'unknown',
@@ -168,10 +168,10 @@ class RabbitMQConfig {
               });
 
               await messageHandler(content, message);
-              
+
               // Acknowledge message on successful processing
               this.channel.ack(message);
-              
+
               const processingTime = Date.now() - startTime;
               logger.queue('Message processed successfully', {
                 queue: queueName,
@@ -217,7 +217,7 @@ class RabbitMQConfig {
     if (retryCount <= maxRetries) {
       // Retry the message
       const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-      
+
       logger.queue('Retrying message', {
         messageId: message.properties.messageId,
         retryCount,
@@ -253,7 +253,7 @@ class RabbitMQConfig {
         retryCount,
         finalError: error.message
       });
-      
+
       this.channel.nack(message, false, false); // Dead letter
     }
   }
@@ -279,7 +279,7 @@ class RabbitMQConfig {
         this.exchange,
         routingKey,
         Buffer.from(JSON.stringify(message)),
-        { 
+        {
           persistent: true,
           contentType: 'application/json',
           messageId: data.id || require('uuid').v4()
@@ -287,8 +287,8 @@ class RabbitMQConfig {
       );
 
       if (published) {
-        logger.queue('Message published successfully', { 
-          routingKey, 
+        logger.queue('Message published successfully', {
+          routingKey,
           messageId: data.id
         });
       }
@@ -352,4 +352,4 @@ class RabbitMQConfig {
   }
 }
 
-module.exports = new RabbitMQConfig(); 
+module.exports = new RabbitMQConfig();

@@ -221,7 +221,7 @@ const profileUpdateSchema = Joi.object({
 const validate = (schema, property = 'body') => {
   return (req, res, next) => {
     const dataToValidate = req[property];
-    
+
     const { error, value } = schema.validate(dataToValidate, {
       abortEarly: false,
       stripUnknown: true,
@@ -291,11 +291,11 @@ module.exports = {
   userIdParamSchema,
   gatewayHeadersSchema,
   profileUpdateSchema,
-  
+
   // Validation middleware
   validate,
   validateGatewayHeaders,
-  
+
   // Individual validations
   validateRegister: validate(registerSchema),
   validateLogin: validate(loginSchema),
@@ -307,7 +307,7 @@ module.exports = {
   validateAccountDeletion: validate(accountDeletionSchema),
   validateUserIdParam: validate(userIdParamSchema, 'params'),
   validateProfileUpdate: validate(profileUpdateSchema),
-  
+
   // Common patterns
   emailSchema,
   passwordSchema,

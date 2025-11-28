@@ -16,7 +16,7 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     await queryInterface.removeIndex('users', ['gender']);
     await queryInterface.removeColumn('users', 'gender');
-    
+
     // Remove the ENUM type if it was created
     await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_users_gender";');
   }

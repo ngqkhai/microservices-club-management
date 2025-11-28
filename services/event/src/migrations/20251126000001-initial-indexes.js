@@ -1,6 +1,6 @@
 /**
  * Initial Migration: Create database indexes for Event Service
- * 
+ *
  * This migration documents the indexes that are defined in the Mongoose schemas.
  * These indexes are automatically created when Mongoose connects, but this migration
  * ensures they're tracked and can be managed via migrate-mongo.
@@ -9,10 +9,10 @@
 module.exports = {
   async up(db) {
     console.log('Creating indexes for events collection...');
-    
+
     // Event indexes (matching eventSchema in models/event.js)
     await db.collection('events').createIndex(
-      { title: 'text', description: 'text', tags: 'text' }, 
+      { title: 'text', description: 'text', tags: 'text' },
       { name: 'events_text_search' }
     );
     await db.collection('events').createIndex({ club_id: 1 }, { name: 'events_club_id' });
@@ -24,12 +24,12 @@ module.exports = {
     await db.collection('events').createIndex({ created_by: 1 }, { name: 'events_created_by' });
     await db.collection('events').createIndex({ registration_deadline: 1 }, { name: 'events_registration_deadline' });
     await db.collection('events').createIndex({ status: 1 }, { name: 'events_status' });
-    
+
     console.log('Creating indexes for event_registrations collection...');
-    
+
     // Registration indexes (matching registrationSchema in models/registration.js)
     await db.collection('event_registrations').createIndex(
-      { event_id: 1, user_id: 1 }, 
+      { event_id: 1, user_id: 1 },
       { unique: true, name: 'registrations_event_user_unique' }
     );
     await db.collection('event_registrations').createIndex({ event_id: 1 }, { name: 'registrations_event_id' });
@@ -38,22 +38,22 @@ module.exports = {
     await db.collection('event_registrations').createIndex({ user_id: 1, status: 1 }, { name: 'registrations_user_status' });
     await db.collection('event_registrations').createIndex({ registered_at: 1 }, { name: 'registrations_registered_at' });
     await db.collection('event_registrations').createIndex({ ticket_id: 1 }, { unique: true, name: 'registrations_ticket_id' });
-    
+
     console.log('Creating indexes for event_interests collection...');
-    
+
     // Event Interests indexes
     await db.collection('event_interests').createIndex(
-      { event_id: 1, user_id: 1, interest_type: 1 }, 
+      { event_id: 1, user_id: 1, interest_type: 1 },
       { unique: true, name: 'interests_event_user_type_unique' }
     );
     await db.collection('event_interests').createIndex({ user_id: 1, interest_type: 1 }, { name: 'interests_user_type' });
-    
+
     console.log('✅ All Event Service indexes created successfully');
   },
 
   async down(db) {
     console.log('Dropping indexes for events collection...');
-    
+
     // Drop Event indexes
     try { await db.collection('events').dropIndex('events_text_search'); } catch (e) {}
     try { await db.collection('events').dropIndex('events_club_id'); } catch (e) {}
@@ -65,9 +65,9 @@ module.exports = {
     try { await db.collection('events').dropIndex('events_created_by'); } catch (e) {}
     try { await db.collection('events').dropIndex('events_registration_deadline'); } catch (e) {}
     try { await db.collection('events').dropIndex('events_status'); } catch (e) {}
-    
+
     console.log('Dropping indexes for event_registrations collection...');
-    
+
     // Drop Registration indexes
     try { await db.collection('event_registrations').dropIndex('registrations_event_user_unique'); } catch (e) {}
     try { await db.collection('event_registrations').dropIndex('registrations_event_id'); } catch (e) {}
@@ -76,13 +76,13 @@ module.exports = {
     try { await db.collection('event_registrations').dropIndex('registrations_user_status'); } catch (e) {}
     try { await db.collection('event_registrations').dropIndex('registrations_registered_at'); } catch (e) {}
     try { await db.collection('event_registrations').dropIndex('registrations_ticket_id'); } catch (e) {}
-    
+
     console.log('Dropping indexes for event_interests collection...');
-    
+
     // Drop Event Interests indexes
     try { await db.collection('event_interests').dropIndex('interests_event_user_type_unique'); } catch (e) {}
     try { await db.collection('event_interests').dropIndex('interests_user_type'); } catch (e) {}
-    
+
     console.log('✅ All Event Service indexes dropped');
   }
 };

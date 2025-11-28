@@ -1,13 +1,13 @@
 import e from 'express';
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
-import { 
-  getFilteredEvents, 
-  rsvpToEvent, 
-  joinEventService, 
-  leaveEventService, 
-  createEventService, 
-  updateEventService, 
-  deleteEventService, 
+import {
+  getFilteredEvents,
+  rsvpToEvent,
+  joinEventService,
+  leaveEventService,
+  createEventService,
+  updateEventService,
+  deleteEventService,
   getEventsOfClubService,
   getEventByIdService,
   getUserEventStatusService,
@@ -24,17 +24,17 @@ import {
 export const getEvents = async (req, res) => {
   try {
     const dto = new GetEventsDTO(req.query);
-    
+
     // Allow 'completed' status for recent events, otherwise default to 'published'
     if (dto.status !== 'completed') {
       dto.status = 'published';
     }
-    
+
     const result = await getFilteredEvents(dto);
     res.status(200).json(result);
   } catch (error) {
     console.error('getEvents error:', error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
       message: error.message,
       code: 'VALIDATION_ERROR'
@@ -73,7 +73,7 @@ export const handleEventRSVP = async (req, res) => {
     const event_id = req.params.id;
     const dto = new RSVPDTO({ ...req.body, event_id });
     const user_id = req.user.id; // Get user ID from API Gateway headers
-    const result = await rsvpToEvent(dto.event_id, dto.status, user_id); 
+    const result = await rsvpToEvent(dto.event_id, dto.status, user_id);
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -86,11 +86,11 @@ export const joinEvent = async (req, res) => {
     const userId = req.user.id; // From API Gateway headers
     const userEmail = req.user.email;
     const userFullName = req.user.full_name;
-    
+
     console.log('joinEvent called:', { eventId, userId });
-    
+
     const result = await joinEventService(eventId, { userId, userEmail, userFullName });
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Joined event successfully',
@@ -113,7 +113,7 @@ export const joinEvent = async (req, res) => {
         message: 'Event not found'
       });
     }
-    
+
     if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
       return res.status(503).json({
         status: 503,
@@ -121,7 +121,7 @@ export const joinEvent = async (req, res) => {
         message: 'Service temporarily unavailable. Please try again later.'
       });
     }
-    
+
     if (error.message === 'You already joined this event') {
       return res.status(400).json({
         status: 400,
@@ -129,7 +129,7 @@ export const joinEvent = async (req, res) => {
         message: 'You already joined this event'
       });
     }
-    
+
     if (error.message === 'Event is full') {
       return res.status(400).json({
         status: 400,
@@ -162,7 +162,7 @@ export const joinEvent = async (req, res) => {
         message: 'Invalid data provided'
       });
     }
-    
+
     // Generic error handling
     console.error('Unhandled error in joinEvent:', error);
     res.status(500).json({
@@ -177,11 +177,11 @@ export const leaveEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const userId = req.user.id; // Get user ID from API Gateway headers
-    
+
     console.log('leaveEvent called:', { eventId, userId });
-    
+
     const result = await leaveEventService(eventId, userId);
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Left event successfully',
@@ -204,7 +204,7 @@ export const leaveEvent = async (req, res) => {
         message: 'Event not found'
       });
     }
-    
+
     if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
       return res.status(503).json({
         status: 503,
@@ -212,7 +212,7 @@ export const leaveEvent = async (req, res) => {
         message: 'Service temporarily unavailable. Please try again later.'
       });
     }
-    
+
     if (error.message === 'You have not joined this event') {
       return res.status(400).json({
         status: 400,
@@ -237,7 +237,7 @@ export const leaveEvent = async (req, res) => {
         message: 'Invalid data provided'
       });
     }
-    
+
     // Generic error handling
     console.error('Unhandled error in leaveEvent:', error);
     res.status(500).json({
@@ -325,7 +325,7 @@ export const deleteEvent = async (req, res, next) => {
         message: 'Event not found'
       });
     }
-    
+
     if (error.message === 'Service temporarily unavailable' || error.message === 'Database connection unavailable') {
       return res.status(503).json({
         status: 503,
@@ -350,7 +350,7 @@ export const deleteEvent = async (req, res, next) => {
         message: 'Invalid data provided'
       });
     }
-    
+
     // Generic error handling
     console.error('Unhandled error in deleteEvent:', error);
     res.status(500).json({
@@ -395,22 +395,22 @@ export const getEventById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id || req.headers['x-user-id']; // Optional user context
     const event = await getEventByIdService(id, userId);
-    
+
     if (!event) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
         message: 'Event not found',
         code: 'EVENT_NOT_FOUND'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: event
     });
   } catch (error) {
     console.error('getEventById error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
       code: 'INTERNAL_ERROR'
@@ -426,14 +426,14 @@ export const getUserEventStatus = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id || req.headers['x-user-id'];
     const status = await getUserEventStatusService(id, userId);
-    
+
     res.status(200).json({
       success: true,
       data: status
     });
   } catch (error) {
     console.error('getUserEventStatus error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
       code: 'INTERNAL_ERROR'
@@ -449,7 +449,7 @@ export const toggleEventFavorite = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id || req.headers['x-user-id'];
     const result = await toggleEventFavoriteService(id, userId);
-    
+
     res.status(200).json({
       success: true,
       data: result,
@@ -457,7 +457,7 @@ export const toggleEventFavorite = async (req, res) => {
     });
   } catch (error) {
     console.error('toggleEventFavorite error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
       code: 'INTERNAL_ERROR'
@@ -473,14 +473,14 @@ export const getUserFavoriteEvents = async (req, res) => {
     const userId = req.user?.id || req.headers['x-user-id'];
     const { page = 1, limit = 10 } = req.query;
     const result = await getUserFavoriteEventsService(userId, { page: parseInt(page), limit: parseInt(limit) });
-    
+
     res.status(200).json({
       success: true,
       data: result
     });
   } catch (error) {
     console.error('getUserFavoriteEvents error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
       code: 'INTERNAL_ERROR'
@@ -495,19 +495,19 @@ export const getEventRegistrations = async (req, res) => {
   try {
     const { id } = req.params;
     const { page = 1, limit = 20, status } = req.query;
-    const result = await getEventRegistrationsService(id, { 
-      page: parseInt(page), 
+    const result = await getEventRegistrationsService(id, {
+      page: parseInt(page),
       limit: parseInt(limit),
-      status 
+      status
     });
-    
+
     res.status(200).json({
       success: true,
       data: result
     });
   } catch (error) {
     console.error('getEventRegistrations error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Internal server error',
       code: 'INTERNAL_ERROR'

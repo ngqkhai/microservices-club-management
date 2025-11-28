@@ -45,7 +45,7 @@ const campaignApplicationSchema = new mongoose.Schema({
     default: 'pending',
     index: true
   },
-  
+
   // Review Information
   reviewed_by: {
     type: String, // User ID of reviewer
@@ -144,15 +144,15 @@ campaignApplicationSchema.methods.toManagerJSON = function() {
 // Static Methods
 campaignApplicationSchema.statics.findByUser = function(userId, status = null) {
   const query = { user_id: userId };
-  if (status) query.status = status;
+  if (status) {query.status = status;}
   return this.find(query).sort({ submitted_at: -1 });
 };
 
 campaignApplicationSchema.statics.findByCampaign = function(campaignId, options = {}) {
   const { status, page = 1, limit = 10 } = options;
   const query = { campaign_id: campaignId };
-  if (status) query.status = status;
-  
+  if (status) {query.status = status;}
+
   const skip = (page - 1) * limit;
   return this.find(query)
     .sort({ submitted_at: -1 })
@@ -162,7 +162,7 @@ campaignApplicationSchema.statics.findByCampaign = function(campaignId, options 
 
 campaignApplicationSchema.statics.countByCampaign = function(campaignId, status = null) {
   const query = { campaign_id: campaignId };
-  if (status) query.status = status;
+  if (status) {query.status = status;}
   return this.countDocuments(query);
 };
 

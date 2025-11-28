@@ -28,8 +28,8 @@ app.use(cors({
 
 // Health check endpoint (BEFORE auth middleware to allow Docker health checks)
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
     service: config.get('SERVICE_NAME'),
     version: config.get('SERVICE_VERSION'),
     environment: config.get('NODE_ENV')
@@ -61,12 +61,12 @@ const start = async () => {
   try {
     // Connect to database
     const dbConnected = await connectToDatabase();
-    
+
     if (!dbConnected && !config.isDevelopment()) {
       logger.error('Could not connect to MongoDB. Exiting application.');
       process.exit(1);
     }
-    
+
     // Initialize RabbitMQ consumers
     const rabbitmqConfig = config.getRabbitMQConfig();
     if (rabbitmqConfig.url) {
@@ -74,7 +74,7 @@ const start = async () => {
         // Image events consumer
         await imageEventConsumer.connect();
         logger.info('📥 Club service listening for image events');
-        
+
         // User events consumer (for user data sync)
         // Don't await - let it connect in background to avoid blocking startup
         userEventConsumer.startConsuming().catch(err => {
@@ -85,14 +85,14 @@ const start = async () => {
         logger.warn('Could not connect to RabbitMQ consumers', { error: error.message });
       }
     }
-    
+
     app.listen(PORT, () => {
-      logger.info(`🚀 Club service started successfully`, {
+      logger.info('🚀 Club service started successfully', {
         port: PORT,
         environment: config.get('NODE_ENV'),
         version: config.get('SERVICE_VERSION')
       });
-      
+
       if (!dbConnected) {
         logger.warn('Running with limited functionality due to database connection issues');
       }

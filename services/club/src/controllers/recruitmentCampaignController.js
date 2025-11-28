@@ -1,13 +1,13 @@
 const RecruitmentCampaignService = require('../services/recruitmentCampaignService');
-const { 
-  CreateCampaignDTO, 
-  UpdateCampaignDTO, 
-  CampaignResponseDTO, 
-  CampaignListResponseDTO 
+const {
+  CreateCampaignDTO,
+  UpdateCampaignDTO,
+  CampaignResponseDTO,
+  CampaignListResponseDTO
 } = require('../dtos/recruitmentCampaignDTOs');
 
 class RecruitmentCampaignController {
-  
+
   /**
    * Create a new recruitment campaign
    * POST /api/clubs/:clubId/campaigns
@@ -72,19 +72,19 @@ class RecruitmentCampaignController {
       // Validate status parameter if provided
       const validStatuses = ['draft', 'published', 'completed', 'paused'];
       let status = req.query.status;
-      
+
       if (status) {
         // Handle comma-separated statuses
         const requestedStatuses = status.split(',').map(s => s.trim());
         const invalidStatuses = requestedStatuses.filter(s => !validStatuses.includes(s));
-        
+
         if (invalidStatuses.length > 0) {
           return res.status(400).json({
             success: false,
             message: `Invalid status values: ${invalidStatuses.join(', ')}. Valid statuses are: ${validStatuses.join(', ')}`
           });
         }
-        
+
         status = requestedStatuses;
       } else {
         // Default to draft for backward compatibility
@@ -132,9 +132,9 @@ class RecruitmentCampaignController {
         data: campaign
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -179,9 +179,9 @@ class RecruitmentCampaignController {
         data: new CampaignResponseDTO(campaign)
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -220,9 +220,9 @@ class RecruitmentCampaignController {
         });
       }
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -255,9 +255,9 @@ class RecruitmentCampaignController {
         data: campaign
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -352,9 +352,9 @@ class RecruitmentCampaignController {
         data: campaign
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -387,9 +387,9 @@ class RecruitmentCampaignController {
         data: campaign
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -422,9 +422,9 @@ class RecruitmentCampaignController {
         data: campaign
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -457,9 +457,9 @@ class RecruitmentCampaignController {
         data: campaign
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -479,15 +479,15 @@ class RecruitmentCampaignController {
       const { campaignId } = req.params;
       const userId = req.user?.id || req.headers['x-user-id'];
       const userEmail = req.user?.email || req.headers['x-user-email'];
-      
+
       // Handle full_name from req.user (already decoded in middleware) or decode from header
       let userFullName = req.user?.full_name;
       if (!userFullName && req.headers['x-user-full-name']) {
         try {
           userFullName = Buffer.from(req.headers['x-user-full-name'], 'base64').toString('utf8');
-          console.debug('Decoded full_name from header:', { 
-            original: req.headers['x-user-full-name'], 
-            decoded: userFullName 
+          console.debug('Decoded full_name from header:', {
+            original: req.headers['x-user-full-name'],
+            decoded: userFullName
           });
         } catch (error) {
           console.warn('Failed to decode base64 full_name from header, using original value:', error.message);
@@ -620,9 +620,9 @@ class RecruitmentCampaignController {
       const { page = 1, limit = 10, status } = req.query;
 
       const applications = await RecruitmentCampaignService.getCampaignApplications(
-        campaignId, 
-        clubId, 
-        userId, 
+        campaignId,
+        clubId,
+        userId,
         { page: parseInt(page), limit: parseInt(limit), status }
       );
 
@@ -680,10 +680,10 @@ class RecruitmentCampaignController {
       const { status, notes } = req.body;
 
       const application = await RecruitmentCampaignService.updateApplicationStatus(
-        applicationId, 
-        clubId, 
-        userId, 
-        status, 
+        applicationId,
+        clubId,
+        userId,
+        status,
         notes
       );
 
@@ -714,10 +714,10 @@ class RecruitmentCampaignController {
       const { role = 'member', notes } = req.body;
 
       const result = await RecruitmentCampaignService.approveApplication(
-        applicationId, 
-        clubId, 
-        userId, 
-        role, 
+        applicationId,
+        clubId,
+        userId,
+        role,
         notes
       );
 
@@ -748,10 +748,10 @@ class RecruitmentCampaignController {
       const { reason, notes } = req.body;
 
       const application = await RecruitmentCampaignService.rejectApplication(
-        applicationId, 
-        clubId, 
-        userId, 
-        reason, 
+        applicationId,
+        clubId,
+        userId,
+        reason,
         notes
       );
 
@@ -803,7 +803,7 @@ class RecruitmentCampaignController {
         data: result
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
       res.status(statusCode).json({
         success: false,
@@ -833,10 +833,10 @@ class RecruitmentCampaignController {
       }
 
       const result = await RecruitmentCampaignService.updateApplicationStatus(
-        applicationId, 
-        clubId, 
-        userId, 
-        status, 
+        applicationId,
+        clubId,
+        userId,
+        status,
         notes
       );
 
@@ -846,7 +846,7 @@ class RecruitmentCampaignController {
         data: result
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
       res.status(statusCode).json({
         success: false,
@@ -873,10 +873,10 @@ class RecruitmentCampaignController {
       }
 
       const result = await RecruitmentCampaignService.approveApplication(
-        applicationId, 
-        clubId, 
-        userId, 
-        role, 
+        applicationId,
+        clubId,
+        userId,
+        role,
         notes
       );
 
@@ -886,7 +886,7 @@ class RecruitmentCampaignController {
         data: result
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
       res.status(statusCode).json({
         success: false,
@@ -913,10 +913,10 @@ class RecruitmentCampaignController {
       }
 
       const result = await RecruitmentCampaignService.rejectApplication(
-        applicationId, 
-        clubId, 
-        userId, 
-        reason, 
+        applicationId,
+        clubId,
+        userId,
+        reason,
         notes
       );
 
@@ -926,7 +926,7 @@ class RecruitmentCampaignController {
         data: result
       });
     } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 : 
+      const statusCode = error.message.includes('not found') ? 404 :
                         error.message.includes('permission') ? 403 : 400;
       res.status(statusCode).json({
         success: false,

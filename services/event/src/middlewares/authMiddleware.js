@@ -17,11 +17,11 @@ export const validateApiGatewaySecret = (req, res, next) => {
   if (req.method === 'OPTIONS') {
     return next();
   }
-  
+
   // MANDATORY: Validate API Gateway secret header first
   const gatewaySecret = req.headers['x-api-gateway-secret'];
   const expectedSecret = config.get('API_GATEWAY_SECRET');
-  
+
   if (!gatewaySecret || gatewaySecret !== expectedSecret) {
     logger.warn('Request rejected - Invalid or missing gateway secret', {
       ip: req.ip,
@@ -30,7 +30,7 @@ export const validateApiGatewaySecret = (req, res, next) => {
       userAgent: req.get('User-Agent'),
       hasSecret: !!gatewaySecret
     });
-    
+
     return res.status(401).json({
       success: false,
       message: 'Unauthorized: Request must come through API Gateway',
@@ -55,7 +55,7 @@ export const authMiddleware = (req, res, next) => {
     // MANDATORY: Validate API Gateway secret header first
     const gatewaySecret = req.headers['x-api-gateway-secret'];
     const expectedSecret = config.get('API_GATEWAY_SECRET');
-    
+
     if (!gatewaySecret || gatewaySecret !== expectedSecret) {
       logger.warn('Request rejected - Invalid or missing gateway secret', {
         ip: req.ip,
@@ -64,7 +64,7 @@ export const authMiddleware = (req, res, next) => {
         userAgent: req.get('User-Agent'),
         hasSecret: !!gatewaySecret
       });
-      
+
       return res.status(401).json({
         success: false,
         message: 'Unauthorized: Request must come through API Gateway',
@@ -85,7 +85,7 @@ export const authMiddleware = (req, res, next) => {
 
     // Decode base64 encoded full_name (from Kong JWT plugin to handle UTF-8 characters)
     const decodeHeaderUtf8 = (value) => {
-      if (!value || typeof value !== 'string') return value;
+      if (!value || typeof value !== 'string') {return value;}
       try {
         return Buffer.from(value, 'base64').toString('utf8');
       } catch (e) {
@@ -106,8 +106,8 @@ export const authMiddleware = (req, res, next) => {
         path: req.path,
         method: req.method
       });
-      
-      return res.status(401).json({ 
+
+      return res.status(401).json({
         success: false,
         message: 'Authentication required',
         code: 'AUTH_REQUIRED'
@@ -124,7 +124,7 @@ export const authMiddleware = (req, res, next) => {
         path: req.path,
         method: req.method
       });
-      
+
       return res.status(401).json({
         success: false,
         message: 'Invalid user role',
@@ -155,7 +155,7 @@ export const authMiddleware = (req, res, next) => {
       path: req.path,
       method: req.method
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Internal authentication error',
@@ -171,7 +171,7 @@ export const authMiddleware = (req, res, next) => {
  */
 export const requireRole = (allowedRoles) => {
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-  
+
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -189,7 +189,7 @@ export const requireRole = (allowedRoles) => {
         path: req.path,
         method: req.method
       });
-      
+
       return res.status(403).json({
         success: false,
         message: 'Insufficient permissions',
@@ -216,7 +216,7 @@ async function isUserClubManager(clubId, userId, req) {
   const servicesConfig = config.getServicesConfig();
   const clubServiceUrl = servicesConfig.clubService.baseURL;
   const membershipCheckUrl = `${clubServiceUrl}/api/clubs/${clubId}/members/${userId}`;
-  
+
   logger.debug('Checking club membership', { membershipCheckUrl });
 
   try {
@@ -249,12 +249,12 @@ export const requireClubManager = async (req, res, next) => {
     const userId = req.user.id;
     const eventId = req.params.id;
     const userRole = req.user.role; // Use normalized role from req.user
-    
+
     if (userRole === 'admin') {
       logger.info('Admin access granted', { userId, userRole, path: req.path, method: req.method });
       return next();
     }
-    
+
     if (eventId) {
       const event = await Event.findById(eventId);
       if (!event) {
@@ -279,7 +279,7 @@ export const requireClubManager = async (req, res, next) => {
         return next();
       }
     }
-    
+
     return res.status(403).json({ success: false, message: 'User must be a club manager to perform this action', code: 'FORBIDDEN' });
 
   } catch (error) {
@@ -313,12 +313,12 @@ export const requireClubManagerOrOrganizer = async (req, res, next) => {
     const userId = req.user.id;
     const eventId = req.params.id;
     const userRole = req.user.role; // Use normalized role from req.user
-    
+
     if (userRole === 'admin') {
       logger.info('Admin access granted', { userId, userRole, path: req.path, method: req.method });
       return next();
     }
-    
+
     if (eventId) {
       const event = await Event.findById(eventId);
       if (!event) {
@@ -347,11 +347,11 @@ export const requireClubManagerOrOrganizer = async (req, res, next) => {
         return next();
       }
     }
-    
-    return res.status(403).json({ 
-      success: false, 
-      message: 'User must be an admin, club manager, or event organizer to perform this action', 
-      code: 'FORBIDDEN' 
+
+    return res.status(403).json({
+      success: false,
+      message: 'User must be an admin, club manager, or event organizer to perform this action',
+      code: 'FORBIDDEN'
     });
 
   } catch (error) {

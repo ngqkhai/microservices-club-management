@@ -1,7 +1,7 @@
 /**
  * User Event Consumer for Event Service
  * Consumes user events from auth-service to keep local user data in sync
- * 
+ *
  * Events handled:
  * - user.created: Log new user
  * - user.updated: Update denormalized user data in registrations
@@ -25,7 +25,7 @@ class UserEventConsumer {
 
   async connect() {
     try {
-      if (this.isConnected) return;
+      if (this.isConnected) {return;}
 
       const rabbitUrl = config.get('RABBITMQ_URL');
       logger.info('UserEventConsumer: Connecting to RabbitMQ...', { queue: this.queue });
@@ -35,7 +35,7 @@ class UserEventConsumer {
 
       // Setup exchange and queue
       await this.channel.assertExchange(this.exchange, 'topic', { durable: true });
-      await this.channel.assertQueue(this.queue, { 
+      await this.channel.assertQueue(this.queue, {
         durable: true,
         arguments: {
           'x-message-ttl': 86400000, // 24 hours
@@ -80,7 +80,7 @@ class UserEventConsumer {
 
     const delay = Math.min(5000 * Math.pow(2, this.reconnectAttempts), 60000);
     this.reconnectAttempts++;
-    
+
     logger.info(`UserEventConsumer: Scheduling reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
     // Use .catch() to prevent unhandled promise rejection from setTimeout
     setTimeout(() => {
@@ -105,16 +105,16 @@ class UserEventConsumer {
       logger.info('UserEventConsumer: Starting to consume messages');
 
       this.channel.consume(this.queue, async (message) => {
-        if (!message) return;
+        if (!message) {return;}
 
         try {
           const content = JSON.parse(message.content.toString());
           const eventType = content.type;
 
-          logger.info('UserEventConsumer: Received event', { 
-            eventType, 
+          logger.info('UserEventConsumer: Received event', {
+            eventType,
             eventId: content.id,
-            userId: content.data?.userId 
+            userId: content.data?.userId
           });
 
           // Process based on event type
@@ -137,7 +137,7 @@ class UserEventConsumer {
           logger.debug('UserEventConsumer: Message acknowledged', { eventId: content.id });
 
         } catch (error) {
-          logger.error('UserEventConsumer: Error processing message', { 
+          logger.error('UserEventConsumer: Error processing message', {
             error: error.message,
             stack: error.stack
           });
@@ -173,13 +173,13 @@ class UserEventConsumer {
   async handleUserUpdated(data) {
     try {
       const { userId, email, fullName, changedFields } = data;
-      
+
       logger.info('UserEventConsumer: Processing user.updated', { userId, changedFields });
 
       // Update denormalized user data in registrations
       const updateData = {};
-      if (email) updateData.user_email = email;
-      if (fullName) updateData.user_name = fullName;
+      if (email) {updateData.user_email = email;}
+      if (fullName) {updateData.user_name = fullName;}
 
       if (Object.keys(updateData).length > 0) {
         const result = await Registration.updateMany(
@@ -187,8 +187,8 @@ class UserEventConsumer {
           { $set: updateData }
         );
 
-        logger.info('UserEventConsumer: Updated registrations', { 
-          userId, 
+        logger.info('UserEventConsumer: Updated registrations', {
+          userId,
           matchedCount: result.matchedCount,
           modifiedCount: result.modifiedCount
         });
@@ -207,24 +207,24 @@ class UserEventConsumer {
   async handleUserDeleted(data) {
     try {
       const { userId } = data;
-      
+
       logger.info('UserEventConsumer: Processing user.deleted', { userId });
 
       // Mark active registrations as cancelled
       const result = await Registration.updateMany(
         { user_id: userId, status: 'registered' },
-        { 
-          $set: { 
+        {
+          $set: {
             status: 'cancelled',
             cancellation_reason: 'User account deleted',
             cancelled_at: new Date()
-          } 
+          }
         }
       );
 
-      logger.info('UserEventConsumer: Registrations cancelled', { 
-        userId, 
-        modifiedCount: result.modifiedCount 
+      logger.info('UserEventConsumer: Registrations cancelled', {
+        userId,
+        modifiedCount: result.modifiedCount
       });
 
     } catch (error) {
@@ -235,8 +235,8 @@ class UserEventConsumer {
 
   async close() {
     try {
-      if (this.channel) await this.channel.close();
-      if (this.connection) await this.connection.close();
+      if (this.channel) {await this.channel.close();}
+      if (this.connection) {await this.connection.close();}
       this.isConnected = false;
       logger.info('UserEventConsumer: Connection closed');
     } catch (error) {

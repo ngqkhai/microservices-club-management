@@ -4,22 +4,22 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
   // Build the query
   const query = {};
   const now = new Date();
-  
+
   // Club filter
   if (club_id) {
     query.club_id = club_id;
   }
-  
+
   // Status filter
   if (status) {
     query.status = status;
   }
-  
+
   // Category filter
   if (category) {
     query.category = category;
   }
-  
+
   // Location filter (case-insensitive partial match)
   if (location) {
     query.$or = query.$or || [];
@@ -32,7 +32,7 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
       ]
     });
   }
-  
+
   // Search filter (across multiple fields)
   if (search) {
     const searchRegex = { $regex: search, $options: 'i' };
@@ -45,7 +45,7 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
       { 'location.platform': searchRegex },
       { detailed_location: searchRegex }
     ];
-    
+
     if (query.$or) {
       // If location filter already added $or, combine with $and
       query.$and = [
@@ -57,10 +57,10 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
       query.$or = searchConditions;
     }
   }
-  
+
   // Date range filters
   const dateConditions = [];
-  
+
   // Filter by date range
   if (start_from || start_to) {
     const dateRange = {};
@@ -72,17 +72,17 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
     }
     dateConditions.push({ start_date: dateRange });
   }
-  
+
   // Filter by upcoming events
   if (filter === 'upcoming') {
     dateConditions.push({ start_date: { $gte: now } });
   }
-  
+
   // Filter by completed events (for recent events)
   if (status === 'completed') {
     dateConditions.push({ start_date: { $lt: now } });
   }
-  
+
   // Combine date conditions with existing query
   if (dateConditions.length > 0) {
     if (query.$and) {
@@ -94,24 +94,24 @@ export async function getEventsFromMock({ filter, club_id, status, category, loc
       query.$and = dateConditions;
     }
   }
-  
+
   // Pagination
   const skip = (page - 1) * limit;
-  
+
   // Get total count for pagination
   const total = await Event.countDocuments(query);
-  
+
   // Get events with pagination
   // Sort by start_date ascending for upcoming events, descending for completed events
   const sortOrder = status === 'completed' ? { start_date: -1, created_at: -1 } : { start_date: 1, created_at: -1 };
-  
+
   const events = await Event.find(query)
     .sort(sortOrder)
     .skip(skip)
     .limit(limit)
     .populate('club_id', 'name logo_url description')
     .lean();
-  
+
   return {
     events,
     meta: {

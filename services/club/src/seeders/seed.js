@@ -239,22 +239,22 @@ const membershipsData = [
   { club_id: FIXED_CLUB_IDS.tech, user_id: FIXED_USER_IDS.member1, role: 'member', status: 'active', user_email: 'member1@example.com', user_full_name: 'Trần Thị Thành Viên' },
   { club_id: FIXED_CLUB_IDS.tech, user_id: FIXED_USER_IDS.member2, role: 'member', status: 'active', user_email: 'member2@example.com', user_full_name: 'Lê Văn Hoạt Động' },
   { club_id: FIXED_CLUB_IDS.tech, user_id: FIXED_USER_IDS.user1, role: 'member', status: 'pending', user_email: 'user@clubmanagement.com', user_full_name: 'Demo User' },
-  
+
   // Music Club members
   { club_id: FIXED_CLUB_IDS.music, user_id: FIXED_USER_IDS.manager1, role: 'club_manager', status: 'active', user_email: 'manager@clubmanagement.com', user_full_name: 'Nguyễn Văn Quản Lý' },
   { club_id: FIXED_CLUB_IDS.music, user_id: FIXED_USER_IDS.user1, role: 'member', status: 'active', user_email: 'user@clubmanagement.com', user_full_name: 'Demo User' },
   { club_id: FIXED_CLUB_IDS.music, user_id: FIXED_USER_IDS.member1, role: 'member', status: 'active', user_email: 'member1@example.com', user_full_name: 'Trần Thị Thành Viên' },
-  
+
   // Sports Club members
   { club_id: FIXED_CLUB_IDS.sports, user_id: FIXED_USER_IDS.manager2, role: 'club_manager', status: 'active', user_email: 'jane.smith@example.com', user_full_name: 'Jane Smith' },
   { club_id: FIXED_CLUB_IDS.sports, user_id: FIXED_USER_IDS.member2, role: 'organizer', status: 'active', user_email: 'member2@example.com', user_full_name: 'Lê Văn Hoạt Động' },
   { club_id: FIXED_CLUB_IDS.sports, user_id: FIXED_USER_IDS.user1, role: 'member', status: 'active', user_email: 'user@clubmanagement.com', user_full_name: 'Demo User' },
-  
+
   // Volunteer Club members
   { club_id: FIXED_CLUB_IDS.volunteer, user_id: FIXED_USER_IDS.member1, role: 'club_manager', status: 'active', user_email: 'member1@example.com', user_full_name: 'Trần Thị Thành Viên' },
   { club_id: FIXED_CLUB_IDS.volunteer, user_id: FIXED_USER_IDS.member2, role: 'member', status: 'active', user_email: 'member2@example.com', user_full_name: 'Lê Văn Hoạt Động' },
   { club_id: FIXED_CLUB_IDS.volunteer, user_id: FIXED_USER_IDS.organizer1, role: 'member', status: 'active', user_email: 'organizer@example.com', user_full_name: 'Phạm Minh Tổ Chức' },
-  
+
   // Business Club members
   { club_id: FIXED_CLUB_IDS.business, user_id: FIXED_USER_IDS.organizer1, role: 'club_manager', status: 'active', user_email: 'organizer@example.com', user_full_name: 'Phạm Minh Tổ Chức' },
   { club_id: FIXED_CLUB_IDS.business, user_id: FIXED_USER_IDS.manager1, role: 'member', status: 'active', user_email: 'manager@clubmanagement.com', user_full_name: 'Nguyễn Văn Quản Lý' }

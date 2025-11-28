@@ -76,7 +76,7 @@ class NotificationHandler {
    */
   async processMessage(message, rawMessage) {
     const startTime = Date.now();
-    
+
     try {
       logger.notification('Processing notification message', {
         type: message.type,
@@ -138,7 +138,7 @@ class NotificationHandler {
       const errorMessage = error.details
         .map(detail => `${detail.path.join('.')}: ${detail.message}`)
         .join(', ');
-      
+
       throw new Error(`Message validation failed: ${errorMessage}`);
     }
 
@@ -327,7 +327,7 @@ class NotificationHandler {
   addMessageProcessor(messageType, processor, schema) {
     this.messageProcessors[messageType] = processor.bind(this);
     this.validationSchemas[messageType] = schema;
-    
+
     logger.notification('Added new message processor', { messageType });
   }
 
@@ -343,4 +343,4 @@ class NotificationHandler {
   }
 }
 
-module.exports = new NotificationHandler(); 
+module.exports = new NotificationHandler();

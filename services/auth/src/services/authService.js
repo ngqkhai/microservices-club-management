@@ -54,8 +54,8 @@ class AuthService {
       if (config.get('AUTO_VERIFY_EMAILS')) {
         // Promote roles for known test accounts
         let newRole = 'user';
-        if (email.toLowerCase().startsWith('admin')) newRole = 'admin';
-        await user.update({ 
+        if (email.toLowerCase().startsWith('admin')) {newRole = 'admin';}
+        await user.update({
           email_verified: true,
           email_verified_at: new Date(),
           role: newRole
@@ -123,7 +123,7 @@ class AuthService {
           throw new EmailVerificationTokenError('Email verification token is invalid');
         }
       }
-      
+
       // Find the user
       const user = await User.findByPk(decoded.userId);
       if (!user) {
@@ -144,7 +144,7 @@ class AuthService {
       }
 
       // Mark email as verified
-      await user.update({ 
+      await user.update({
         email_verified: true,
         email_verified_at: new Date()
       });
@@ -191,7 +191,7 @@ class AuthService {
       // Check if email is verified
       if (!user.email_verified) {
         if (config.get('AUTO_VERIFY_EMAILS')) {
-          await user.update({ 
+          await user.update({
             email_verified: true,
             email_verified_at: new Date()
           });
@@ -337,14 +337,14 @@ class AuthService {
   async getAllUsers(options = {}) {
     try {
       const { page = 1, limit = 10, search, role } = options;
-      
+
       // Build where clause
       const whereClause = {};
-      
+
       if (role) {
         whereClause.role = role;
       }
-      
+
       if (search) {
         const { Op } = require('sequelize');
         whereClause[Op.or] = [
@@ -352,12 +352,12 @@ class AuthService {
           { email: { [Op.iLike]: `%${search}%` } }
         ];
       }
-      
+
       // Only include non-deleted users
       whereClause.deleted_at = null;
-      
+
       const offset = (page - 1) * limit;
-      
+
       const { count, rows } = await User.findAndCountAll({
         where: whereClause,
         limit: parseInt(limit, 10),
@@ -365,24 +365,24 @@ class AuthService {
         order: [['created_at', 'DESC']],
         attributes: ['id', 'email', 'full_name', 'role', 'email_verified', 'created_at']
       });
-      
+
       const users = rows.map(user => user.toJSON());
-      
+
       const pagination = {
         current_page: parseInt(page, 10),
         total_pages: Math.ceil(count / limit),
         total_items: count,
         items_per_page: parseInt(limit, 10)
       };
-      
-      logger.debug('Retrieved users list', { 
-        page, 
-        limit, 
-        search, 
-        role, 
-        total: count 
+
+      logger.debug('Retrieved users list', {
+        page,
+        limit,
+        search,
+        role,
+        total: count
       });
-      
+
       return {
         users,
         pagination
@@ -401,19 +401,19 @@ class AuthService {
   async getUserById(userId) {
     try {
       const user = await User.findOne({
-        where: { 
+        where: {
           id: userId,
           deleted_at: null
         },
         attributes: ['id', 'email', 'full_name', 'role', 'email_verified', 'created_at', 'updated_at']
       });
-      
+
       if (!user) {
         return null;
       }
-      
+
       logger.debug('Retrieved user by ID', { userId });
-      
+
       return user.toJSON();
     } catch (error) {
       logger.error('Get user by ID failed:', error);
@@ -713,8 +713,8 @@ class AuthService {
   async getUserProfile(userId) {
     try {
       const user = await User.findByPk(userId, {
-        attributes: { 
-          exclude: ['password_hash', 'failed_login_attempts', 'locked_until'] 
+        attributes: {
+          exclude: ['password_hash', 'failed_login_attempts', 'locked_until']
         }
       });
 
@@ -745,7 +745,7 @@ class AuthService {
 
       // Allowed profile fields for update
       const allowedFields = [
-        'full_name', 'phone', 'bio', 'date_of_birth', 
+        'full_name', 'phone', 'bio', 'date_of_birth',
         'address', 'social_links', 'profile_picture_url',
         'gender'
       ];
@@ -760,8 +760,8 @@ class AuthService {
 
       // Check if phone number is already taken by another user
       if (updateData.phone && updateData.phone !== user.phone) {
-        const existingUser = await User.findOne({ 
-          where: { phone: updateData.phone } 
+        const existingUser = await User.findOne({
+          where: { phone: updateData.phone }
         });
         if (existingUser && existingUser.id !== userId) {
           throw new ConflictError('Phone number already exists');
@@ -769,11 +769,11 @@ class AuthService {
       }
 
       await user.update(updateData);
-      
+
       // Return updated user without sensitive fields
       const updatedUser = await User.findByPk(userId, {
-        attributes: { 
-          exclude: ['password_hash', 'failed_login_attempts', 'locked_until'] 
+        attributes: {
+          exclude: ['password_hash', 'failed_login_attempts', 'locked_until']
         }
       });
 
@@ -805,9 +805,9 @@ class AuthService {
       await user.update({ profile_picture_url: imageUrl });
 
       logger.info('Profile picture updated', { userId });
-      return { 
+      return {
         message: 'Profile picture updated successfully',
-        profile_picture_url: imageUrl 
+        profile_picture_url: imageUrl
       };
     } catch (error) {
       logger.error('Failed to update profile picture:', error);

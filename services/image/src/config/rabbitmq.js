@@ -13,10 +13,10 @@ class RabbitMQService {
       const rabbitmqConfig = config.getRabbitMQConfig();
       this.connection = await amqp.connect(rabbitmqConfig.url);
       this.channel = await this.connection.createChannel();
-      
+
       // Declare exchange for image events
       await this.channel.assertExchange('image_events', 'topic', { durable: true });
-      
+
       logger.info('Connected to RabbitMQ');
       return this.channel;
     } catch (error) {
@@ -39,7 +39,7 @@ class RabbitMQService {
 
       // Publish to different routing keys based on image type
       const routingKey = `image.${imageData.type}`;
-      
+
       await this.channel.publish(
         'image_events',
         routingKey,
@@ -57,8 +57,8 @@ class RabbitMQService {
 
   async close() {
     try {
-      if (this.channel) await this.channel.close();
-      if (this.connection) await this.connection.close();
+      if (this.channel) {await this.channel.close();}
+      if (this.connection) {await this.connection.close();}
       logger.info('RabbitMQ connection closed');
     } catch (error) {
       logger.error('Error closing RabbitMQ connection', { error: error.message });

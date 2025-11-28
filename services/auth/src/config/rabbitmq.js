@@ -20,13 +20,13 @@ class RabbitMQConfig {
       }
 
       logger.info('Connecting to RabbitMQ...', { url: this.url });
-      
+
       this.connection = await amqp.connect(this.url);
       this.channel = await this.connection.createChannel();
 
       // Create exchange if it doesn't exist
-      await this.channel.assertExchange(this.exchange, 'topic', { 
-        durable: true 
+      await this.channel.assertExchange(this.exchange, 'topic', {
+        durable: true
       });
 
       // Setup email notification queues that notification service expects
@@ -46,7 +46,7 @@ class RabbitMQConfig {
 
       this.isConnected = true;
       logger.info('Successfully connected to RabbitMQ');
-      
+
       return this.channel;
     } catch (error) {
       logger.error('Failed to connect to RabbitMQ:', error);
@@ -67,7 +67,7 @@ class RabbitMQConfig {
       ];
 
       for (const { queue, routingKey } of emailQueues) {
-        await this.channel.assertQueue(queue, { 
+        await this.channel.assertQueue(queue, {
           durable: true,
           arguments: {
             'x-message-ttl': 86400000, // 24 hours TTL
@@ -85,7 +85,7 @@ class RabbitMQConfig {
       ];
 
       for (const { queue, routingKeys } of userEventQueues) {
-        await this.channel.assertQueue(queue, { 
+        await this.channel.assertQueue(queue, {
           durable: true,
           arguments: {
             'x-message-ttl': 86400000, // 24 hours TTL
@@ -101,7 +101,7 @@ class RabbitMQConfig {
       // Also setup the general auth events queue for backwards compatibility
       await this.channel.assertQueue(this.queue, { durable: true });
       await this.channel.bindQueue(this.queue, this.exchange, 'auth.*');
-      
+
       logger.info(`Auth events queue setup completed: ${this.queue}`);
     } catch (error) {
       logger.error('Failed to setup queues:', error);
@@ -118,10 +118,10 @@ class RabbitMQConfig {
       try {
         attempts++;
         logger.info(`Attempting to reconnect to RabbitMQ (attempt ${attempts}/${maxAttempts})`);
-        
+
         await new Promise(resolve => setTimeout(resolve, delay));
         await this.connect();
-        
+
         if (this.isConnected) {
           logger.info('Successfully reconnected to RabbitMQ');
           return;
@@ -149,20 +149,20 @@ class RabbitMQConfig {
       };
 
       const messageBuffer = Buffer.from(JSON.stringify(message));
-      
+
       const published = this.channel.publish(
         this.exchange,
         routingKey,
         messageBuffer,
-        { 
+        {
           persistent: true,
           contentType: 'application/json'
         }
       );
 
       if (published) {
-        logger.info('Event published successfully', { 
-          routingKey, 
+        logger.info('Event published successfully', {
+          routingKey,
           messageId: data.id || 'unknown',
           exchange: this.exchange
         });
@@ -202,4 +202,4 @@ class RabbitMQConfig {
   }
 }
 
-module.exports = new RabbitMQConfig(); 
+module.exports = new RabbitMQConfig();

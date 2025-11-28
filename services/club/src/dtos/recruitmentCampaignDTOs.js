@@ -19,9 +19,9 @@ class CreateCampaignDTO {
 
   validate() {
     const errors = [];
-    if (!this.title) errors.push('Title is required');
-    if (!this.start_date) errors.push('Start date is required');
-    if (!this.end_date) errors.push('End date is required');
+    if (!this.title) {errors.push('Title is required');}
+    if (!this.start_date) {errors.push('Start date is required');}
+    if (!this.end_date) {errors.push('End date is required');}
     return errors.length > 0 ? errors : null;
   }
 }
@@ -46,8 +46,8 @@ class UpdateCampaignDTO {
  */
 class CampaignResponseDTO {
   constructor(campaign) {
-    if (!campaign) return null;
-    
+    if (!campaign) {return null;}
+
     this.id = campaign._id || campaign.id;
     this.club_id = campaign.club_id;
     this.title = campaign.title;
@@ -64,7 +64,7 @@ class CampaignResponseDTO {
     this.created_by = campaign.created_by;
     this.created_at = campaign.created_at;
     this.updated_at = campaign.updated_at;
-    
+
     // Include club info if populated
     if (campaign.club) {
       this.club = {

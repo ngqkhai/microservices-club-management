@@ -5,7 +5,7 @@
 const { CreateCampaignDTO, UpdateCampaignDTO } = require('../dtos/recruitmentCampaignDTOs');
 
 class CampaignValidationMiddleware {
-  
+
   /**
    * Validate create campaign request
    */
@@ -67,7 +67,7 @@ class CampaignValidationMiddleware {
    */
   static validateCampaignId(req, res, next) {
     const { campaignId } = req.params;
-    
+
     if (!campaignId) {
       return res.status(400).json({
         success: false,
@@ -91,7 +91,7 @@ class CampaignValidationMiddleware {
    */
   static validateClubId(req, res, next) {
     const { clubId } = req.params;
-    
+
     if (!clubId) {
       return res.status(400).json({
         success: false,
@@ -115,7 +115,7 @@ class CampaignValidationMiddleware {
    */
   static validatePagination(req, res, next) {
     const { page, limit } = req.query;
-    
+
     if (page && (isNaN(page) || parseInt(page) < 1)) {
       return res.status(400).json({
         success: false,
@@ -138,7 +138,7 @@ class CampaignValidationMiddleware {
    */
   static validateStatus(req, res, next) {
     const { status } = req.query;
-    
+
     if (status && !['draft', 'active', 'paused', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json({
         success: false,
@@ -154,7 +154,7 @@ class CampaignValidationMiddleware {
    */
   static validateSort(req, res, next) {
     const { sort } = req.query;
-    
+
     if (sort && !['title', 'start_date', 'end_date', 'created_at'].includes(sort)) {
       return res.status(400).json({
         success: false,

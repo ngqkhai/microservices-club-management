@@ -24,7 +24,7 @@ const rateLimitConfig = {
       endpoint: req.path,
       userAgent: req.get('User-Agent')
     });
-    
+
     const error = new TooManyRequestsError(
       'Too many requests from this IP/user, please try again later'
     );
@@ -103,7 +103,7 @@ const createDynamicLimiter = (baseMax = 100, factor = 1) => {
         req.headers['x-forwarded-for'] ? 0.8 : 1, // Proxy/VPN detection
         req.user?.role === 'admin' ? 2 : 1 // Higher limit for admins
       ];
-      
+
       const adjustedMax = suspiciousFactors.reduce((acc, curr) => acc * curr, baseMax * factor);
       return Math.floor(adjustedMax);
     },
@@ -119,13 +119,13 @@ const createDynamicLimiter = (baseMax = 100, factor = 1) => {
 // Progressive rate limiter that increases restrictions on repeated violations
 const createProgressiveLimiter = () => {
   const violations = new Map();
-  
+
   return rateLimit({
     ...config,
     max: (req) => {
       const key = req.ip;
       const userViolations = violations.get(key) || 0;
-      
+
       // Decrease limit based on previous violations
       const baseLimit = 100;
       const penalty = Math.min(userViolations * 10, 80); // Max 80% reduction
@@ -134,14 +134,14 @@ const createProgressiveLimiter = () => {
     handler: (req, res, next) => {
       const key = req.ip;
       violations.set(key, (violations.get(key) || 0) + 1);
-      
+
       logger.warn('Progressive rate limit exceeded', {
         ip: req.ip,
         violations: violations.get(key),
         endpoint: req.path,
         userAgent: req.get('User-Agent')
       });
-      
+
       // Clean up old violations periodically
       setTimeout(() => {
         const current = violations.get(key) || 0;
@@ -149,7 +149,7 @@ const createProgressiveLimiter = () => {
           violations.set(key, current - 1);
         }
       }, 60 * 60 * 1000); // Reduce violation count after 1 hour
-      
+
       const error = new TooManyRequestsError(
         'Request limit exceeded due to repeated violations'
       );
@@ -188,4 +188,4 @@ module.exports = {
   createProgressiveLimiter,
   createWhitelistLimiter,
   createClusterLimiter
-}; 
+};

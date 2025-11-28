@@ -71,11 +71,11 @@ module.exports = (sequelize, DataTypes) => {
   RefreshToken.createToken = async function(userId) {
     const expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
     const expiresAt = new Date();
-    
+
     // Parse expires_in (e.g., '7d', '24h', '60m')
     const timeUnit = expiresIn.slice(-1);
     const timeValue = parseInt(expiresIn.slice(0, -1));
-    
+
     switch (timeUnit) {
       case 'd':
         expiresAt.setDate(expiresAt.getDate() + timeValue);
@@ -112,7 +112,7 @@ module.exports = (sequelize, DataTypes) => {
 
   RefreshToken.revokeAllUserTokens = async function(userId) {
     return this.update(
-      { 
+      {
         revoked: true
       },
       {
@@ -151,4 +151,4 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   return RefreshToken;
-}; 
+};

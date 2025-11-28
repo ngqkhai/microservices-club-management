@@ -37,9 +37,9 @@ const eventTaskSchema = new mongoose.Schema({
     maxLength: 1000
   }
 }, {
-  timestamps: { 
-    createdAt: 'created_at', 
-    updatedAt: 'updated_at' 
+  timestamps: {
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
   },
   collection: 'event_tasks'
 });

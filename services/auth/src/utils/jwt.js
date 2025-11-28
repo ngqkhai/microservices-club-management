@@ -16,10 +16,10 @@ class JWTUtil {
     try {
       const privateKeyPath = path.resolve(jwtConfig.privateKeyPath);
       const publicKeyPath = path.resolve(jwtConfig.publicKeyPath);
-      
+
       this.privateKey = fs.readFileSync(privateKeyPath, 'utf8');
       this.publicKey = fs.readFileSync(publicKeyPath, 'utf8');
-      
+
       logger.info('RSA keys loaded successfully for JWT signing');
     } catch (error) {
       logger.error('Failed to load RSA keys:', error);
@@ -139,8 +139,8 @@ class JWTUtil {
   isTokenExpired(token) {
     try {
       const expirationTime = this.getTokenExpirationTime(token);
-      if (!expirationTime) return true;
-      
+      if (!expirationTime) {return true;}
+
       return new Date() > expirationTime;
     } catch (error) {
       return true;
@@ -228,7 +228,7 @@ class JWTUtil {
     const crypto = require('crypto');
     const key = crypto.createPublicKey(this.publicKey);
     const jwk = key.export({ format: 'jwk' });
-    
+
     return {
       keys: [{
         ...jwk,
@@ -240,4 +240,4 @@ class JWTUtil {
   }
 }
 
-module.exports = new JWTUtil(); 
+module.exports = new JWTUtil();

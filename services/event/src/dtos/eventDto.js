@@ -23,7 +23,7 @@ export class GetEventsDTO {
 
     // Validate club_id
     if (club_id && !mongoose.Types.ObjectId.isValid(club_id)) {
-      throw new Error(`'club_id' must be a valid ObjectId.`);
+      throw new Error('\'club_id\' must be a valid ObjectId.');
     }
 
     // Validate status
