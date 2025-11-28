@@ -1,5 +1,5 @@
 const { Club } = require('../config/database');
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose'); // Available for ObjectId validation if needed
 const logger = require('../utils/logger');
 
 class ClubModel {
@@ -415,7 +415,10 @@ class ClubModel {
           { deleted_at: { $exists: false } },
           { deleted_at: null }
         ],
-        location: { $ne: null, $ne: '' }
+        $and: [
+          { location: { $ne: null } },
+          { location: { $ne: '' } }
+        ]
       });
       return locations.sort();
     } catch (error) {

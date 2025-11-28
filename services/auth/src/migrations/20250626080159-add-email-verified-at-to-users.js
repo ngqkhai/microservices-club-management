@@ -13,7 +13,7 @@ module.exports = {
     await queryInterface.addIndex('users', ['email_verified_at']);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.removeIndex('users', ['email_verified_at']);
     await queryInterface.removeColumn('users', 'email_verified_at');
   }

@@ -66,7 +66,7 @@ const validateApiGatewaySecret = (req, res, next) => {
 // API Gateway header validation (for protected routes)
 const validateApiGatewayHeaders = (req, res, next) => {
   const requiredHeaders = ['x-user-id', 'x-user-role'];
-  const optionalHeaders = ['x-user-email', 'x-request-id'];
+  // Optional headers: 'x-user-email', 'x-request-id'
 
   //DEBUG: Log all headers for debugging Kong JWT claims injection
   logger.info('🔍 DEBUG: Incoming headers from Kong (Protected Route)', {

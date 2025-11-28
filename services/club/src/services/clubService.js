@@ -138,7 +138,7 @@ class ClubService {
       }
 
       // Get additional data for the club
-      const [currentRecruitments, recruitmentStats, publishedEvents, completedEvents, eventStats] = await Promise.all([
+      const [currentRecruitments, recruitmentStats, publishedEvents, completedEvents] = await Promise.all([
         this._getCurrentRecruitments(clubId),
         this._getRecruitmentStatistics(clubId),
         this._getPublishedEvents(clubId),
@@ -1065,7 +1065,6 @@ class ClubService {
   async _getCurrentRecruitments(clubId) {
     try {
       const { RecruitmentCampaign } = require('../config/database');
-      const currentDate = new Date();
 
       const recruitments = await RecruitmentCampaign.find({
         club_id: clubId,
@@ -1132,11 +1131,6 @@ class ClubService {
    */
   async _getPublishedEvents(clubId) {
     try {
-      const requestContext = {
-        // Add basic context for API Gateway validation
-        service: 'club-service'
-      };
-
       const publishedEvents = await eventServiceClient.getPublishedClubEvents(clubId, {
         status: 'published',
         limit: 10 // Limit to 10 most recent published events

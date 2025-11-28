@@ -158,7 +158,8 @@ class UserEventConsumer {
    */
   async handleUserCreated(data) {
     try {
-      const { userId, email, fullName, profilePictureUrl } = data;
+      const { userId, email } = data;
+      // Note: fullName, profilePictureUrl available in data if needed
 
       logger.info('UserEventConsumer: Processing user.created', { userId, email });
 

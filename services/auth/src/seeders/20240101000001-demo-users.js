@@ -67,7 +67,7 @@ function toAsciiSlug(text) {
 }
 
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface, _Sequelize) {
     const now = new Date();
 
     // Core demo users with fixed IDs
@@ -267,7 +267,7 @@ module.exports = {
     console.log(`   - ${additionalUsers.length} additional users`);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.bulkDelete('users', null, {});
     console.log('✅ All users deleted');
   }

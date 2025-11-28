@@ -8,7 +8,7 @@ const rateLimitConfig = {
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
   standardizeHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
+  skip: (_req) => {
     // Skip ALL rate limiting (disabled for development)
     return true;
   },
@@ -107,7 +107,7 @@ const createDynamicLimiter = (baseMax = 100, factor = 1) => {
       const adjustedMax = suspiciousFactors.reduce((acc, curr) => acc * curr, baseMax * factor);
       return Math.floor(adjustedMax);
     },
-          message: (req) => ({
+          message: (_req) => ({
         success: false,
         message: 'Request limit exceeded based on usage patterns',
         code: 'DYNAMIC_RATE_LIMIT_EXCEEDED',

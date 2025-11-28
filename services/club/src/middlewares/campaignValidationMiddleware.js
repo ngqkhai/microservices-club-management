@@ -168,7 +168,8 @@ class CampaignValidationMiddleware {
   /**
    * Generic error handler for campaign operations
    */
-  static handleErrors(error, req, res, next) {
+  static handleErrors(error, req, res, _next) {
+    // eslint-disable-next-line no-console
     console.error('Campaign operation error:', error);
 
     // Handle specific error types

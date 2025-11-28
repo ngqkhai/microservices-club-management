@@ -1,4 +1,3 @@
-import e from 'express';
 import { RSVPDTO, GetEventsDTO } from '../dtos/eventDto.js';
 import {
   getFilteredEvents,
@@ -14,6 +13,7 @@ import {
   toggleEventFavoriteService,
   getUserFavoriteEventsService,
   getEventRegistrationsService,
+  updateEventRegistrationStatusService,
   getDistinctEventCategoriesService,
   getDistinctEventLocationsService,
   getMyEventsService,
@@ -300,7 +300,7 @@ export const updateEvent = async (req, res, next) => {
   }
 };
 
-export const deleteEvent = async (req, res, next) => {
+export const deleteEvent = async (req, res, _next) => {
   try {
     const eventId = req.params.id;
     await deleteEventService(eventId);

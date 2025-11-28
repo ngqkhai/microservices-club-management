@@ -165,7 +165,7 @@ const profileUpdateSchema = Joi.object({
   full_name: nameSchema.optional(),
   phone: Joi.string()
     .trim()
-    .pattern(/^[\+]?[1-9][\d]{0,15}$/)
+    .pattern(/^[+]?[1-9][\d]{0,15}$/)
     .allow('')
     .optional()
     .messages({

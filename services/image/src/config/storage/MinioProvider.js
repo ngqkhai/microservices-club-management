@@ -243,7 +243,7 @@ class MinioProvider extends StorageProvider {
     }
   }
 
-  getUrl(publicId, options = {}) {
+  getUrl(publicId, _options = {}) {
     // For local development, use the public URL
     return `${this.publicUrl}/${this.bucket}/${publicId}`;
   }

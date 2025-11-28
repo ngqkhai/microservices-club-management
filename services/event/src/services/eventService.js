@@ -384,7 +384,7 @@ export const checkInWithTicketService = async (eventId, qrToken, checkerUserId) 
 };
 
 export const createEventService = async (eventData) => {
-  let {
+  const {
     title,
     description,
     short_description,
@@ -411,7 +411,7 @@ export const createEventService = async (eventData) => {
     visibility,
     organizers,
     created_by,
-    club_id,
+    club_id: providedClubId,
     club,
     club_name,
     club_logo_url,
@@ -421,6 +421,9 @@ export const createEventService = async (eventData) => {
     max_attendees,
     fee
   } = eventData;
+
+  // Use provided club_id or will be resolved later
+  let club_id = providedClubId;
 
   // Handle field mapping for backward compatibility and combine date/time if provided
   const startDate = start_date || start_at;

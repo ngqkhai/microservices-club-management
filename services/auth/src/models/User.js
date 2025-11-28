@@ -70,7 +70,7 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
       validate: {
         is: {
-          args: /^[\+]?[1-9][\d]{0,15}$/,
+          args: /^[+]?[1-9][\d]{0,15}$/,
           msg: 'Phone number must be a valid international format'
         }
       }

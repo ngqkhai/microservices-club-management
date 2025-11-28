@@ -1,6 +1,6 @@
 const http = require('http');
 const https = require('https');
-const config = require('../config');
+// const config = require('../config'); // Available for future configuration
 const logger = require('./logger');
 
 class EventServiceClient {
@@ -129,7 +129,7 @@ class EventServiceClient {
   /**
    * Get upcoming events for a club
    */
-  async getUpcomingClubEvents(clubId, requestContext = {}) {
+  async getUpcomingClubEvents(clubId) {
     try {
       logger.debug('Fetching upcoming events for club', { clubId });
       const response = await this._makeRequest(`/api/clubs/${clubId}/events`, {
@@ -154,7 +154,7 @@ class EventServiceClient {
   /**
    * Get event statistics for a club
    */
-  async getEventStatistics(clubId, requestContext = {}) {
+  async getEventStatistics(clubId) {
     try {
       logger.debug('Fetching event statistics for club', { clubId });
 

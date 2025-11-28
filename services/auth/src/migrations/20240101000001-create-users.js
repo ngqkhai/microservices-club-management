@@ -65,7 +65,7 @@ module.exports = {
     await queryInterface.addIndex('users', ['deleted_at']);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.dropTable('users');
   }
 };

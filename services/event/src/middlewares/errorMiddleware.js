@@ -7,7 +7,7 @@ import logger from '../utils/logger.js';
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-export const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res, _next) => {
   logger.error('Request error', {
     error: err.message,
     stack: err.stack,

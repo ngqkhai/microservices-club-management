@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
   logger.error('Request error', {
     error: err.message,
     stack: err.stack,

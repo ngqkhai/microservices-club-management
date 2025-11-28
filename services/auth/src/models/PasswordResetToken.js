@@ -57,7 +57,7 @@ module.exports = (sequelize, DataTypes) => {
     return !this.used && !this.isExpired();
   };
 
-  PasswordResetToken.prototype.markAsUsed = async function(ipAddress = null) {
+  PasswordResetToken.prototype.markAsUsed = async function(_ipAddress = null) {
     return this.update({
       used: true
     });
@@ -68,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
     return crypto.randomBytes(32).toString('hex');
   };
 
-  PasswordResetToken.createToken = async function(userId, ipAddress = null) {
+  PasswordResetToken.createToken = async function(userId, _ipAddress = null) {
     // Invalidate all existing tokens for this user
     await this.update(
       { used: true },

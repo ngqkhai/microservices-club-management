@@ -329,41 +329,6 @@ class RecruitmentCampaignController {
   }
 
   /**
-   * Publish campaign (change status from draft to published)
-   * POST /api/clubs/:clubId/campaigns/:campaignId/publish
-   */
-  static async publishCampaign(req, res) {
-    try {
-      const { campaignId } = req.params;
-      const userId = req.user?.id;
-
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required'
-        });
-      }
-
-      const campaign = await RecruitmentCampaignService.publishCampaign(campaignId, userId);
-
-      res.status(200).json({
-        success: true,
-        message: 'Campaign published successfully',
-        data: campaign
-      });
-    } catch (error) {
-      const statusCode = error.message.includes('not found') ? 404 :
-                        error.message.includes('permission') ? 403 : 400;
-
-      res.status(statusCode).json({
-        success: false,
-        message: error.message,
-        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-    }
-  }
-
-  /**
    * Complete campaign (change status from published to completed)
    * POST /api/clubs/:clubId/campaigns/:campaignId/complete
    */
@@ -534,7 +499,7 @@ class RecruitmentCampaignController {
    */
   static async getApplication(req, res) {
     try {
-      const { campaignId, applicationId } = req.params;
+      const { applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
 
       const application = await RecruitmentCampaignService.getApplication(applicationId, userId);
@@ -561,7 +526,7 @@ class RecruitmentCampaignController {
    */
   static async updateApplication(req, res) {
     try {
-      const { campaignId, applicationId } = req.params;
+      const { applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
 
       const application = await RecruitmentCampaignService.updateApplication(applicationId, userId, req.body);
@@ -589,7 +554,7 @@ class RecruitmentCampaignController {
    */
   static async withdrawApplication(req, res) {
     try {
-      const { campaignId, applicationId } = req.params;
+      const { applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
 
       await RecruitmentCampaignService.withdrawApplication(applicationId, userId);
@@ -648,7 +613,7 @@ class RecruitmentCampaignController {
    */
   static async getApplicationDetails(req, res) {
     try {
-      const { clubId, campaignId, applicationId } = req.params;
+      const { clubId, applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
 
       const application = await RecruitmentCampaignService.getApplicationDetails(applicationId, clubId, userId);
@@ -675,7 +640,7 @@ class RecruitmentCampaignController {
    */
   static async updateApplicationStatus(req, res) {
     try {
-      const { clubId, campaignId, applicationId } = req.params;
+      const { clubId, applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
       const { status, notes } = req.body;
 
@@ -709,7 +674,7 @@ class RecruitmentCampaignController {
    */
   static async approveApplication(req, res) {
     try {
-      const { clubId, campaignId, applicationId } = req.params;
+      const { clubId, applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
       const { role = 'member', notes } = req.body;
 
@@ -743,7 +708,7 @@ class RecruitmentCampaignController {
    */
   static async rejectApplication(req, res) {
     try {
-      const { clubId, campaignId, applicationId } = req.params;
+      const { clubId, applicationId } = req.params; // campaignId available in route but not used
       const userId = req.user?.id || req.headers['x-user-id'];
       const { reason, notes } = req.body;
 

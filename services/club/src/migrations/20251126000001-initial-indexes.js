@@ -47,32 +47,36 @@ module.exports = {
   },
 
   async down(db) {
+    // eslint-disable-next-line no-console
     console.log('Dropping indexes for clubs collection...');
 
-    // Drop Club indexes
-    try { await db.collection('clubs').dropIndex('clubs_text_search'); } catch (e) {}
-    try { await db.collection('clubs').dropIndex('clubs_category'); } catch (e) {}
-    try { await db.collection('clubs').dropIndex('clubs_status'); } catch (e) {}
-    try { await db.collection('clubs').dropIndex('clubs_manager_user_id'); } catch (e) {}
-    try { await db.collection('clubs').dropIndex('clubs_created_at'); } catch (e) {}
-    try { await db.collection('clubs').dropIndex('clubs_soft_delete'); } catch (e) {}
+    // Drop Club indexes - ignore errors if indexes don't exist
+    try { await db.collection('clubs').dropIndex('clubs_text_search'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('clubs').dropIndex('clubs_category'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('clubs').dropIndex('clubs_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('clubs').dropIndex('clubs_manager_user_id'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('clubs').dropIndex('clubs_created_at'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('clubs').dropIndex('clubs_soft_delete'); } catch (_e) { /* index may not exist */ }
 
+    // eslint-disable-next-line no-console
     console.log('Dropping indexes for memberships collection...');
 
-    // Drop Membership indexes
-    try { await db.collection('memberships').dropIndex('memberships_club_user_unique'); } catch (e) {}
-    try { await db.collection('memberships').dropIndex('memberships_club_status'); } catch (e) {}
-    try { await db.collection('memberships').dropIndex('memberships_user_status'); } catch (e) {}
-    try { await db.collection('memberships').dropIndex('memberships_campaign'); } catch (e) {}
-    try { await db.collection('memberships').dropIndex('memberships_joined_at'); } catch (e) {}
+    // Drop Membership indexes - ignore errors if indexes don't exist
+    try { await db.collection('memberships').dropIndex('memberships_club_user_unique'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('memberships').dropIndex('memberships_club_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('memberships').dropIndex('memberships_user_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('memberships').dropIndex('memberships_campaign'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('memberships').dropIndex('memberships_joined_at'); } catch (_e) { /* index may not exist */ }
 
+    // eslint-disable-next-line no-console
     console.log('Dropping indexes for recruitmentcampaigns collection...');
 
-    // Drop Recruitment Campaign indexes
-    try { await db.collection('recruitmentcampaigns').dropIndex('campaigns_club_status'); } catch (e) {}
-    try { await db.collection('recruitmentcampaigns').dropIndex('campaigns_date_range'); } catch (e) {}
-    try { await db.collection('recruitmentcampaigns').dropIndex('campaigns_created_by'); } catch (e) {}
+    // Drop Recruitment Campaign indexes - ignore errors if indexes don't exist
+    try { await db.collection('recruitmentcampaigns').dropIndex('campaigns_club_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('recruitmentcampaigns').dropIndex('campaigns_date_range'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('recruitmentcampaigns').dropIndex('campaigns_created_by'); } catch (_e) { /* index may not exist */ }
 
+    // eslint-disable-next-line no-console
     console.log('✅ All Club Service indexes dropped');
   }
 };

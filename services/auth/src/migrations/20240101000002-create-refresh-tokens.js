@@ -59,7 +59,7 @@ module.exports = {
     await queryInterface.addIndex('refresh_tokens', ['revoked']);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     await queryInterface.dropTable('refresh_tokens');
   }
 };

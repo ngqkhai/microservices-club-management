@@ -46,7 +46,7 @@ module.exports = {
     });
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface, _Sequelize) {
     // Remove constraint first
     await queryInterface.removeConstraint('users', 'users_phone_unique');
 

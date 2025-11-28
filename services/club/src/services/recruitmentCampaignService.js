@@ -160,7 +160,7 @@ class RecruitmentCampaignService {
       // If there are applications, restrict certain updates
       if (existingCampaign.statistics.total_applications > 0) {
         const restrictedFields = ['application_questions', 'max_applications'];
-        const hasRestrictedChanges = restrictedFields.some(field => updateData.hasOwnProperty(field));
+        const hasRestrictedChanges = restrictedFields.some(field => Object.hasOwn(updateData, field));
         if (hasRestrictedChanges) {
           throw new Error('Cannot modify application questions or max applications after applications have been submitted');
         }
@@ -487,7 +487,7 @@ class RecruitmentCampaignService {
    */
   static async submitApplication(campaignId, applicationData) {
     try {
-      const { user_id, user_email, user_full_name, answers, ...otherData } = applicationData;
+      const { user_id, user_email, user_full_name, answers } = applicationData;
 
       // Validate required fields
       logger.debug('Submitting application data', { userId: user_id, campaignId });

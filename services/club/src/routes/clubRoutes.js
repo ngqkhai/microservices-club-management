@@ -3,7 +3,7 @@ const clubController = require('../controllers/clubController');
 const RecruitmentCampaignController = require('../controllers/recruitmentCampaignController'); // Import controller
 const authMiddleware = require('../middlewares/authMiddleware');
 const recruitmentCampaignRoutes = require('./recruitmentCampaignRoutes');
-const publicCampaignRoutes = require('./publicCampaignRoutes');
+// const publicCampaignRoutes = require('./publicCampaignRoutes'); // Available for future use
 
 const router = express.Router();
 

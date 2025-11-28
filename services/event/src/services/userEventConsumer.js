@@ -157,7 +157,7 @@ class UserEventConsumer {
    */
   async handleUserCreated(data) {
     try {
-      const { userId, email, fullName } = data;
+      const { userId, email } = data; // fullName also available if needed
       logger.info('UserEventConsumer: Processing user.created', { userId, email });
       // No action needed - user data is cached when they register for events
     } catch (error) {

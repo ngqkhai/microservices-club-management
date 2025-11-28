@@ -10,7 +10,8 @@
  * - STORAGE_PROVIDER=s3 (for AWS S3)
  */
 
-const StorageProvider = require('./storage/StorageProvider');
+// Base class used by providers
+// const StorageProvider = require('./storage/StorageProvider');
 const CloudinaryProvider = require('./storage/CloudinaryProvider');
 const MinioProvider = require('./storage/MinioProvider');
 const logger = require('./logger');

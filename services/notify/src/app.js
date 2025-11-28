@@ -165,7 +165,7 @@ function createApp() {
   });
 
   // Global error handler
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     const errorId = require('uuid').v4();
 
     logger.error('Unhandled error in request:', err, {

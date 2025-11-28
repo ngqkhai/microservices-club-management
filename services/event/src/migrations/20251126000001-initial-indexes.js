@@ -52,37 +52,41 @@ module.exports = {
   },
 
   async down(db) {
+    // eslint-disable-next-line no-console
     console.log('Dropping indexes for events collection...');
 
-    // Drop Event indexes
-    try { await db.collection('events').dropIndex('events_text_search'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_club_id'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_club_status'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_start_date'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_date_range'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_category'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_visibility'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_created_by'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_registration_deadline'); } catch (e) {}
-    try { await db.collection('events').dropIndex('events_status'); } catch (e) {}
+    // Drop Event indexes - ignore errors if indexes don't exist
+    try { await db.collection('events').dropIndex('events_text_search'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_club_id'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_club_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_start_date'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_date_range'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_category'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_visibility'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_created_by'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_registration_deadline'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('events').dropIndex('events_status'); } catch (_e) { /* index may not exist */ }
 
+    // eslint-disable-next-line no-console
     console.log('Dropping indexes for event_registrations collection...');
 
-    // Drop Registration indexes
-    try { await db.collection('event_registrations').dropIndex('registrations_event_user_unique'); } catch (e) {}
-    try { await db.collection('event_registrations').dropIndex('registrations_event_id'); } catch (e) {}
-    try { await db.collection('event_registrations').dropIndex('registrations_user_id'); } catch (e) {}
-    try { await db.collection('event_registrations').dropIndex('registrations_event_status'); } catch (e) {}
-    try { await db.collection('event_registrations').dropIndex('registrations_user_status'); } catch (e) {}
-    try { await db.collection('event_registrations').dropIndex('registrations_registered_at'); } catch (e) {}
-    try { await db.collection('event_registrations').dropIndex('registrations_ticket_id'); } catch (e) {}
+    // Drop Registration indexes - ignore errors if indexes don't exist
+    try { await db.collection('event_registrations').dropIndex('registrations_event_user_unique'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_registrations').dropIndex('registrations_event_id'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_registrations').dropIndex('registrations_user_id'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_registrations').dropIndex('registrations_event_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_registrations').dropIndex('registrations_user_status'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_registrations').dropIndex('registrations_registered_at'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_registrations').dropIndex('registrations_ticket_id'); } catch (_e) { /* index may not exist */ }
 
+    // eslint-disable-next-line no-console
     console.log('Dropping indexes for event_interests collection...');
 
-    // Drop Event Interests indexes
-    try { await db.collection('event_interests').dropIndex('interests_event_user_type_unique'); } catch (e) {}
-    try { await db.collection('event_interests').dropIndex('interests_user_type'); } catch (e) {}
+    // Drop Event Interests indexes - ignore errors if indexes don't exist
+    try { await db.collection('event_interests').dropIndex('interests_event_user_type_unique'); } catch (_e) { /* index may not exist */ }
+    try { await db.collection('event_interests').dropIndex('interests_user_type'); } catch (_e) { /* index may not exist */ }
 
+    // eslint-disable-next-line no-console
     console.log('✅ All Event Service indexes dropped');
   }
 };

@@ -20,7 +20,7 @@ import {
   getEventTicket,
   checkInEvent
 } from '../controllers/eventController.js';
-import { authMiddleware, requireUser, requireClubManager, requireClubManagerOrOrganizer, validateApiGatewaySecret } from '../middlewares/authMiddleware.js';
+import { authMiddleware, requireUser, requireClubManagerOrOrganizer, validateApiGatewaySecret } from '../middlewares/authMiddleware.js';
 
 const eventRoutes = express.Router();
 

@@ -72,7 +72,7 @@ app.get('/live', (req, res) => {
 app.use('/api/images', imageRoutes);
 
 // Error handling middleware
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   logger.error('Server error', { error: error.message, stack: error.stack });
 
   if (error.code === 'LIMIT_FILE_SIZE') {

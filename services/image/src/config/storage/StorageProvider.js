@@ -39,7 +39,7 @@ class StorageProvider {
    * @param {string} [options.mime_type] - MIME type of the file
    * @returns {Promise<ImageUploadResult>}
    */
-  async upload(buffer, options = {}) {
+  async upload(_buffer, _options = {}) {
     throw new Error('Must implement upload()');
   }
 
@@ -49,7 +49,7 @@ class StorageProvider {
    * @param {string} publicId - The public ID of the image to delete
    * @returns {Promise<DeleteResult>}
    */
-  async delete(publicId) {
+  async delete(_publicId) {
     throw new Error('Must implement delete()');
   }
 
@@ -59,7 +59,7 @@ class StorageProvider {
    * @param {string} publicId - The public ID of the image
    * @returns {Promise<ImageInfo>}
    */
-  async getInfo(publicId) {
+  async getInfo(_publicId) {
     throw new Error('Must implement getInfo()');
   }
 
@@ -70,7 +70,7 @@ class StorageProvider {
    * @param {Object} [options] - URL options (transformations, etc.)
    * @returns {string}
    */
-  getUrl(publicId, options = {}) {
+  getUrl(_publicId, _options = {}) {
     throw new Error('Must implement getUrl()');
   }
 

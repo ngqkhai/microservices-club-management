@@ -5,9 +5,9 @@ const logger = require('../config/logger');
 const config = require('../config');
 // userSyncService replaced with RabbitMQ events - see publisher.publishUserCreated/Updated
 const {
-  AppError,
+  // AppError - available for future use
   NotFoundError,
-  ValidationError,
+  // ValidationError - available for future use
   ConflictError,
   InvalidCredentialsError,
   AccountLockedError,
@@ -16,7 +16,7 @@ const {
   PasswordResetTokenInvalidError,
   RefreshTokenExpiredError,
   EmailVerificationTokenError,
-  WeakPasswordError,
+  // WeakPasswordError - available for future use
   AuthorizationError
 } = require('../utils/errors');
 
@@ -174,7 +174,8 @@ class AuthService {
    * @returns {Object} User and tokens
    */
   async login(credentials) {
-    const { email, password, rememberMe = false, ip, userAgent } = credentials;
+    const { email, password, ip } = credentials;
+    // Note: rememberMe and userAgent available in credentials if needed
 
     try {
       // Find user with password
@@ -212,7 +213,7 @@ class AuthService {
       await user.resetFailedAttempts();
 
       // Generate tokens
-      const { accessToken, refreshToken } = jwtUtil.generateTokenPair(user);
+      const { accessToken } = jwtUtil.generateTokenPair(user);
 
       // Store refresh token in database
       const refreshTokenRecord = await RefreshToken.createToken(user.id);
@@ -284,7 +285,7 @@ class AuthService {
       }
 
       // Generate new token pair
-      const { accessToken, refreshToken: newRefreshToken } = jwtUtil.generateTokenPair(user);
+      const { accessToken } = jwtUtil.generateTokenPair(user);
 
       // Create new refresh token record
       const newRefreshTokenRecord = await RefreshToken.createToken(user.id);
