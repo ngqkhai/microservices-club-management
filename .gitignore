@@ -61,6 +61,10 @@ secrets/
 *.pem
 *.key
 **/secrets/
+.secrets
+
+# Act (GitHub Actions local runner)
+.actrc
 
 # IDEs
 .vscode/
