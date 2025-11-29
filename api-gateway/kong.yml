@@ -385,10 +385,11 @@ routes:
           header_prefix: "x-user-"
     
   # Image Service Delete Routes (Protected - requires JWT)
+  # Note: Matches MongoDB ObjectId format (24 hex chars)
   - name: image-delete-routes
     service: image-service
     paths:
-      - ~/api/images/[^/]+$
+      - ~/api/images/[a-fA-F0-9]{24}$
     methods: [DELETE, OPTIONS]
     strip_path: false
     tags: [image, protected, delete]
@@ -412,10 +413,12 @@ routes:
           header_prefix: "x-user-"
     
   # Image Service Info Routes (Protected - requires JWT)
+  # Note: This route matches individual image IDs (24 hex chars for MongoDB ObjectId)
+  # The health endpoint is handled by a separate route with higher specificity
   - name: image-info-routes
     service: image-service
     paths:
-      - ~/api/images/[^/]+$
+      - ~/api/images/[a-fA-F0-9]{24}$
     methods: [GET, OPTIONS]
     strip_path: false
     tags: [image, protected, info]
@@ -788,12 +791,12 @@ consumers:
       - key: auth-service
         rsa_public_key: |
           -----BEGIN PUBLIC KEY-----
-          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2EhYreDkbolZ8FytzEA0
-          ZkSmwQdG7AcID214WFfaeqFyBLE/JQLkihTDit9WT/mRR87ul0Bb05ZeWTlcDuL4
-          O+F3kl3T0kF3IFYINaE3su6jTROV85EJPd51AezLfgZHi2fX5tvf3DS8A6G1537h
-          v9ir/m6N5Dpp/zGYJ39vJSsyKCGLV5/wQZkpBERw5QZd7SiphWyK241r/l6w/bm7
-          VfpDujgozypl6piR7rGxpFJvW83M7F3yEDx24VKIJUSanPHuShg+H87QYUKmXFnW
-          GRIVloTZnrMlU21TELuEn8dc7rAF8VkFSli+FBvea7jDO1Fk7K7gXCn7EsTWpXfz
-          ZwIDAQAB
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq0GRCDwOMQgvCjLqfSrr
+          k2IAdpqr0MsN3gO5qbNPLjKkRIMhrn1B8/6pm3ABGEkFk7pGH0YgHozqESw22I+K
+          uetijo8QiXWigYD4kbpXxkluQj+VlBaTWTDfaWrmhtb5bk9BvHSjZTSOwcU7gVWW
+          YrDRn/9dCHLLUoJ+bXSHbKCSS0b+I/FcO0PCcjPOl2NrFUrcQETC8rx0djJrXZoj
+          ADr7+78/BJCHL0/k7gptGDxGW1Ehn+ON1aT9awvUZX0kHi+ByVeCKD/fOwhBbNe/
+          ZYPVj6Plp1Q3dO8j4raRjYOqtPIreERSjELL/ZtuxyWuhSB0oBJ44SpUc6gqP9YY
+          6wIDAQAB
           -----END PUBLIC KEY-----
         algorithm: RS256
