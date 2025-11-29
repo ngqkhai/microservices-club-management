@@ -1,0 +1,151 @@
+# =============================================================================
+# API Gateway (Kong) Pipeline
+# =============================================================================
+name: API Gateway
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'api-gateway/**'
+      - '.github/workflows/api-gateway.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api-gateway/**'
+
+env:
+  SERVICE_NAME: kong
+  SERVICE_PATH: api-gateway
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/kong
+
+jobs:
+  # ===========================================================================
+  # Validate Kong Configuration
+  # ===========================================================================
+  validate:
+    name: Validate Config
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Kong YAML
+        run: |
+          # Check file exists and is valid YAML using yq (pre-installed on GitHub runners)
+          # For act locally, we use a simple check
+          if command -v yq &> /dev/null; then
+            yq eval '.' ${{ env.SERVICE_PATH }}/kong.yml > /dev/null
+          else
+            # Fallback: check file exists and has expected structure
+            grep -q "_format_version:" ${{ env.SERVICE_PATH }}/kong.yml
+            grep -q "services:" ${{ env.SERVICE_PATH }}/kong.yml
+          fi
+          echo "✅ Kong configuration is valid!"
+
+      - name: Lint Lua plugins
+        run: |
+          # Install luacheck
+          sudo apt-get update && sudo apt-get install -y luarocks
+          sudo luarocks install luacheck
+          
+          # Lint custom Lua plugins
+          if [ -d "${{ env.SERVICE_PATH }}/lua-plugins" ]; then
+            luacheck ${{ env.SERVICE_PATH }}/lua-plugins --no-unused-args || echo "Lua lint warnings found"
+          fi
+
+  # ===========================================================================
+  # Build & Push Image
+  # ===========================================================================
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.SERVICE_PATH }}
+          file: ${{ env.SERVICE_PATH }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Deploy to Production (requires approval)
+  # ===========================================================================
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: production
+      url: https://yourapp.com
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+
+      - name: Deploy Kong
+        run: |
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << EOF
+            cd /app
+            docker pull ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            
+            # Reload Kong configuration without downtime
+            docker compose up -d --no-deps ${{ env.SERVICE_NAME }}
+            
+            # Wait for Kong to be ready
+            sleep 10
+            docker exec kong kong reload
+          EOF
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f https://yourapp.com/api/auth/health || exit 1
+          echo "API Gateway deployed successfully!"
+
+      - name: Notify
+        if: always()
+        uses: slackapi/slack-github-action@v1.24.0
+        continue-on-error: true
+        with:
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} API Gateway deployment ${{ job.status }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

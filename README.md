@@ -14,6 +14,7 @@
   - [Prerequisites](#prerequisites)
   - [Development Setup](#development-setup)
   - [Production Setup](#production-setup)
+- [CI/CD Pipelines](#cicd-pipelines)
 - [Services](#services)
 - [Environment Variables](#environment-variables)
 - [Database & Seeding](#database--seeding)
@@ -343,6 +344,83 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
 - [ ] Configure proper CORS origins
 - [ ] Set up monitoring and logging
 - [ ] Configure backup strategies for databases
+
+---
+
+## CI/CD Pipelines
+
+This project uses **GitHub Actions** for continuous integration and deployment with a simplified flow: `main → approval → production`.
+
+### Pipeline Overview
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| `auth-service.yml` | Push to `services/auth/**` | Test, build, deploy auth service |
+| `club-service.yml` | Push to `services/club/**` | Test, build, deploy club service |
+| `event-service.yml` | Push to `services/event/**` | Test, build, deploy event service |
+| `image-service.yml` | Push to `services/image/**` | Test, build, deploy image service |
+| `notify-service.yml` | Push to `services/notify/**` | Test, build, deploy notify service |
+| `frontend.yml` | Push to `frontend/**` | Lint, build, deploy frontend |
+| `api-gateway.yml` | Push to `api-gateway/**` | Validate Kong config, deploy |
+| `infrastructure.yml` | Push to `docker-compose*.yml` | Validate compose files |
+| `pr-checks.yml` | Pull requests | Security audit, outdated deps |
+| `scheduled.yml` | Weekly cron | Dependency updates, health checks |
+| `reusable-docker-build.yml` | Called by services | Shared Docker build with caching |
+
+### Deployment Flow
+
+```
+Push to main → Run Tests → Build Docker Image → Wait for Approval → Deploy to Production
+```
+
+- **No staging environment** - simplified for rapid iteration
+- **Manual approval** required before production deployment
+- **GitHub Container Registry (ghcr.io)** for Docker images
+
+### Local Pipeline Testing with `act`
+
+Test pipelines locally before pushing using [act](https://github.com/nektos/act):
+
+```bash
+# Install act (Windows - requires Docker)
+choco install act-cli
+
+# Test a specific workflow
+act push -W .github/workflows/auth-service.yml --container-architecture linux/amd64
+
+# Test with specific event
+act push -W .github/workflows/frontend.yml -e .github/test-event.json
+
+# Test PR checks
+act pull_request -W .github/workflows/pr-checks.yml
+```
+
+**Note:** Some features (GitHub secrets, environment approvals) only work on GitHub.
+
+### Required GitHub Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `GHCR_TOKEN` | GitHub Personal Access Token for container registry |
+| `PRODUCTION_HOST` | Production server hostname/IP |
+| `PRODUCTION_SSH_KEY` | SSH private key for deployment |
+| `DATABASE_URL` | PostgreSQL connection string (Neon) |
+| `MONGODB_URI` | MongoDB connection string (Atlas) |
+| `RABBITMQ_URL` | RabbitMQ connection string (CloudAMQP) |
+| `AWS_ACCESS_KEY_ID` | AWS credentials for S3 |
+| `AWS_SECRET_ACCESS_KEY` | AWS credentials for S3 |
+| `S3_BUCKET` | S3 bucket name for image storage |
+| `JWT_SECRET` | JWT signing secret |
+| `GMAIL_USER` | Gmail for notifications |
+| `GMAIL_APP_PASSWORD` | Gmail app password |
+
+### GitHub Environments
+
+Create a `production` environment in **Settings → Environments** with:
+- Required reviewers for approval gate
+- Environment secrets for production values
 
 ---
 

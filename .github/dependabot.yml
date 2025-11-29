@@ -1,0 +1,195 @@
+# =============================================================================
+# Dependabot Configuration
+# =============================================================================
+# Best Practice: Automated dependency updates
+# - Security updates immediately
+# - Regular updates weekly
+# - Grouped updates to reduce PR noise
+# =============================================================================
+
+version: 2
+
+registries:
+  npm-registry:
+    type: npm-registry
+    url: https://registry.npmjs.org
+    replaces-base: true
+
+updates:
+  # Root package
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "ngqkhai"
+    labels:
+      - "dependencies"
+      - "automated"
+
+  # Auth Service
+  - package-ecosystem: "npm"
+    directory: "/services/auth"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      production-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "jest*"
+          - "eslint*"
+          - "@types/*"
+      dev-dependencies:
+        patterns:
+          - "jest*"
+          - "eslint*"
+          - "@types/*"
+    labels:
+      - "dependencies"
+      - "auth-service"
+
+  # Club Service
+  - package-ecosystem: "npm"
+    directory: "/services/club"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "club-service"
+
+  # Event Service
+  - package-ecosystem: "npm"
+    directory: "/services/event"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "event-service"
+
+  # Image Service
+  - package-ecosystem: "npm"
+    directory: "/services/image"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "image-service"
+
+  # Notify Service
+  - package-ecosystem: "npm"
+    directory: "/services/notify"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "notify-service"
+
+  # Frontend
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      next-ecosystem:
+        patterns:
+          - "next*"
+          - "react*"
+          - "@next/*"
+      ui-libraries:
+        patterns:
+          - "@radix-ui/*"
+          - "tailwindcss*"
+          - "@tailwindcss/*"
+      dev-dependencies:
+        patterns:
+          - "typescript*"
+          - "eslint*"
+          - "@types/*"
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  # Docker images
+  - package-ecosystem: "docker"
+    directory: "/services/auth"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/club"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/event"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/image"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/notify"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"

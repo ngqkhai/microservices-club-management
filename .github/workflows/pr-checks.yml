@@ -1,0 +1,145 @@
+# =============================================================================
+# PR Checks - Lightweight checks for pull requests
+# =============================================================================
+# Best Practice: Fast feedback for developers
+# - Quick lint and type checks
+# - Dependency audit
+# - PR-specific validations
+# =============================================================================
+
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  # ===========================================================================
+  # PR Metadata validation
+  # ===========================================================================
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            should start with a lowercase letter.
+
+      - name: Check PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr.body || pr.body.length < 10) {
+              core.setFailed('Please provide a meaningful PR description');
+            }
+
+  # ===========================================================================
+  # Quick lint check
+  # ===========================================================================
+  quick-lint:
+    name: Quick Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Check for console.log statements
+        run: |
+          if grep -r "console\.log" services/*/src --include="*.js" --include="*.ts" | grep -v "logger"; then
+            echo "Warning: Found console.log statements. Consider using proper logging."
+          fi
+
+      - name: Check for TODO/FIXME
+        run: |
+          echo "## TODOs and FIXMEs found:" >> $GITHUB_STEP_SUMMARY
+          grep -rn "TODO\|FIXME" services/*/src --include="*.js" --include="*.ts" || echo "None found" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # Dependency check
+  # ===========================================================================
+  dependency-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Check for security vulnerabilities
+        run: |
+          for service in auth club event image notify; do
+            echo "Checking $service..."
+            cd services/$service
+            npm audit --audit-level=high || echo "Vulnerabilities found in $service"
+            cd ../..
+          done
+
+      - name: Check for outdated packages
+        run: |
+          echo "## Outdated Packages" >> $GITHUB_STEP_SUMMARY
+          for service in auth club event image notify; do
+            echo "### $service" >> $GITHUB_STEP_SUMMARY
+            cd services/$service
+            npm install --package-lock-only --ignore-scripts 2>/dev/null || true
+            npm outdated --json 2>/dev/null | jq -r 'to_entries[] | "- \(.key): \(.value.current // "N/A") → \(.value.latest)"' >> $GITHUB_STEP_SUMMARY || echo "All up to date" >> $GITHUB_STEP_SUMMARY
+            cd ../..
+          done
+
+  # ===========================================================================
+  # Size check
+  # ===========================================================================
+  size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'frontend')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install and build
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Check bundle size
+        uses: preactjs/compressed-size-action@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: 'frontend/.next/**/*.js'
+          exclude: '{**/*.map,**/node_modules/**}'
